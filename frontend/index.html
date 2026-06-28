@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emaús — Relevamiento</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <div class="login-card">
+      <h1>Emaús</h1>
+      <p class="subtitle">Sistema de Relevamiento</p>
+
+      <form id="login-form">
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password">
+        </div>
+        <div id="error-msg" class="error-msg hidden"></div>
+        <button type="submit" id="btn-login">Ingresar</button>
+      </form>
+    </div>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/login.js"></script>
+</body>
+</html>

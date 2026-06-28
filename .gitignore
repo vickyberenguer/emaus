@@ -1,0 +1,26 @@
+# Entorno
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# AWS
+.aws/
+
+# IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Lambda package
+backend/package.zip
