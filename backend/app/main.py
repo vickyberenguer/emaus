@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
+from app import models  # noqa: F401 — registra los modelos en el mapper de SQLAlchemy
 from app.routers import auth
 
 settings = get_settings()

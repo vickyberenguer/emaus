@@ -9,3 +9,4 @@ python-dotenv==1.0.1
 pydantic==2.7.1
 pydantic-settings==2.3.0
 python-multipart==0.0.9
+certifi==2024.7.4
