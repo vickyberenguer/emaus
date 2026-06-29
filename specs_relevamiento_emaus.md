@@ -464,10 +464,14 @@ Todos aceptan filtros: `?anio=&semestre=&diocesis_id=&emaus_id=`
 - [x] Backend desplegado en AWS Lambda + API Gateway, verificado end-to-end (login real devuelve JWT)
 
 - [x] Endpoints de secciones del formulario: `pastoral-pi`, `espacios-educativos` (+ `/datos-semestrales`), `talleres` (CRUD), `establecimientos` (búsqueda en padrón + articulación) — guardado parcial por sección, verificado end-to-end local
+- [x] `backend/app/routers/admin.py` — usuarios (CRUD), asignación responsable↔Emaús, catálogos (CRUD), importación de padrón (.xlsx, upsert por cueanexo, fila 13 de encabezados) y estado del padrón. Todo bajo `require_rol("admin")`.
+- [x] `backend/migrations/003_padron_importacion.sql` — tabla de auditoría de importaciones
 
 ### Pendiente
 - [ ] Formulario ATL (4 secciones, frontend)
 - [ ] Panel responsable (validación)
-- [ ] Panel admin (usuarios, padrón, catálogos)
-- [ ] Endpoint e importación del padrón de establecimientos
+- [ ] Panel admin (frontend)
 - [ ] Tablero de indicadores
+
+### Notas / riesgos conocidos
+- El mapeo de encabezados del Excel del padrón (`ENCABEZADOS_PADRON` en `admin.py`) está armado a partir de la descripción de la spec, sin haber visto un archivo real del Ministerio. Hay que validar contra el Excel real y ajustar los nombres de columna esperados antes de usarlo en producción.
