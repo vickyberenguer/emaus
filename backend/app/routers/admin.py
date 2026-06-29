@@ -381,3 +381,90 @@ def importar_padron(
         "insertados": insertados,
         "actualizados": actualizados,
     }
+
+
+# --- Importación por lotes (el navegador parsea el Excel y manda filas en JSON) ---
+# El archivo real del Ministerio supera el límite de payload de API Gateway (10 MB),
+# así que /padron/importar (subida directa del .xlsx) solo funciona con archivos chicos.
+# Para el padrón real, el frontend lee el Excel con SheetJS y manda los datos ya
+# parseados en lotes a este endpoint.
+
+class EstablecimientoBatchItem(BaseModel):
+    cueanexo: str
+    jurisdiccion: str | None = None
+    sector: str | None = None
+    ambito: str | None = None
+    departamento: str | None = None
+    cod_departamento: str | None = None
+    localidad: str | None = None
+    cod_localidad: str | None = None
+    nombre: str | None = None
+    domicilio: str | None = None
+    codigo_postal: str | None = None
+    telefono: str | None = None
+    mail: str | None = None
+    nivel_inicial_maternal: bool = False
+    nivel_inicial_infantes: bool = False
+    primario: bool = False
+    secundario: bool = False
+    adultos: bool = False
+    formacion_profesional: bool = False
+    alfabetizacion: bool = False
+
+
+class ImportarBatchRequest(BaseModel):
+    items: list[EstablecimientoBatchItem]
+
+
+class ImportarBatchResponse(BaseModel):
+    procesados: int
+    insertados: int
+    actualizados: int
+
+
+@router.post("/padron/importar-batch", response_model=ImportarBatchResponse)
+def importar_padron_batch(body: ImportarBatchRequest, db: Session = Depends(get_db)):
+    cueanexos = [item.cueanexo for item in body.items]
+    existentes = {
+        e.cueanexo: e for e in db.query(EstablecimientoEstado)
+        .filter(EstablecimientoEstado.cueanexo.in_(cueanexos)).all()
+    }
+    procesados = insertados = actualizados = 0
+    hoy = date.today()
+
+    for item in body.items:
+        procesados += 1
+        valores = item.model_dump(exclude={"cueanexo"})
+        if item.cueanexo in existentes:
+            estab = existentes[item.cueanexo]
+            for campo, valor in valores.items():
+                setattr(estab, campo, valor)
+            estab.actualizado_en = hoy
+            actualizados += 1
+        else:
+            estab = EstablecimientoEstado(cueanexo=item.cueanexo, actualizado_en=hoy, **valores)
+            db.add(estab)
+            existentes[item.cueanexo] = estab
+            insertados += 1
+
+    db.commit()
+    return ImportarBatchResponse(procesados=procesados, insertados=insertados, actualizados=actualizados)
+
+
+class RegistrarImportacionRequest(BaseModel):
+    total_procesados: int
+    insertados: int
+    actualizados: int
+
+
+@router.post("/padron/registrar-importacion")
+def registrar_importacion(
+    body: RegistrarImportacionRequest,
+    current_user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Se llama una vez al final, después de mandar todos los lotes, para dejar un registro de auditoría."""
+    registro = PadronImportacion(usuario_id=current_user.id, **body.model_dump())
+    db.add(registro)
+    db.commit()
+    return {"ok": True}

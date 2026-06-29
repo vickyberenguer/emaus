@@ -189,18 +189,124 @@ async function cargarEstadoPadron() {
   }
 }
 
+// Encabezados esperados en la fila 13 del Excel del Ministerio → campo del modelo.
+// Debe coincidir con ENCABEZADOS_PADRON en backend/app/routers/admin.py.
+const ENCABEZADOS_PADRON = {
+  "cueanexo": "cueanexo",
+  "jurisdiccion": "jurisdiccion",
+  "sector": "sector",
+  "ambito": "ambito",
+  "departamento": "departamento",
+  "cod_depto": "cod_departamento",
+  "codigo departamento": "cod_departamento",
+  "localidad": "localidad",
+  "cod_localidad": "cod_localidad",
+  "codigo localidad": "cod_localidad",
+  "nombre": "nombre",
+  "domicilio": "domicilio",
+  "cp": "codigo_postal",
+  "codigo postal": "codigo_postal",
+  "telefono": "telefono",
+  "mail": "mail",
+  "email": "mail",
+  "inicial - jardin maternal": "nivel_inicial_maternal",
+  "inicial - jardin de infantes": "nivel_inicial_infantes",
+  "primario": "primario",
+  "secundario": "secundario",
+  "adultos": "adultos",
+  "formacion profesional": "formacion_profesional",
+  "alfabetizacion": "alfabetizacion",
+};
+const PADRON_CAMPOS_BOOL = new Set([
+  'nivel_inicial_maternal', 'nivel_inicial_infantes', 'primario',
+  'secundario', 'adultos', 'formacion_profesional', 'alfabetizacion',
+]);
+const PADRON_TAMANO_LOTE = 1500;
+
+function normalizarEncabezado(texto) {
+  return String(texto).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function esValorVerdadero(valor) {
+  if (valor === null || valor === undefined) return false;
+  if (typeof valor === 'boolean') return valor;
+  const texto = String(valor).trim();
+  return !['0', '', 'False', 'NO', 'No'].includes(texto);
+}
+
 document.getElementById('btn-importar-padron').addEventListener('click', async () => {
   const fileInput = document.getElementById('padron-file');
   const resultado = document.getElementById('padron-resultado');
+  const progressWrapper = document.getElementById('padron-progress-wrapper');
+  const progressBar = document.getElementById('padron-progress-bar');
   if (!fileInput.files.length) { alert('Seleccioná un archivo .xlsx primero'); return; }
 
-  resultado.textContent = 'Importando, puede tardar unos segundos...';
+  resultado.textContent = 'Leyendo el archivo en el navegador...';
+  progressWrapper.classList.remove('hidden');
+  progressBar.style.width = '0%';
+  progressBar.textContent = '0%';
+
   try {
-    const data = await api.upload('/admin/padron/importar', fileInput.files[0]);
-    resultado.innerHTML = `<span class="text-success">Listo.</span> Procesados: ${data.total_procesados}, insertados: ${data.insertados}, actualizados: ${data.actualizados}.`;
+    const buffer = await fileInput.files[0].arrayBuffer();
+    const wb = XLSX.read(buffer, { type: 'array' });
+    const hoja = wb.Sheets[wb.SheetNames[0]];
+    const filas = XLSX.utils.sheet_to_json(hoja, { header: 1, raw: true, defval: null });
+
+    if (filas.length < 13) throw new Error('El archivo no tiene suficientes filas (se esperan encabezados en la fila 13)');
+    const encabezados = filas[12]; // fila 13 (índice 12)
+
+    const columnaACampo = {};
+    encabezados.forEach((enc, idx) => {
+      if (!enc) return;
+      const campo = ENCABEZADOS_PADRON[normalizarEncabezado(enc)];
+      if (campo) columnaACampo[idx] = campo;
+    });
+    if (!Object.values(columnaACampo).includes('cueanexo')) {
+      throw new Error("No se encontró la columna 'cueanexo' en los encabezados (fila 13)");
+    }
+
+    const items = [];
+    for (let i = 13; i < filas.length; i++) {
+      const fila = filas[i];
+      if (!fila) continue;
+      const item = {};
+      Object.entries(columnaACampo).forEach(([idx, campo]) => {
+        const valor = fila[idx];
+        item[campo] = PADRON_CAMPOS_BOOL.has(campo) ? esValorVerdadero(valor) : (valor === null || valor === undefined ? null : String(valor).trim());
+      });
+      if (!item.cueanexo) continue;
+      items.push(item);
+    }
+
+    if (items.length === 0) throw new Error('No se encontraron filas con datos para importar');
+
+    let totalProcesados = 0, totalInsertados = 0, totalActualizados = 0;
+    const totalLotes = Math.ceil(items.length / PADRON_TAMANO_LOTE);
+
+    for (let lote = 0; lote < totalLotes; lote++) {
+      const desde = lote * PADRON_TAMANO_LOTE;
+      const grupo = items.slice(desde, desde + PADRON_TAMANO_LOTE);
+      const data = await api.post('/admin/padron/importar-batch', { items: grupo });
+      totalProcesados += data.procesados;
+      totalInsertados += data.insertados;
+      totalActualizados += data.actualizados;
+
+      const porcentaje = Math.round(((lote + 1) / totalLotes) * 100);
+      progressBar.style.width = `${porcentaje}%`;
+      progressBar.textContent = `${porcentaje}% (${desde + grupo.length}/${items.length})`;
+      resultado.textContent = `Importando... lote ${lote + 1} de ${totalLotes}`;
+    }
+
+    await api.post('/admin/padron/registrar-importacion', {
+      total_procesados: totalProcesados, insertados: totalInsertados, actualizados: totalActualizados,
+    });
+
+    resultado.innerHTML = `<span class="text-success">Listo.</span> Procesados: ${totalProcesados}, insertados: ${totalInsertados}, actualizados: ${totalActualizados}.`;
     await cargarEstadoPadron();
   } catch (err) {
     resultado.innerHTML = `<span class="text-danger">${err.message}</span>`;
+  } finally {
+    progressWrapper.classList.add('hidden');
   }
 });
 
