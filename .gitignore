@@ -24,3 +24,7 @@ build/
 
 # Lambda package
 backend/package.zip
+emaus_setup.tar.gz
+
+# Generado en build de Netlify
+frontend/js/env.js

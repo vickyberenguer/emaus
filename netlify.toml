@@ -1,6 +1,7 @@
 [build]
   base    = "frontend"
   publish = "frontend"
+  command = "sh generate-env.sh"
 
 [[redirects]]
   from   = "/*"
