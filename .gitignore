@@ -23,8 +23,12 @@ build/
 .idea/
 
 # Lambda package
-backend/package.zip
+backend/package/
+backend/*.zip
 emaus_setup.tar.gz
+
+# Claude Code
+.claude/
 
 # Generado en build de Netlify
 frontend/js/env.js

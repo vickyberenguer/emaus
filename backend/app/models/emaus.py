@@ -28,7 +28,8 @@ class Emaus(Base):
     diocesis = relationship("Diocesis", back_populates="emaus_list")
     atl = relationship("Usuario", back_populates="emaus")
     responsables = relationship("ResponsableEmaus", back_populates="emaus")
-    # relevamientos y espacios_educativos se agregan cuando se implementen esos modelos
+    relevamientos = relationship("Relevamiento", back_populates="emaus")
+    espacios_educativos = relationship("EspacioEducativo", back_populates="emaus")
 
 
 class ResponsableEmaus(Base):

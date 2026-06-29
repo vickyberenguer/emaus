@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Enum, ForeignKey, DateTime, Text, UniqueConstraint, TinyInteger
+from sqlalchemy import Column, Integer, String, Boolean, Enum, ForeignKey, DateTime, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -27,8 +27,8 @@ class Relevamiento(Base):
     emaus_id = Column(Integer, ForeignKey("emaus.id"), nullable=False)
     atl_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     anio = Column(Integer, nullable=False)
-    semestre = Column(Enum(SemestreEnum), nullable=False)
-    estado = Column(Enum(EstadoEnum), default=EstadoEnum.borrador, nullable=False)
+    semestre = Column(Enum(SemestreEnum, values_callable=lambda e: [m.value for m in e]), nullable=False)
+    estado = Column(Enum(EstadoEnum, values_callable=lambda e: [m.value for m in e]), default=EstadoEnum.borrador, nullable=False)
     comentario_rechazo = Column(Text)
     creado_en = Column(DateTime, server_default=func.now())
     enviado_en = Column(DateTime)
