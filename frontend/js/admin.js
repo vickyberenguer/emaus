@@ -199,18 +199,23 @@ const ENCABEZADOS_PADRON = {
   "departamento": "departamento",
   "cod_depto": "cod_departamento",
   "codigo departamento": "cod_departamento",
+  "codigo de departamento": "cod_departamento",
   "localidad": "localidad",
   "cod_localidad": "cod_localidad",
   "codigo localidad": "cod_localidad",
+  "codigo de localidad": "cod_localidad",
   "nombre": "nombre",
   "domicilio": "domicilio",
   "cp": "codigo_postal",
   "codigo postal": "codigo_postal",
+  "c. p.": "codigo_postal",
   "telefono": "telefono",
   "mail": "mail",
   "email": "mail",
   "inicial - jardin maternal": "nivel_inicial_maternal",
+  "nivel inicial - jardin maternal": "nivel_inicial_maternal",
   "inicial - jardin de infantes": "nivel_inicial_infantes",
+  "nivel inicial - jardin de infantes": "nivel_inicial_infantes",
   "primario": "primario",
   "secundario": "secundario",
   "adultos": "adultos",
@@ -252,27 +257,44 @@ document.getElementById('btn-importar-padron').addEventListener('click', async (
     const hoja = wb.Sheets[wb.SheetNames[0]];
     const filas = XLSX.utils.sheet_to_json(hoja, { header: 1, raw: true, defval: null });
 
-    if (filas.length < 13) throw new Error('El archivo no tiene suficientes filas (se esperan encabezados en la fila 13)');
-    const encabezados = filas[12]; // fila 13 (índice 12)
-
-    const columnaACampo = {};
-    encabezados.forEach((enc, idx) => {
-      if (!enc) return;
-      const campo = ENCABEZADOS_PADRON[normalizarEncabezado(enc)];
-      if (campo) columnaACampo[idx] = campo;
-    });
-    if (!Object.values(columnaACampo).includes('cueanexo')) {
-      throw new Error("No se encontró la columna 'cueanexo' en los encabezados (fila 13)");
+    // Buscamos la fila de encabezados real (la que tiene "cueanexo"), en vez de asumir
+    // que es la fila 13 — distintas librerías pueden alinear filas vacías al inicio
+    // de forma distinta y desplazar el índice.
+    let filaEncabezados = -1;
+    let columnaACampo = {};
+    for (let i = 0; i < Math.min(filas.length, 40); i++) {
+      const fila = filas[i] || [];
+      const candidato = {};
+      fila.forEach((enc, idx) => {
+        if (!enc) return;
+        const campo = ENCABEZADOS_PADRON[normalizarEncabezado(enc)];
+        if (campo) candidato[idx] = campo;
+      });
+      if (Object.values(candidato).includes('cueanexo')) {
+        filaEncabezados = i;
+        columnaACampo = candidato;
+        break;
+      }
+    }
+    if (filaEncabezados === -1) {
+      throw new Error("No se encontró una fila de encabezados con la columna 'cueanexo' en las primeras 40 filas del archivo");
     }
 
     const items = [];
-    for (let i = 13; i < filas.length; i++) {
+    for (let i = filaEncabezados + 1; i < filas.length; i++) {
       const fila = filas[i];
       if (!fila) continue;
       const item = {};
+      // Ojo: el archivo real repite nombres de columna (ej. "Primario" aparece una vez por
+      // modalidad: Común, Especial, Adultos, etc.). Para los campos booleanos combinamos esas
+      // columnas con OR en vez de dejar que la última pise a las anteriores.
       Object.entries(columnaACampo).forEach(([idx, campo]) => {
         const valor = fila[idx];
-        item[campo] = PADRON_CAMPOS_BOOL.has(campo) ? esValorVerdadero(valor) : (valor === null || valor === undefined ? null : String(valor).trim());
+        if (PADRON_CAMPOS_BOOL.has(campo)) {
+          item[campo] = !!item[campo] || esValorVerdadero(valor);
+        } else {
+          item[campo] = (valor === null || valor === undefined) ? null : String(valor).trim();
+        }
       });
       if (!item.cueanexo) continue;
       items.push(item);

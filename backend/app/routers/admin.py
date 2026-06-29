@@ -253,18 +253,23 @@ ENCABEZADOS_PADRON = {
     "departamento": "departamento",
     "cod_depto": "cod_departamento",
     "codigo departamento": "cod_departamento",
+    "codigo de departamento": "cod_departamento",
     "localidad": "localidad",
     "cod_localidad": "cod_localidad",
     "codigo localidad": "cod_localidad",
+    "codigo de localidad": "cod_localidad",
     "nombre": "nombre",
     "domicilio": "domicilio",
     "cp": "codigo_postal",
     "codigo postal": "codigo_postal",
+    "c. p.": "codigo_postal",
     "telefono": "telefono",
     "mail": "mail",
     "email": "mail",
     "inicial - jardin maternal": "nivel_inicial_maternal",
+    "nivel inicial - jardin maternal": "nivel_inicial_maternal",
     "inicial - jardin de infantes": "nivel_inicial_infantes",
+    "nivel inicial - jardin de infantes": "nivel_inicial_infantes",
     "primario": "primario",
     "secundario": "secundario",
     "adultos": "adultos",
@@ -314,44 +319,61 @@ def importar_padron(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No se pudo leer el archivo Excel")
 
     hoja = wb.active
-    filas = hoja.iter_rows(values_only=True)
+    todas_las_filas = list(hoja.iter_rows(values_only=True))
 
-    # Encabezados en la fila 13 (índice 12)
-    for _ in range(12):
-        next(filas, None)
-    encabezados = next(filas, None)
-    if not encabezados:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No se encontraron encabezados en la fila 13")
-
+    # Buscamos la fila de encabezados real (la que tiene "cueanexo") en vez de asumir
+    # que es la fila 13 — el archivo real puede tener filas vacías/título al inicio
+    # en cantidad distinta a la esperada.
+    fila_encabezados_idx = None
     columna_a_campo: dict[int, str] = {}
-    for idx, encabezado in enumerate(encabezados):
-        if not encabezado:
+    for i, fila in enumerate(todas_las_filas[:40]):
+        if not fila:
             continue
-        campo = ENCABEZADOS_PADRON.get(_normalizar(str(encabezado)))
-        if campo:
-            columna_a_campo[idx] = campo
+        candidato: dict[int, str] = {}
+        for idx, encabezado in enumerate(fila):
+            if not encabezado:
+                continue
+            campo = ENCABEZADOS_PADRON.get(_normalizar(str(encabezado)))
+            if campo:
+                candidato[idx] = campo
+        if "cueanexo" in candidato.values():
+            fila_encabezados_idx = i
+            columna_a_campo = candidato
+            break
 
-    if "cueanexo" not in columna_a_campo.values():
+    if fila_encabezados_idx is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No se encontró la columna 'cueanexo' en los encabezados (fila 13)",
+            detail="No se encontró una fila de encabezados con la columna 'cueanexo' en las primeras 40 filas",
         )
 
     existentes = {e.cueanexo: e for e in db.query(EstablecimientoEstado).all()}
     procesados = insertados = actualizados = 0
     hoy = date.today()
 
-    for fila in filas:
-        valores = {campo: fila[idx] for idx, campo in columna_a_campo.items() if idx < len(fila)}
+    for fila in todas_las_filas[fila_encabezados_idx + 1:]:
+        if not fila:
+            continue
+        # Ojo: el archivo real repite nombres de columna (ej. "Primario" aparece una vez
+        # por modalidad: Común, Especial, Adultos, etc.). Para los campos booleanos
+        # combinamos esas columnas con OR en vez de dejar que la última pise a las anteriores.
+        valores: dict = {}
+        for idx, campo in columna_a_campo.items():
+            if idx >= len(fila):
+                continue
+            valor = fila[idx]
+            if campo in BOOLEAN_FIELDS:
+                valores[campo] = bool(valores.get(campo)) or (
+                    bool(valor) and str(valor).strip() not in ("0", "", "False", "NO", "No")
+                )
+            else:
+                valores[campo] = valor
+
         cueanexo = valores.get("cueanexo")
         if not cueanexo:
             continue
         cueanexo = str(cueanexo).strip()
         procesados += 1
-
-        for campo in BOOLEAN_FIELDS:
-            if campo in valores:
-                valores[campo] = bool(valores[campo]) and str(valores[campo]).strip() not in ("0", "", "False", "NO", "No")
 
         if cueanexo in existentes:
             estab = existentes[cueanexo]
