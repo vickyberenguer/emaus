@@ -472,28 +472,28 @@ Todos aceptan filtros: `?anio=&semestre=&diocesis_id=&emaus_id=`
 - [x] `frontend/pages/relevamiento.html` + 5 archivos JS — formulario ATL completo: selector/creación de relevamiento, Pastoral PI, Espacios Educativos (datos de base + semestrales), Talleres, Establecimientos. Verificado end-to-end en producción con datos reales (creación, guardado, persistencia confirmada en TiDB).
 - [x] `backend/app/routers/catalogos.py` — GET /catalogos/{categoria} de solo lectura para cualquier usuario autenticado (los catálogos estaban antes solo bajo /admin)
 
+- [x] **Rediseño UX del formulario ATL calcado de la planilla de Google Sheets original** (revisada con la usuaria: https://docs.google.com/spreadsheets/d/1PsxFXxAfRytT7CfxRAIsxDz_sEWkymCSbEfi19ikNJM). La mayoría de las "subtablas" del spec resultaron ser checklists fijas (lista predefinida + checkbox + campo extra opcional), no listas libres con botón "+". Se reescribieron `dynlist.js` (nuevo helper `checklist()`), `seccion-pastoral.js` y `seccion-espacios.js` para usar checklists fijas y selects de catálogo en vez de inputs de texto libre con filas dinámicas. Verificado end-to-end en producción.
+
 ### Pendiente
 - [ ] Panel de Responsable (validación de relevamientos enviados: validar/rechazar con comentario)
 - [ ] Tablero de indicadores (dashboard con los indicadores de la sección 11)
 - [ ] Endpoints + UI para que el admin cree/edite Diócesis y Emaús (hoy esas tablas solo se pueden cargar por SQL directo en TiDB — ver sección 15)
-- [ ] Rediseño del formulario ATL para que se parezca más a la planilla de Google Sheets que usaban antes (ver sección 14 — nota de UX crítica)
+- [ ] Considerar agregar autoguardado (guardar al perder foco) en vez de un botón "Guardar" único al final de cada sección — quedó pendiente de evaluar con uso real
+- [ ] Validar con un ATL real (no de prueba) que el formulario resulte efectivamente más simple que antes; ajustar agrupación/orden de campos si hace falta
 
 ### Notas / riesgos conocidos
 - El mapeo de encabezados del Excel del padrón (`ENCABEZADOS_PADRON` en `admin.py`) está armado a partir de la descripción de la spec, sin haber visto un archivo real del Ministerio. Hay que validar contra el Excel real y ajustar los nombres de columna esperados antes de usarlo en producción.
-- El formulario ATL actual (`frontend/pages/relevamiento.html` y sus JS) es funcionalmente completo pero visualmente es un formulario web genérico (inputs sueltos, subtablas con botones +/-). Los ATL tienen poca práctica con computadoras y están acostumbrados a la planilla de Google Sheets — **antes de poner esto en uso real, conviene rediseñar la UX para que se parezca más a una planilla** (ver sección 14).
 
 ---
 
-## 14. Nota de UX crítica — simplicidad para el usuario ATL
+## 14. UX del formulario ATL — calcada de la planilla original
 
-Los ATL son el perfil de usuario con menos experiencia informática del sistema. Hoy completan el relevamiento en una planilla de Google Sheets, a la que están acostumbrados. El formulario web actual, aunque funcionalmente completo, tiene una interfaz típica de formulario (inputs, checkboxes, botones "+" para agregar filas a subtablas) que puede resultarles más difícil que la planilla.
+Se revisó la planilla de Google Sheets que usaban los ATL (link en la sección 13) y se confirmó que el patrón dominante es: **lista fija de opciones + checkbox + campo extra opcional** (cantidad, detalle, "otro"), no listas libres donde el usuario tipea texto y agrega filas. El formulario se reescribió para reflejar esto:
 
-**Para la próxima sesión, antes de dar por terminado el frontend ATL, evaluar:**
-- Layout más parecido a una grilla/tabla (como una hoja de cálculo) en lugar de formularios con muchos campos sueltos agrupados en cards.
-- Reducir al mínimo los clics necesarios para agregar una fila a una subtabla (hoy hay que clickear "+" y completar cada celda a mano).
-- Para los campos que en la planilla son listas desplegables (enfermedades, temáticas, articulaciones, ejes de acción, necesidades de infraestructura, preocupaciones de jóvenes — todos viven en la tabla `catalogo`), usar `<select>` con las opciones reales del catálogo en lugar de inputs de texto libre. Esto está pendiente: las subtablas hoy usan `<input>` de texto plano para esos campos (ver `dynlist.js` y los `seccion-*.js`), cuando deberían ser selects poblados desde `GET /catalogos/{categoria}`.
-- Considerar revisar la planilla de Google Sheets original junto con la usuaria para calcar el orden y agrupación de campos tal como los ATL ya los conocen.
-- Posiblemente conviene un modo de "autoguardado" (guardar cada campo al perder foco) en vez de un botón "Guardar" único al final de una sección larga, para reducir el riesgo de perder el trabajo.
+- **Pastoral PI**: las 3 enfermedades más recurrentes (niños/as y embarazadas) son 3 selects fijos con catálogo real, calcado de "Enfermedad 1/2/3" de la planilla. Temáticas y articulaciones son checklists fijas desde el catálogo real (`/catalogos/{categoria}`), con campo "Detalle" que aparece solo en el ítem "Otra/Otro".
+- **Espacios Educativos (datos de base)**: ambientes, servicios, equipo de cocina y equipo informático son checklists fijas idénticas a la planilla (con cantidad donde corresponde), no listas de longitud libre.
+- **Espacios Educativos (datos semestrales)**: "Acciones por eje" usa los 30 pares eje+acción exactos de la planilla (antes era texto libre); necesidades de infraestructura y zona usan catálogo/lista fija; preocupaciones de jóvenes es un ejercicio de ranking 1-8 (no checklist, hay que asignar un número a cada una de las 8); itinerancia, motivos de abandono BTU, contenidos de apoyo escolar y talleres digitales son checklists fijas; grupo motor, roles de itinerancia y niveles superiores son slots fijos (4, 4 y 5 respectivamente, como en la planilla) en vez de listas sin límite.
+- El helper genérico `checklist()` en `dynlist.js` se reutiliza en toda la sección de Espacios Educativos; soporta límite de selección (ej. "hasta 3 opciones") y maneja automáticamente el campo de detalle cuando el ítem es "Otro/Otra".
 
 ---
 
