@@ -23,7 +23,7 @@ from app.models.espacio_educativo import (
     RelevamientoEEItineranciaRol,
     RelevamientoEEDigitalTaller,
     RelevamientoEEGrupoMotorRol,
-    RelevamientoEEUbicacionZona,
+    EEZona,
 )
 from app.routers.auth import get_current_user
 from app.routers.relevamientos import get_relevamiento_or_404, check_acceso_lectura, check_acceso_escritura
@@ -36,12 +36,11 @@ router = APIRouter(prefix="/relevamientos/{relevamiento_id}/espacios-educativos"
 class AmbienteItem(BaseModel):
     ambiente: str
     tiene: bool = False
-    cantidad: int | None = None
 
 
 class ServicioItem(BaseModel):
     servicio: str
-    valor: str | None = None
+    tiene: bool = False
 
 
 class EquipoCocinaItem(BaseModel):
@@ -52,6 +51,10 @@ class EquipoCocinaItem(BaseModel):
 class EquipoInformaticoItem(BaseModel):
     equipo: str
     cantidad: int | None = None
+
+
+class ZonaItem(BaseModel):
+    zona: str
 
 
 class EspacioEducativoBase(BaseModel):
@@ -70,6 +73,7 @@ class EspacioEducativoBase(BaseModel):
     servicios: list[ServicioItem] = []
     equipos_cocina: list[EquipoCocinaItem] = []
     equipos_informaticos: list[EquipoInformaticoItem] = []
+    zonas: list[ZonaItem] = []
 
 
 BASE_SCALAR_FIELDS = [
@@ -177,7 +181,6 @@ class RelevamientoEEUpdate(BaseModel):
     itinerancia_roles: list[RolItem] = []
     digital_talleres: list[SimpleItem] = []
     grupo_motor_roles: list[RolItem] = []
-    ubicacion_zonas: list[SimpleItem] = []
 
 
 EE_SCALAR_FIELDS = [
@@ -212,6 +215,7 @@ def _serializar(ee: EspacioEducativo, rel_ee: RelevamientoEE | None) -> dict:
     data["servicios"] = ee.servicios
     data["equipos_cocina"] = ee.equipos_cocina
     data["equipos_informaticos"] = ee.equipos_informaticos
+    data["zonas"] = ee.zonas
 
     for f in EE_SCALAR_FIELDS:
         data[f] = getattr(rel_ee, f) if rel_ee else None
@@ -220,7 +224,7 @@ def _serializar(ee: EspacioEducativo, rel_ee: RelevamientoEE | None) -> dict:
         "acciones", "necesidades_infra", "preocupaciones_joven", "niveles_superiores",
         "btu_abandono_motivos", "apoyo_primario_contenidos", "apoyo_secundario_contenidos",
         "itinerancia_espacios", "itinerancia_actividades", "itinerancia_roles",
-        "digital_talleres", "grupo_motor_roles", "ubicacion_zonas",
+        "digital_talleres", "grupo_motor_roles",
     ]
     for s in subtablas:
         data[s] = getattr(rel_ee, s) if rel_ee else []
@@ -243,7 +247,6 @@ SIMPLE_FIELD_MAP = {
     "apoyo_secundario_contenidos": ("contenido", RelevamientoEEApoyoSecundarioContenido),
     "itinerancia_actividades": ("actividad", RelevamientoEEItineranciaActividad),
     "digital_talleres": ("taller", RelevamientoEEDigitalTaller),
-    "ubicacion_zonas": ("zona", RelevamientoEEUbicacionZona),
 }
 
 
@@ -289,7 +292,7 @@ def _sync_base_subtablas(db: Session, ee_id: int, body: EspacioEducativoBase):
 
     db.query(EEServicio).filter(EEServicio.espacio_educativo_id == ee_id).delete()
     for item in body.servicios:
-        db.add(EEServicio(espacio_educativo_id=ee_id, **item.model_dump()))
+        db.add(EEServicio(espacio_educativo_id=ee_id, servicio=item.servicio))
 
     db.query(EEEquipoCocina).filter(EEEquipoCocina.espacio_educativo_id == ee_id).delete()
     for item in body.equipos_cocina:
@@ -298,6 +301,10 @@ def _sync_base_subtablas(db: Session, ee_id: int, body: EspacioEducativoBase):
     db.query(EEEquipoInformatico).filter(EEEquipoInformatico.espacio_educativo_id == ee_id).delete()
     for item in body.equipos_informaticos:
         db.add(EEEquipoInformatico(espacio_educativo_id=ee_id, **item.model_dump()))
+
+    db.query(EEZona).filter(EEZona.espacio_educativo_id == ee_id).delete()
+    for item in body.zonas:
+        db.add(EEZona(espacio_educativo_id=ee_id, zona=item.zona))
 
 
 # --- Endpoints ---

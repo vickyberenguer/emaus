@@ -54,7 +54,7 @@ function renderShellPastoral() {
         </div>
       </div>
 
-      <div class="subseccion-titulo">¿Cuáles son las 3 enfermedades más recurrentes en niños/as acompañados?</div>
+      <div class="subseccion-titulo">¿Cuáles son las 3 enfermedades más recurrentes en niños/as acompañados? ${ayudaIcon('Elegí las 3 enfermedades que más se repiten. Si alguna no está en la lista, elegí la opción "Otra" y escribí el detalle.')}</div>
       <div id="enf-ninos-slots" class="row g-2"></div>
 
       <div class="subseccion-titulo">¿Cuáles son las 3 enfermedades más recurrentes en embarazadas acompañadas?</div>
@@ -63,7 +63,7 @@ function renderShellPastoral() {
       <div class="subseccion-titulo">Las líderes, ¿están realizando las siguientes acciones?</div>
       <div id="dyn-acciones-lider"></div>
 
-      <div class="subseccion-titulo">Temáticas abordadas desde julio a diciembre del semestre</div>
+      <div class="subseccion-titulo">Temáticas abordadas desde julio a diciembre del semestre ${ayudaIcon('Tildá todas las temáticas que se trabajaron en el semestre y, en cada una, indicá en cuántas comunidades se abordó.')}</div>
       <div id="lista-tematicas"></div>
 
       <div class="subseccion-titulo">¿Trabajan de manera articulada con alguna de las siguientes organizaciones e instituciones?</div>

@@ -16,6 +16,7 @@ from app.models.espacio_educativo import (
     EEServicio,
     EEEquipoCocina,
     EEEquipoInformatico,
+    EEZona,
     RelevamientoEE,
     RelevamientoEEAccion,
     RelevamientoEENecesidadInfra,

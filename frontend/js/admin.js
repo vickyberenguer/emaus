@@ -205,6 +205,29 @@ document.getElementById('btn-importar-padron').addEventListener('click', async (
 });
 
 // ============================================================
+// Relevamientos (abrir período)
+// ============================================================
+
+document.getElementById('btn-generar-relevamientos').addEventListener('click', async () => {
+  const anio = parseInt(document.getElementById('rel-gen-anio').value);
+  const semestre = document.getElementById('rel-gen-semestre').value;
+  const resultado = document.getElementById('rel-gen-resultado');
+  if (!confirm(`¿Abrir el relevamiento ${anio} - Semestre ${semestre} para todos los Emaús con ATL asignado?`)) return;
+
+  resultado.textContent = 'Generando...';
+  try {
+    const data = await api.post('/relevamientos/generar', { anio, semestre });
+    let html = `<span class="text-success">Listo.</span> Creados: ${data.creados}. Ya existían: ${data.ya_existian}.`;
+    if (data.sin_atl.length) {
+      html += `<div class="text-warning mt-1">Emaús sin ATL asignado (no se les creó relevamiento): ${data.sin_atl.join(', ')}</div>`;
+    }
+    resultado.innerHTML = html;
+  } catch (err) {
+    resultado.innerHTML = `<span class="text-danger">${err.message}</span>`;
+  }
+});
+
+// ============================================================
 // Init
 // ============================================================
 

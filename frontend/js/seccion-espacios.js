@@ -133,13 +133,16 @@ async function toggleEspacio(eeId, modo) {
 // Datos de base
 // ============================================================
 
-let chkAmbientes, chkServicios, chkEquipoCocina, chkEquipoInformatico;
+let chkAmbientes, chkServicios, chkEquipoCocina, chkEquipoInformatico, chkZonaBase;
 
 function ambientesASeleccion(ambientes) {
-  return (ambientes || []).filter(a => a.tiene).map(a => ({ valor: a.ambiente, extra: a.cantidad }));
+  return (ambientes || []).filter(a => a.tiene).map(a => ({ valor: a.ambiente }));
 }
 function serviciosASeleccion(servicios) {
-  return (servicios || []).map(s => ({ valor: s.servicio, extra: s.valor }));
+  return (servicios || []).map(s => ({ valor: s.servicio }));
+}
+function zonasASeleccion(zonas) {
+  return (zonas || []).map(z => ({ valor: z.zona }));
 }
 function equipoCocinaASeleccion(equipos) {
   return (equipos || []).filter(e => e.tiene).map(e => ({ valor: e.equipo }));
@@ -174,13 +177,17 @@ function renderPanelBase(panel, ee) {
     <div class="subseccion-titulo">¿Con cuántas unidades de este equipamiento informático cuenta?</div>
     <div id="chk-equipo-informatico"></div>
 
-    <button class="btn btn-primary mt-3" id="btn-guardar-ee-base"><i class="bi bi-save"></i> Guardar datos de base</button>
+    <div class="subseccion-titulo">Zona donde está ubicado el espacio</div>
+    <div id="chk-zona"></div>
+
+    <button class="btn btn-primary mt-3" id="btn-guardar-ee-base"><i class="bi bi-save"></i> Guardar datos del espacio</button>
     <span id="ee-base-guardado-msg" class="text-success small ms-2"></span>`;
 
-  chkAmbientes = checklist('chk-ambientes', toItems(AMBIENTES_FIJOS), ambientesASeleccion(ee.ambientes), { extraField: { key: 'cantidad', label: 'Cantidad (si aplica)', type: 'number' } });
-  chkServicios = checklist('chk-servicios', toItems(SERVICIOS_FIJOS), serviciosASeleccion(ee.servicios), { extraField: { key: 'valor', label: 'Detalle / Sí-No', type: 'text' } });
+  chkAmbientes = checklist('chk-ambientes', toItems(AMBIENTES_FIJOS), ambientesASeleccion(ee.ambientes));
+  chkServicios = checklist('chk-servicios', toItems(SERVICIOS_FIJOS), serviciosASeleccion(ee.servicios));
   chkEquipoCocina = checklist('chk-equipo-cocina', toItems(EQUIPO_COCINA_FIJO), equipoCocinaASeleccion(ee.equipos_cocina));
   chkEquipoInformatico = checklist('chk-equipo-informatico', toItems(EQUIPO_INFORMATICO_FIJO), equipoInformaticoASeleccion(ee.equipos_informaticos), { extraField: { key: 'cantidad', label: 'Cantidad', type: 'number' } });
+  chkZonaBase = checklist('chk-zona', toItems(ZONA_FIJA), zonasASeleccion(ee.zonas));
 
   document.getElementById('btn-guardar-ee-base').addEventListener('click', () => guardarEspacioBase(ee.id));
 }
@@ -197,10 +204,11 @@ async function guardarEspacioBase(eeId) {
     renabap: document.getElementById('eeb-renabap').checked,
     rampa_acceso: document.getElementById('eeb-rampa-acceso').checked,
     activo: true,
-    ambientes: chkAmbientes.getValues().map(s => ({ ambiente: s.valor, tiene: true, cantidad: s.extra ? parseInt(s.extra) : null })),
-    servicios: chkServicios.getValues().map(s => ({ servicio: s.valor, valor: s.extra })),
+    ambientes: chkAmbientes.getValues().map(s => ({ ambiente: s.valor, tiene: true })),
+    servicios: chkServicios.getValues().map(s => ({ servicio: s.valor, tiene: true })),
     equipos_cocina: chkEquipoCocina.getValues().map(s => ({ equipo: s.valor, tiene: true })),
     equipos_informaticos: chkEquipoInformatico.getValues().map(s => ({ equipo: s.valor, cantidad: s.extra ? parseInt(s.extra) : null })),
+    zonas: chkZonaBase.getValues().map(s => ({ zona: s.valor })),
   };
   try {
     await api.put(`/relevamientos/${relevamientoActual.id}/espacios-educativos/${eeId}`, payload);
@@ -216,7 +224,7 @@ async function guardarEspacioBase(eeId) {
 // Datos semestrales
 // ============================================================
 
-let chkAcciones = {}, chkZona, chkItinEspacios, chkItinActividades, chkBtuMotivos;
+let chkAcciones = {}, chkItinEspacios, chkItinActividades, chkBtuMotivos;
 let chkApoyoPrimContenidos, chkApoyoSecContenidos, chkDigitalTalleres, chkNecesidades;
 let preocupacionesRanking = {};
 
@@ -226,7 +234,7 @@ function renderPanelSemestral(panel, ee) {
   const accionesActuales = ee.acciones || [];
 
   panel.innerHTML = `
-    <div class="subseccion-titulo">¿Cuántas personas asisten al espacio entre las siguientes edades?</div>
+    <div class="subseccion-titulo">¿Cuántas personas asisten al espacio entre las siguientes edades? ${ayudaIcon('Contá todas las personas que asisten al espacio educativo, separadas por edad. Una misma persona se cuenta en un solo rango.')}</div>
     <div class="row g-2">
       <div class="col"><label class="form-label small">0-6</label><input type="number" class="form-control" id="ees-asistentes-0-6" value="${ee.asistentes_0_6 ?? ''}"></div>
       <div class="col"><label class="form-label small">7-14</label><input type="number" class="form-control" id="ees-asistentes-7-14" value="${ee.asistentes_7_14 ?? ''}"></div>
@@ -236,7 +244,7 @@ function renderPanelSemestral(panel, ee) {
       <div class="col"><label class="form-label small">+50</label><input type="number" class="form-control" id="ees-asistentes-mas-50" value="${ee.asistentes_mas_50 ?? ''}"></div>
     </div>
 
-    <div class="subseccion-titulo">Acciones que se realizan, por eje</div>
+    <div class="subseccion-titulo">Acciones que se realizan, por eje ${ayudaIcon('Marcá únicamente las acciones que efectivamente se realizan en este espacio educativo durante el semestre, agrupadas por el eje al que pertenecen.')}</div>
     <div id="acciones-por-eje">
       ${Object.entries(accionesPorEjeAgrupadas).map(([eje, acciones]) => `
         <div class="mb-2">
@@ -343,14 +351,11 @@ function renderPanelSemestral(panel, ee) {
       <div class="col"><label class="form-label small">Frecuencia (días/semana)</label><input type="number" class="form-control" id="ees-dale-frecuencia-dias" value="${ee.dale_frecuencia_dias ?? ''}"></div>
     </div>
 
-    <div class="subseccion-titulo">Necesidades de infraestructura prioritarias</div>
+    <div class="subseccion-titulo">Necesidades de infraestructura prioritarias ${ayudaIcon('Elegí hasta 3 necesidades, las que consideres más urgentes o importantes para este espacio en este momento.')}</div>
     <div id="chk-necesidades"></div>
 
-    <div class="subseccion-titulo">Preocupaciones sobre adolescentes/jóvenes — ordená del 1 (más preocupante) al 8 (menos), sin repetir números</div>
+    <div class="subseccion-titulo">Preocupaciones sobre adolescentes/jóvenes ${ayudaIcon('Hacé click en las situaciones en el orden en que más te preocupan: la primera que toques va a quedar como la #1 (la más preocupante), la siguiente como #2, y así. Podés tocar una ya elegida para sacarla del orden.')}</div>
     <div id="ranking-preocupaciones"></div>
-
-    <div class="subseccion-titulo">Zona donde está ubicado el espacio</div>
-    <div id="chk-zona"></div>
 
     <button class="btn btn-primary mt-3" id="btn-guardar-ee-semestral"><i class="bi bi-save"></i> Guardar datos semestrales</button>
     <span id="ee-semestral-guardado-msg" class="text-success small ms-2"></span>`;
@@ -361,7 +366,6 @@ function renderPanelSemestral(panel, ee) {
     chkAcciones[eje] = checklist(`chk-acciones-${eje.replace(/\W/g, '')}`, items, seleccion);
   });
 
-  chkZona = checklist('chk-zona', toItems(ZONA_FIJA), (ee.ubicacion_zonas || []).map(z => ({ valor: z.zona })));
   chkItinEspacios = checklist('chk-itin-espacios', toItems(ITINERANCIA_ESPACIOS_FIJO), (ee.itinerancia_espacios || []).map(i => ({ valor: i.espacio, otro: i.espacio_otro })));
   chkItinActividades = checklist('chk-itin-actividades', toItems(ITINERANCIA_ACTIVIDADES_FIJO), (ee.itinerancia_actividades || []).map(i => ({ valor: i.actividad })), { maxSelected: 3 });
   chkBtuMotivos = checklist('chk-btu-motivos', toItems(BTU_ABANDONO_FIJO), (ee.btu_abandono_motivos || []).map(m => ({ valor: BTU_ABANDONO_FIJO.includes(m.motivo) ? m.motivo : 'Otro:', otro: BTU_ABANDONO_FIJO.includes(m.motivo) ? null : m.motivo })), { maxSelected: 3 });
@@ -407,22 +411,45 @@ function leerSlotsFijos(containerId, campoClave) {
     .filter(obj => obj[campoClave]);
 }
 
+let ordenPreocupaciones = [];
+
 function renderRankingPreocupaciones(seleccionadas) {
+  ordenPreocupaciones = seleccionadas
+    .slice()
+    .sort((a, b) => a.ranking - b.ranking)
+    .map(p => p.preocupacion);
+  pintarRankingPreocupaciones();
+}
+
+function pintarRankingPreocupaciones() {
   const container = document.getElementById('ranking-preocupaciones');
-  container.innerHTML = catPreocupacionJoven.map(c => {
-    const actual = seleccionadas.find(p => p.preocupacion === c.valor);
-    return `
-      <div class="row g-2 align-items-center mb-1 fila-ranking" data-valor="${c.valor}">
-        <div class="col-md-8">${c.valor}</div>
-        <div class="col-md-2"><input type="number" min="1" max="8" class="form-control form-control-sm" value="${actual?.ranking ?? ''}"></div>
-      </div>`;
-  }).join('');
+  container.innerHTML = `
+    <p class="small text-muted mb-2">Tocá las situaciones en orden, de la más a la menos preocupante. La primera que toques queda como #1.</p>
+    ${catPreocupacionJoven.map(c => {
+      const posicion = ordenPreocupaciones.indexOf(c.valor);
+      const rankeada = posicion !== -1;
+      return `
+        <div class="d-flex align-items-center mb-1 fila-ranking-click ${rankeada ? 'border border-primary' : 'border'}"
+             style="border-radius:.5rem;padding:.4rem .7rem;cursor:pointer;background:${rankeada ? 'var(--sec-blue-light)' : '#fff'}"
+             data-valor="${c.valor}" onclick="toggleRankingPreocupacion('${c.valor.replace(/'/g, "\\'")}')">
+          <span class="badge ${rankeada ? 'bg-primary' : 'bg-secondary'} me-2" style="width:28px">${rankeada ? posicion + 1 : '–'}</span>
+          <span class="small">${c.valor}</span>
+        </div>`;
+    }).join('')}`;
+}
+
+function toggleRankingPreocupacion(valor) {
+  const idx = ordenPreocupaciones.indexOf(valor);
+  if (idx !== -1) {
+    ordenPreocupaciones.splice(idx, 1);
+  } else {
+    ordenPreocupaciones.push(valor);
+  }
+  pintarRankingPreocupaciones();
 }
 
 function leerRankingPreocupaciones() {
-  return Array.from(document.querySelectorAll('#ranking-preocupaciones .fila-ranking'))
-    .map(fila => ({ preocupacion: fila.dataset.valor, ranking: fila.querySelector('input').value ? parseInt(fila.querySelector('input').value) : null }))
-    .filter(p => p.ranking !== null);
+  return ordenPreocupaciones.map((valor, i) => ({ preocupacion: valor, ranking: i + 1 }));
 }
 
 const CAMPOS_SEMESTRALES_NUM = [
@@ -462,7 +489,6 @@ async function guardarEspacioSemestral(eeId) {
     apoyo_secundario_contenidos: chkApoyoSecContenidos.getValues().map(s => ({ contenido: valorOtro(s) })),
     necesidades_infra: chkNecesidades.getValues().map((s, i) => ({ necesidad: s.valor, orden: i + 1 })),
     preocupaciones_joven: leerRankingPreocupaciones(),
-    ubicacion_zonas: chkZona.getValues().map(s => ({ zona: s.valor })),
   };
 
   CAMPOS_SEMESTRALES_NUM.forEach(c => {

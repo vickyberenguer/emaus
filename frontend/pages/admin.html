@@ -27,6 +27,7 @@
   <ul class="nav nav-tabs" id="mainTabs">
     <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-usuarios"><i class="bi bi-people"></i> Usuarios</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-asignaciones"><i class="bi bi-diagram-3"></i> Asignaciones</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-relevamientos"><i class="bi bi-calendar-check"></i> Relevamientos</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-catalogos"><i class="bi bi-list-ul"></i> Catálogos</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-padron"><i class="bi bi-file-earmark-arrow-up"></i> Padrón</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-emaus"><i class="bi bi-building"></i> Emaús / Diócesis</a></li>
@@ -81,6 +82,31 @@
       <div class="card border-0 shadow-sm p-3">
         <h6 class="mb-3"><i class="bi bi-diagram-3"></i> Emaús asignados por Responsable</h6>
         <div id="lista-asignaciones"></div>
+      </div>
+    </div>
+
+    <!-- RELEVAMIENTOS -->
+    <div class="tab-pane fade" id="tab-relevamientos">
+      <div class="card border-0 shadow-sm p-3 mb-3">
+        <h6 class="mb-2"><i class="bi bi-calendar-plus"></i> Abrir un período de relevamiento</h6>
+        <p class="small text-muted">Crea un relevamiento en borrador para cada Emaús activo que tenga un ATL asignado. Los ATL solo verán el período una vez que lo abras acá — no pueden crearlo ellos mismos.</p>
+        <div class="row g-2 align-items-end">
+          <div class="col-md-2">
+            <label class="form-label small">Año</label>
+            <input type="number" class="form-control" id="rel-gen-anio" value="2026">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small">Semestre</label>
+            <select class="form-select" id="rel-gen-semestre">
+              <option value="1">1</option>
+              <option value="2">2</option>
+            </select>
+          </div>
+          <div class="col-md-3 d-grid">
+            <button class="btn btn-primary" id="btn-generar-relevamientos"><i class="bi bi-calendar-check"></i> Abrir período</button>
+          </div>
+        </div>
+        <div id="rel-gen-resultado" class="mt-2 small"></div>
       </div>
     </div>
 

@@ -1,4 +1,22 @@
 /**
+ * Ícono de ayuda contextual: un "?" que al tocarlo muestra/oculta un texto de ayuda.
+ * Se usa inline dentro de títulos de pregunta/sección, ej:
+ *   `Frecuencia ${ayudaIcon('Elegí con qué periodicidad se realiza esta acción.')}`
+ */
+let _ayudaContador = 0;
+function ayudaIcon(texto) {
+  const id = `ayuda-${_ayudaContador++}`;
+  return `<span style="position:relative;display:inline-block;">
+    <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle p-0"
+      style="width:18px;height:18px;font-size:.65rem;line-height:1;vertical-align:middle;"
+      onclick="event.stopPropagation(); document.getElementById('${id}').classList.toggle('hidden')">?</button>
+    <span id="${id}" class="hidden" style="position:absolute;z-index:20;background:#fff;border:1px solid var(--sec-border);
+      border-radius:.5rem;padding:.5rem .75rem;width:260px;box-shadow:0 2px 8px rgba(0,0,0,.15);font-weight:normal;
+      font-size:.78rem;color:var(--sec-text);top:130%;left:0;">${texto}</span>
+  </span>`;
+}
+
+/**
  * Checklist fija: lista predefinida de opciones (igual a la planilla de Sheets),
  * cada una con un checkbox y, opcionalmente, un campo extra (cantidad, detalle, ranking).
  *

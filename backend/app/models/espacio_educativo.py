@@ -24,6 +24,7 @@ class EspacioEducativo(Base):
     servicios = relationship("EEServicio", back_populates="espacio_educativo")
     equipos_cocina = relationship("EEEquipoCocina", back_populates="espacio_educativo")
     equipos_informaticos = relationship("EEEquipoInformatico", back_populates="espacio_educativo")
+    zonas = relationship("EEZona", back_populates="espacio_educativo")
     relevamientos_ee = relationship("RelevamientoEE", back_populates="espacio_educativo")
 
 
@@ -70,6 +71,16 @@ class EEEquipoInformatico(Base):
     cantidad = Column(Integer)
 
     espacio_educativo = relationship("EspacioEducativo", back_populates="equipos_informaticos")
+
+
+class EEZona(Base):
+    __tablename__ = "ee_zona"
+
+    id = Column(Integer, primary_key=True, index=True)
+    espacio_educativo_id = Column(Integer, ForeignKey("espacio_educativo.id"), nullable=False)
+    zona = Column(String(100), nullable=False)
+
+    espacio_educativo = relationship("EspacioEducativo", back_populates="zonas")
 
 
 class RelevamientoEE(Base):

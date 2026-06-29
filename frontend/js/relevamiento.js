@@ -64,19 +64,6 @@ async function seleccionarRelevamiento(id) {
 
 document.getElementById('rel-selector').addEventListener('change', (e) => seleccionarRelevamiento(e.target.value));
 
-document.getElementById('btn-nuevo-relevamiento').addEventListener('click', async () => {
-  const anio = parseInt(document.getElementById('rel-nuevo-anio').value);
-  const semestre = document.getElementById('rel-nuevo-semestre').value;
-  try {
-    const nuevo = await api.post('/relevamientos', { anio, semestre });
-    await cargarRelevamientos();
-    document.getElementById('rel-selector').value = nuevo.id;
-    await seleccionarRelevamiento(nuevo.id);
-  } catch (err) {
-    alert(err.message);
-  }
-});
-
 document.getElementById('btn-enviar-relevamiento').addEventListener('click', async () => {
   if (!relevamientoActual) return;
   if (!confirm('¿Enviar este relevamiento para validación? No vas a poder seguir editándolo hasta que el responsable lo revise.')) return;
@@ -90,5 +77,11 @@ document.getElementById('btn-enviar-relevamiento').addEventListener('click', asy
 
 (async function init() {
   await cargarRelevamientos();
-  pintarEstado();
+  // El más reciente (primero de la lista, ya viene ordenado por año/semestre desc) se selecciona solo
+  if (relevamientosCache.length > 0) {
+    document.getElementById('rel-selector').value = relevamientosCache[0].id;
+    await seleccionarRelevamiento(relevamientosCache[0].id);
+  } else {
+    pintarEstado();
+  }
 })();

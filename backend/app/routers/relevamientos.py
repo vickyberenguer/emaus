@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 from datetime import datetime, timezone
 from typing import Literal
 
 from app.database import get_db
-from app.models.usuario import Usuario
+from app.models.usuario import Usuario, RolEnum
 from app.models.relevamiento import Relevamiento, EstadoEnum, SemestreEnum
-from app.models.emaus import ResponsableEmaus
+from app.models.emaus import Emaus, ResponsableEmaus
 from app.routers.auth import get_current_user, require_rol
 
 router = APIRouter(prefix="/relevamientos", tags=["relevamientos"])
@@ -111,36 +110,43 @@ def listar_relevamientos(
     return query.order_by(Relevamiento.anio.desc(), Relevamiento.semestre.desc()).all()
 
 
-@router.post("", response_model=RelevamientoResponse, status_code=status.HTTP_201_CREATED)
-def crear_relevamiento(
+class GenerarRelevamientosResponse(BaseModel):
+    creados: int
+    ya_existian: int
+    sin_atl: list[str]
+
+
+@router.post("/generar", response_model=GenerarRelevamientosResponse, dependencies=[Depends(require_rol("admin"))])
+def generar_relevamientos_periodo(
     body: RelevamientoCreate,
-    current_user: Usuario = Depends(require_rol("atl")),
     db: Session = Depends(get_db),
 ):
-    if not current_user.emaus_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Tu usuario no tiene un Emaús asignado",
-        )
+    """El admin abre el período: crea un relevamiento en borrador para cada Emaús activo que tenga un ATL asignado."""
+    emaus_activos = db.query(Emaus).filter(Emaus.activo == True).all()
+    semestre = SemestreEnum(body.semestre)
 
-    relevamiento = Relevamiento(
-        emaus_id=current_user.emaus_id,
-        atl_id=current_user.id,
-        anio=body.anio,
-        semestre=SemestreEnum(body.semestre),
-        estado=EstadoEnum.borrador,
-    )
-    db.add(relevamiento)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Ya existe un relevamiento para ese Emaús en ese período",
-        )
-    db.refresh(relevamiento)
-    return relevamiento
+    creados = 0
+    ya_existian = 0
+    sin_atl = []
+
+    for emaus in emaus_activos:
+        atl = db.query(Usuario).filter(Usuario.emaus_id == emaus.id, Usuario.rol == RolEnum.atl, Usuario.activo == True).first()
+        if not atl:
+            sin_atl.append(emaus.nombre)
+            continue
+
+        existe = db.query(Relevamiento).filter(
+            Relevamiento.emaus_id == emaus.id, Relevamiento.anio == body.anio, Relevamiento.semestre == semestre,
+        ).first()
+        if existe:
+            ya_existian += 1
+            continue
+
+        db.add(Relevamiento(emaus_id=emaus.id, atl_id=atl.id, anio=body.anio, semestre=semestre, estado=EstadoEnum.borrador))
+        creados += 1
+
+    db.commit()
+    return GenerarRelevamientosResponse(creados=creados, ya_existian=ya_existian, sin_atl=sin_atl)
 
 
 @router.get("/{relevamiento_id}", response_model=RelevamientoResponse)
