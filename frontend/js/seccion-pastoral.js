@@ -1,4 +1,17 @@
-let dynEnfermedadesNinos, dynEnfermedadesEmbarazadas, dynAccionesLider, dynTematicas, dynArticulaciones;
+let catEnfermedadNinos = [], catEnfermedadEmbarazadas = [], catTematicaPi = [], catArticulacion = [];
+
+const ACCIONES_LIDER_FIJAS = [
+  { accion: 'celebracion_vida', label: 'Celebración de la vida' },
+  { accion: 'visita_domiciliaria', label: 'Visita domiciliaria' },
+  { accion: 'reunion_evaluacion', label: 'Reunión de evaluación y reflexión' },
+];
+
+function selectEnfermedad(idx, catalogo, valorSeleccionado) {
+  const opciones = catalogo.map(c => `<option value="${c.valor}" ${c.valor === valorSeleccionado ? 'selected' : ''}>${c.valor}</option>`).join('');
+  return `<select class="form-select form-select-sm" id="pp-enf-${idx}">
+    <option value="">— sin seleccionar —</option>${opciones}
+  </select>`;
+}
 
 function renderShellPastoral() {
   document.getElementById('seccion-pastoral').innerHTML = `
@@ -8,8 +21,8 @@ function renderShellPastoral() {
         <div class="col-md-3"><label class="form-label small">Comunidades sin pastoral activa</label><input type="number" class="form-control" id="pp-comunidades-sin-pastoral"></div>
         <div class="col-md-3"><label class="form-label small">Capacitadoras</label><input type="number" class="form-control" id="pp-capacitadoras"></div>
         <div class="col-md-3"><label class="form-label small">Líderes</label><input type="number" class="form-control" id="pp-lideres"></div>
-        <div class="col-md-4">
-          <div class="form-check mt-4">
+        <div class="col-md-6">
+          <div class="form-check mt-2">
             <input class="form-check-input" type="checkbox" id="pp-presento-metodologia">
             <label class="form-check-label small" for="pp-presento-metodologia">Presentaron la metodología a otras comunidades</label>
           </div>
@@ -29,49 +42,115 @@ function renderShellPastoral() {
 
       <div class="subseccion-titulo">Alfabetización</div>
       <div class="row g-3">
-        <div class="col-md-3">
-          <div class="form-check"><input class="form-check-input" type="checkbox" id="pp-lideres-todas-alfabetizadas"><label class="form-check-label small">Todas las líderes alfabetizadas</label></div>
-          <label class="form-label small mt-1">Líderes no alfabetizadas (cant.)</label><input type="number" class="form-control" id="pp-lideres-no-alfabetizadas-cantidad">
-          <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="pp-lideres-en-alfabetizacion"><label class="form-check-label small">En proceso de alfabetización</label></div>
+        <div class="col-md-6">
+          <div class="form-check"><input class="form-check-input" type="checkbox" id="pp-lideres-todas-alfabetizadas"><label class="form-check-label small">¿Nuestras líderes saben leer y escribir? (todas)</label></div>
+          <label class="form-label small mt-1">Si no todas, cantidad que no</label><input type="number" class="form-control" id="pp-lideres-no-alfabetizadas-cantidad" style="max-width:200px">
+          <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="pp-lideres-en-alfabetizacion"><label class="form-check-label small">Alguna participa de una propuesta de alfabetización</label></div>
         </div>
-        <div class="col-md-3">
-          <div class="form-check"><input class="form-check-input" type="checkbox" id="pp-madres-todas-alfabetizadas"><label class="form-check-label small">Todas las madres alfabetizadas</label></div>
-          <label class="form-label small mt-1">Madres no alfabetizadas (cant.)</label><input type="number" class="form-control" id="pp-madres-no-alfabetizadas-cantidad">
-          <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="pp-madres-en-alfabetizacion"><label class="form-check-label small">En proceso de alfabetización</label></div>
+        <div class="col-md-6">
+          <div class="form-check"><input class="form-check-input" type="checkbox" id="pp-madres-todas-alfabetizadas"><label class="form-check-label small">¿Están todas las madres alfabetizadas?</label></div>
+          <label class="form-label small mt-1">Si no todas, cantidad que no</label><input type="number" class="form-control" id="pp-madres-no-alfabetizadas-cantidad" style="max-width:200px">
+          <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="pp-madres-en-alfabetizacion"><label class="form-check-label small">Alguna participa de una propuesta de alfabetización</label></div>
         </div>
       </div>
 
-      <div class="subseccion-titulo">Enfermedades más frecuentes en niños/as <button type="button" class="btn btn-sm btn-outline-primary btn-add-row" id="btn-add-enf-ninos"><i class="bi bi-plus"></i></button></div>
-      <div id="dyn-enfermedades-ninos"></div>
+      <div class="subseccion-titulo">¿Cuáles son las 3 enfermedades más recurrentes en niños/as acompañados?</div>
+      <div id="enf-ninos-slots" class="row g-2"></div>
 
-      <div class="subseccion-titulo">Enfermedades más frecuentes en embarazadas <button type="button" class="btn btn-sm btn-outline-primary btn-add-row" id="btn-add-enf-embarazadas"><i class="bi bi-plus"></i></button></div>
-      <div id="dyn-enfermedades-embarazadas"></div>
+      <div class="subseccion-titulo">¿Cuáles son las 3 enfermedades más recurrentes en embarazadas acompañadas?</div>
+      <div id="enf-embarazadas-slots" class="row g-2"></div>
 
-      <div class="subseccion-titulo">Acciones de líderes en el semestre</div>
+      <div class="subseccion-titulo">Las líderes, ¿están realizando las siguientes acciones?</div>
       <div id="dyn-acciones-lider"></div>
 
-      <div class="subseccion-titulo">Temáticas abordadas <button type="button" class="btn btn-sm btn-outline-primary btn-add-row" id="btn-add-tematica"><i class="bi bi-plus"></i></button></div>
-      <div id="dyn-tematicas"></div>
+      <div class="subseccion-titulo">Temáticas abordadas desde julio a diciembre del semestre</div>
+      <div id="lista-tematicas"></div>
 
-      <div class="subseccion-titulo">Articulaciones con organizaciones/instituciones <button type="button" class="btn btn-sm btn-outline-primary btn-add-row" id="btn-add-articulacion"><i class="bi bi-plus"></i></button></div>
-      <div id="dyn-articulaciones"></div>
+      <div class="subseccion-titulo">¿Trabajan de manera articulada con alguna de las siguientes organizaciones e instituciones?</div>
+      <div id="lista-articulaciones"></div>
 
       <button class="btn btn-primary mt-3 btn-guardar" id="btn-guardar-pastoral"><i class="bi bi-save"></i> Guardar Pastoral PI</button>
       <span id="pastoral-guardado-msg" class="text-success small ms-2"></span>
     </div>`;
 
-  document.getElementById('btn-add-enf-ninos').addEventListener('click', () => dynEnfermedadesNinos.addRow());
-  document.getElementById('btn-add-enf-embarazadas').addEventListener('click', () => dynEnfermedadesEmbarazadas.addRow());
-  document.getElementById('btn-add-tematica').addEventListener('click', () => dynTematicas.addRow());
-  document.getElementById('btn-add-articulacion').addEventListener('click', () => dynArticulaciones.addRow());
   document.getElementById('btn-guardar-pastoral').addEventListener('click', guardarPastoral);
 }
 
-const ACCIONES_LIDER_FIJAS = [
-  { accion: 'celebracion_vida', label: 'Celebración de vida' },
-  { accion: 'visita_domiciliaria', label: 'Visita domiciliaria' },
-  { accion: 'reunion_evaluacion', label: 'Reunión de evaluación' },
-];
+function renderEnfermedadSlots(containerId, catalogo, seleccionadas) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const actual = seleccionadas[i] || {};
+    const esOtra = actual.enfermedad && !catalogo.find(c => c.valor === actual.enfermedad && c.valor.toLowerCase() !== 'otra');
+    const div = document.createElement('div');
+    div.className = 'col-md-4';
+    div.innerHTML = `
+      <label class="form-label small">Enfermedad ${i + 1}</label>
+      ${selectEnfermedad(i, catalogo, actual.enfermedad)}
+      <input class="form-control form-control-sm mt-1" id="pp-enf-${containerId}-otra-${i}" placeholder="Detalle si elegiste 'Otra'" value="${actual.enfermedad_otra ?? ''}">`;
+    container.appendChild(div);
+    // corregimos el id del select para que sea único por containerId
+    div.querySelector('select').id = `pp-enf-${containerId}-${i}`;
+  }
+}
+
+function leerEnfermedadSlots(containerId) {
+  const resultado = [];
+  for (let i = 0; i < 3; i++) {
+    const select = document.getElementById(`pp-enf-${containerId}-${i}`);
+    const otra = document.getElementById(`pp-enf-${containerId}-otra-${i}`);
+    if (select && select.value) {
+      resultado.push({ enfermedad: select.value, enfermedad_otra: otra.value || null, orden: i + 1 });
+    }
+  }
+  return resultado;
+}
+
+function renderListaTematicas(seleccionadas) {
+  const container = document.getElementById('lista-tematicas');
+  container.innerHTML = catTematicaPi.map((c, i) => {
+    const actual = seleccionadas.find(t => t.tematica === c.valor) || {};
+    const esOtras = c.valor.toLowerCase().startsWith('otra');
+    return `
+      <div class="row g-2 align-items-center mb-1 fila-tematica" data-valor="${c.valor}">
+        <div class="col-md-5"><div class="form-check"><input class="form-check-input chk-tematica" type="checkbox" ${actual.tematica ? 'checked' : ''}><label class="form-check-label small">${c.valor}</label></div></div>
+        <div class="col-md-3"><input type="number" class="form-control form-control-sm input-cantidad" placeholder="Cant. comunidades" value="${actual.comunidades_cantidad ?? ''}"></div>
+        ${esOtras ? `<div class="col-md-4"><input class="form-control form-control-sm input-otra" placeholder="Detalle" value="${actual.tematica_otra ?? ''}"></div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function leerListaTematicas() {
+  return Array.from(document.querySelectorAll('#lista-tematicas .fila-tematica'))
+    .filter(fila => fila.querySelector('.chk-tematica').checked)
+    .map(fila => ({
+      tematica: fila.dataset.valor,
+      comunidades_cantidad: fila.querySelector('.input-cantidad').value ? parseInt(fila.querySelector('.input-cantidad').value) : null,
+      tematica_otra: fila.querySelector('.input-otra')?.value || null,
+    }));
+}
+
+function renderListaArticulaciones(seleccionadas) {
+  const container = document.getElementById('lista-articulaciones');
+  container.innerHTML = catArticulacion.map(c => {
+    const actual = seleccionadas.find(a => a.organizacion === c.valor) || {};
+    const esOtro = c.valor.toLowerCase().startsWith('otro');
+    return `
+      <div class="row g-2 align-items-center mb-1 fila-articulacion" data-valor="${c.valor}">
+        <div class="col-md-5"><div class="form-check"><input class="form-check-input chk-articulacion" type="checkbox" ${actual.organizacion ? 'checked' : ''}><label class="form-check-label small">${c.valor}</label></div></div>
+        ${esOtro ? `<div class="col-md-4"><input class="form-control form-control-sm input-otra" placeholder="Detalle" value="${actual.organizacion_otra ?? ''}"></div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function leerListaArticulaciones() {
+  return Array.from(document.querySelectorAll('#lista-articulaciones .fila-articulacion'))
+    .filter(fila => fila.querySelector('.chk-articulacion').checked)
+    .map(fila => ({
+      organizacion: fila.dataset.valor,
+      organizacion_otra: fila.querySelector('.input-otra')?.value || null,
+    }));
+}
 
 function renderAccionesLider(acciones) {
   const container = document.getElementById('dyn-acciones-lider');
@@ -101,7 +180,18 @@ function getAccionesLiderValues() {
 
 async function cargarSeccionPastoral(relevamientoId) {
   renderShellPastoral();
-  const data = await api.get(`/relevamientos/${relevamientoId}/pastoral-pi`) || {};
+  const [data, enfNinos, enfEmb, tematicas, articulaciones] = await Promise.all([
+    api.get(`/relevamientos/${relevamientoId}/pastoral-pi`),
+    api.get('/catalogos/enfermedad_ninos'),
+    api.get('/catalogos/enfermedad_embarazadas'),
+    api.get('/catalogos/tematica_pi'),
+    api.get('/catalogos/articulacion'),
+  ]);
+  catEnfermedadNinos = enfNinos;
+  catEnfermedadEmbarazadas = enfEmb;
+  catTematicaPi = tematicas;
+  catArticulacion = articulaciones;
+  const pastoral = data || {};
 
   const campos = [
     'anios_desarrollo', 'comunidades_sin_pastoral', 'capacitadoras', 'lideres',
@@ -111,40 +201,28 @@ async function cargarSeccionPastoral(relevamientoId) {
   ];
   campos.forEach(c => {
     const el = document.getElementById(`pp-${c.replace(/_/g, '-')}`);
-    if (el) el.value = data[c] ?? '';
+    if (el) el.value = pastoral[c] ?? '';
   });
 
   ['presento_metodologia', 'lideres_todas_alfabetizadas', 'lideres_en_alfabetizacion', 'madres_todas_alfabetizadas', 'madres_en_alfabetizacion'].forEach(c => {
     const el = document.getElementById(`pp-${c.replace(/_/g, '-')}`);
-    if (el) el.checked = !!data[c];
+    if (el) el.checked = !!pastoral[c];
   });
 
-  dynEnfermedadesNinos = dynList('dyn-enfermedades-ninos', [
-    { key: 'enfermedad', label: 'Enfermedad' }, { key: 'enfermedad_otra', label: 'Detalle (si es "Otra")' }, { key: 'orden', label: 'Orden', type: 'number' },
-  ], data.enfermedades_ninos || []);
-
-  dynEnfermedadesEmbarazadas = dynList('dyn-enfermedades-embarazadas', [
-    { key: 'enfermedad', label: 'Enfermedad' }, { key: 'enfermedad_otra', label: 'Detalle (si es "Otra")' }, { key: 'orden', label: 'Orden', type: 'number' },
-  ], data.enfermedades_embarazadas || []);
-
-  renderAccionesLider(data.acciones_lider || []);
-
-  dynTematicas = dynList('dyn-tematicas', [
-    { key: 'tematica', label: 'Temática' }, { key: 'tematica_otra', label: 'Detalle (si es "Otra")' }, { key: 'comunidades_cantidad', label: 'Cant. comunidades', type: 'number' },
-  ], data.tematicas || []);
-
-  dynArticulaciones = dynList('dyn-articulaciones', [
-    { key: 'organizacion', label: 'Organización' }, { key: 'organizacion_otra', label: 'Detalle (si es "Otra")' },
-  ], data.articulaciones || []);
+  renderEnfermedadSlots('enf-ninos-slots', catEnfermedadNinos, pastoral.enfermedades_ninos || []);
+  renderEnfermedadSlots('enf-embarazadas-slots', catEnfermedadEmbarazadas, pastoral.enfermedades_embarazadas || []);
+  renderAccionesLider(pastoral.acciones_lider || []);
+  renderListaTematicas(pastoral.tematicas || []);
+  renderListaArticulaciones(pastoral.articulaciones || []);
 }
 
 async function guardarPastoral() {
   const payload = {
-    enfermedades_ninos: dynEnfermedadesNinos.getValues(),
-    enfermedades_embarazadas: dynEnfermedadesEmbarazadas.getValues(),
+    enfermedades_ninos: leerEnfermedadSlots('enf-ninos-slots'),
+    enfermedades_embarazadas: leerEnfermedadSlots('enf-embarazadas-slots'),
     acciones_lider: getAccionesLiderValues(),
-    tematicas: dynTematicas.getValues(),
-    articulaciones: dynArticulaciones.getValues(),
+    tematicas: leerListaTematicas(),
+    articulaciones: leerListaArticulaciones(),
   };
 
   const numCampos = [

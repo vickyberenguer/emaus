@@ -1,4 +1,50 @@
 /**
+ * Checklist fija: lista predefinida de opciones (igual a la planilla de Sheets),
+ * cada una con un checkbox y, opcionalmente, un campo extra (cantidad, detalle, ranking).
+ *
+ * items: [{value, label}]
+ * opts.extraField: {key, label, type: 'number'|'text'} — se muestra junto al check si está tildado
+ * opts.maxSelected: número máximo de opciones que se pueden tildar (valida y avisa, no bloquea)
+ * opts.otroKeys: valores (en minúsculas, sin tilde) que disparan un input de texto "Detalle" (ej: 'otro', 'otra', 'otras')
+ */
+function checklist(containerId, items, seleccionados = [], opts = {}) {
+  const container = document.getElementById(containerId);
+  const esOtro = (label) => /^otr[ao]s?\b/i.test(label.trim());
+
+  container.innerHTML = `
+    ${opts.maxSelected ? `<div class="small text-muted mb-1">Seleccioná hasta ${opts.maxSelected} opciones.</div>` : ''}
+    ${items.map(item => {
+      const actual = seleccionados.find(s => s.valor === item.value) || null;
+      const otro = esOtro(item.label);
+      return `
+        <div class="row g-2 align-items-center mb-1 fila-checklist" data-valor="${item.value}">
+          <div class="col-md-5">
+            <div class="form-check">
+              <input class="form-check-input chk-item" type="checkbox" ${actual ? 'checked' : ''}>
+              <label class="form-check-label small">${item.label}</label>
+            </div>
+          </div>
+          ${opts.extraField ? `<div class="col-md-3"><input type="${opts.extraField.type === 'number' ? 'number' : 'text'}" class="form-control form-control-sm input-extra" placeholder="${opts.extraField.label}" value="${actual?.extra ?? ''}"></div>` : ''}
+          ${otro ? `<div class="col-md-4"><input class="form-control form-control-sm input-otro" placeholder="Detalle" value="${actual?.otro ?? ''}"></div>` : ''}
+        </div>`;
+    }).join('')}`;
+
+  return {
+    getValues() {
+      const seleccionadas = Array.from(container.querySelectorAll('.fila-checklist')).filter(f => f.querySelector('.chk-item').checked);
+      if (opts.maxSelected && seleccionadas.length > opts.maxSelected) {
+        alert(`Seleccionaste más de ${opts.maxSelected} opciones en una lista que tiene ese límite. Revisá esa sección antes de guardar.`);
+      }
+      return seleccionadas.map(f => ({
+        valor: f.dataset.valor,
+        extra: f.querySelector('.input-extra')?.value || null,
+        otro: f.querySelector('.input-otro')?.value || null,
+      }));
+    },
+  };
+}
+
+/**
  * Editor genérico de listas dinámicas (subtablas) para formularios.
  * columns: [{key, label, type: 'text'|'number'|'checkbox'|'select', options?}]
  */

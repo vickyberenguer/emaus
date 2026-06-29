@@ -1,8 +1,62 @@
 let espaciosCache = [];
-let dynEEAmbientes, dynEEServicios, dynEEEquiposCocina, dynEEEquiposInformaticos;
-let dynEENecesidades, dynEEPreocupaciones, dynEEAcciones, dynEEZonas;
-let dynEENivelesSuperiores, dynEEBtuMotivos, dynEEApoyoPrimContenidos, dynEEApoyoSecContenidos;
-let dynEEItinEspacios, dynEEItinActividades, dynEEItinRoles, dynEEDigitalTalleres, dynEEGrupoMotorRoles;
+let catNecesidadInfra = [], catPreocupacionJoven = [];
+
+// --- Listas fijas tomadas literalmente de la planilla de Sheets ---
+
+const AMBIENTES_FIJOS = ['Cocina', 'Salón comedor', 'Despensa / almacén / depósito', 'Baño', 'Espacio de recreación'];
+const SERVICIOS_FIJOS = [
+  'Servicio de cloacas', 'Energía eléctrica por red domiciliaria', 'El tratamiento de residuos',
+  'Señal de telefonía móvil', 'Internet por cable, fibra óptica, satelital', 'Tipo de combustible que utiliza la cocina',
+];
+const EQUIPO_COCINA_FIJO = ['Cocina industrial', 'Cocina familiar', 'Mechero', 'Heladera industrial', 'Heladera familiar', 'Freezer industrial', 'Freezer familiar'];
+const EQUIPO_INFORMATICO_FIJO = ['Monitor de tubo', 'Monitor plano', 'PC All in one', 'PC de escritorio', 'Notebook / laptop', 'Tablet', 'Impresora', 'Impresora multifunción (con escáner)'];
+const ZONA_FIJA = ['Urbana', 'Periférica', 'Rural', 'Inundable', 'Con poco o sin acceso al transporte público'];
+
+const ACCIONES_POR_EJE = [
+  ['Primera infancia', 'Pastoral PI'], ['Primera infancia', 'Capacitaciones, talleres y encuentros'],
+  ['Primera infancia', 'Espacios de Primera Infancia'], ['Primera infancia', 'Estimulación temprana'],
+  ['Apoyo a las trayectorias educativas', 'Becas Familiares'], ['Apoyo a las trayectorias educativas', 'Apoyo escolar'],
+  ['Apoyo a las trayectorias educativas', 'Becas Terciarias y universitarias'], ['Apoyo a las trayectorias educativas', 'Alfabetización inicial'],
+  ['Apoyo a las trayectorias educativas', 'Propuesta DALE'], ['Apoyo a las trayectorias educativas', 'Actividades de lectoescritura y oralidad'],
+  ['Apoyo a las trayectorias educativas', 'Rincón de lectura'], ['Apoyo a las trayectorias educativas', 'Alfabetización de adultos'],
+  ['Apoyo a las trayectorias educativas', 'Promotores socio-educativos'],
+  ['Integración comunitaria', 'Itinerancia'], ['Integración comunitaria', 'Mochileros'], ['Integración comunitaria', 'Ludoteca'],
+  ['Integración comunitaria', 'Actividades culturales y recreativas'], ['Integración comunitaria', 'Desarrollo habilidades duras y blandas'],
+  ['Integración comunitaria', 'Habilidades para el mundo del trabajo'], ['Integración comunitaria', 'Talleres para mujeres'],
+  ['Integración comunitaria', 'Propuestas para adolescentes'], ['Integración comunitaria', 'Potenciar trabajo'], ['Integración comunitaria', 'Talleres de oficio'],
+  ['Nuevas tecnologías', 'Capacitaciones y talleres'], ['Nuevas tecnologías', 'Equipamiento informático e internet'],
+  ['Nuevas tecnologías', 'Trámites del estado (ANSES, AUH, CUD, etc)'], ['Nuevas tecnologías', 'Acceso digital comunitario'],
+  ['Salud integral', 'Deportes'], ['Salud integral', 'Alimentación saludable'], ['Salud integral', 'Meriendas'],
+  ['Salud integral', 'Controles médicos'], ['Salud integral', 'Capacitaciones, talleres y encuentros'], ['Salud integral', 'Huertas comunitarias'],
+];
+
+const ITINERANCIA_ESPACIOS_FIJO = ['Club', 'Plaza/espacio público', 'Terreno baldío', 'Paraje', 'Otro:'];
+const ITINERANCIA_ACTIVIDADES_FIJO = [
+  'Estimulación adecuada y plaza blanda', 'Actividades de la Pastoral de Primera Infancia', 'Alfabetización', 'Merienda comunitaria',
+  'Recreación (deportes, teatro, títeres, música, baile)', 'Talleres de artesanías, arte, oficios', 'Charlas de prevención y atención de la salud',
+  'Festividades y celebraciones locales', 'Reuniones para trabajar sobre problemáticas barriales',
+];
+const BTU_ABANDONO_FIJO = [
+  'Incompatibilidad de la cursada con horarios laborales', 'Dificultad para costear el transporte',
+  'Cambio de domicilio (mudanza)', 'Falta de tiempo por tareas de cuidado familiar',
+  'Problemas de accesibilidad del transporte local', 'Falta de acceso al boleto estudiantil', 'Otro:',
+];
+const CONTENIDOS_ESCOLARES_FIJO = ['Lengua', 'Matemáticas', 'Ciencias Naturales', 'Ciencias Sociales', 'Inglés', 'Otro:'];
+const DIGITAL_TALLERES_FIJO = [
+  'Herramientas digitales (navegador, correo, drive, etc.)', 'Herramientas de Microsoft Office (Word, Excel, PowerPoint)',
+  'Redes sociales (Facebook, Instagram, TikTok, WhatsApp, YouTube)', 'Seguridad informática (estafas, contraseñas seguras)',
+];
+
+function toItems(strings) { return strings.map(s => ({ value: s, label: s })); }
+function toItemsCatalogo(cat) { return cat.map(c => ({ value: c.valor, label: c.valor })); }
+
+function valorOtro(seleccion, esOtroPrefijo = 'otr') {
+  // si el ítem es "Otro:" usa el texto tipeado; si no, el label tal cual
+  if (seleccion.valor.toLowerCase().startsWith(esOtroPrefijo)) {
+    return seleccion.otro || seleccion.valor;
+  }
+  return seleccion.valor;
+}
 
 async function cargarSeccionEspacios(relevamientoId) {
   document.getElementById('seccion-espacios').innerHTML = `
@@ -16,6 +70,14 @@ async function cargarSeccionEspacios(relevamientoId) {
     <div id="lista-espacios"></div>`;
 
   document.getElementById('btn-add-ee').addEventListener('click', () => crearEspacioEducativo(relevamientoId));
+
+  if (catNecesidadInfra.length === 0) {
+    [catNecesidadInfra, catPreocupacionJoven] = await Promise.all([
+      api.get('/catalogos/necesidad_infra'),
+      api.get('/catalogos/preocupacion_joven'),
+    ]);
+  }
+
   await refrescarEspacios(relevamientoId);
 }
 
@@ -32,7 +94,7 @@ async function refrescarEspacios(relevamientoId) {
         </div>
       </div>
       <div id="ee-panel-${ee.id}" class="mt-3 hidden"></div>
-    </div>`).join('') || '<p class="text-muted small">Todavía no hay espacios educativos para este Emaús.</p>';
+    </div>`).join('') || '<p class="text-muted small">Todavía no hay espacios educativos para este Emaús. El admin debería haberlos pre-cargado — si falta alguno, avisale.</p>';
 }
 
 async function crearEspacioEducativo(relevamientoId) {
@@ -47,7 +109,7 @@ async function crearEspacioEducativo(relevamientoId) {
   }
 }
 
-let panelAbierto = null; // {eeId, modo}
+let panelAbierto = null;
 
 async function toggleEspacio(eeId, modo) {
   const panel = document.getElementById(`ee-panel-${eeId}`);
@@ -57,7 +119,6 @@ async function toggleEspacio(eeId, modo) {
     panelAbierto = null;
     return;
   }
-  // cerrar cualquier otro panel abierto
   document.querySelectorAll('[id^=ee-panel-]').forEach(p => { p.classList.add('hidden'); p.innerHTML = ''; });
 
   panelAbierto = { eeId, modo };
@@ -72,52 +133,55 @@ async function toggleEspacio(eeId, modo) {
 // Datos de base
 // ============================================================
 
+let chkAmbientes, chkServicios, chkEquipoCocina, chkEquipoInformatico;
+
+function ambientesASeleccion(ambientes) {
+  return (ambientes || []).filter(a => a.tiene).map(a => ({ valor: a.ambiente, extra: a.cantidad }));
+}
+function serviciosASeleccion(servicios) {
+  return (servicios || []).map(s => ({ valor: s.servicio, extra: s.valor }));
+}
+function equipoCocinaASeleccion(equipos) {
+  return (equipos || []).filter(e => e.tiene).map(e => ({ valor: e.equipo }));
+}
+function equipoInformaticoASeleccion(equipos) {
+  return (equipos || []).map(e => ({ valor: e.equipo, extra: e.cantidad }));
+}
+
 function renderPanelBase(panel, ee) {
   panel.innerHTML = `
     <div class="row g-3">
       <div class="col-md-4"><label class="form-label small">Nombre</label><input class="form-control" id="eeb-nombre" value="${ee.nombre ?? ''}"></div>
       <div class="col-md-4"><label class="form-label small">Dirección</label><input class="form-control" id="eeb-direccion" value="${ee.direccion ?? ''}"></div>
-      <div class="col-md-4"><label class="form-label small">Geolocalización</label><input class="form-control" id="eeb-geolocalizacion" value="${ee.geolocalizacion ?? ''}"></div>
+      <div class="col-md-4"><label class="form-label small">Geolocalización (link de Google Maps)</label><input class="form-control" id="eeb-geolocalizacion" value="${ee.geolocalizacion ?? ''}"></div>
       <div class="col-md-3"><label class="form-label small">Titularidad</label><input class="form-control" id="eeb-titularidad" value="${ee.titularidad ?? ''}"></div>
       <div class="col-md-3"><label class="form-label small">Nombre del titular</label><input class="form-control" id="eeb-nombre-titular" value="${ee.nombre_titular ?? ''}"></div>
-      <div class="col-md-3"><label class="form-label small">Material de construcción</label><input class="form-control" id="eeb-construccion-material" value="${ee.construccion_material ?? ''}"></div>
-      <div class="col-md-3"><label class="form-label small">Acceso principal</label><input class="form-control" id="eeb-acceso-principal" value="${ee.acceso_principal ?? ''}"></div>
+      <div class="col-md-3"><label class="form-label small">Construido de</label><input class="form-control" id="eeb-construccion-material" value="${ee.construccion_material ?? ''}"></div>
+      <div class="col-md-3"><label class="form-label small">Acceso principal por</label><input class="form-control" id="eeb-acceso-principal" value="${ee.acceso_principal ?? ''}"></div>
       <div class="col-md-2"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="eeb-renabap" ${ee.renabap ? 'checked' : ''}><label class="form-check-label small">RENABAP</label></div></div>
       <div class="col-md-2"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="eeb-rampa-acceso" ${ee.rampa_acceso ? 'checked' : ''}><label class="form-check-label small">Rampa de acceso</label></div></div>
     </div>
 
-    <div class="subseccion-titulo">Ambientes disponibles <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-ambiente"><i class="bi bi-plus"></i></button></div>
-    <div id="dyn-ambientes"></div>
+    <div class="subseccion-titulo">¿Con cuál de los siguientes ambientes cuenta el espacio?</div>
+    <div id="chk-ambientes"></div>
 
-    <div class="subseccion-titulo">Servicios básicos <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-servicio"><i class="bi bi-plus"></i></button></div>
-    <div id="dyn-servicios"></div>
+    <div class="subseccion-titulo">El espacio cuenta con</div>
+    <div id="chk-servicios"></div>
 
-    <div class="subseccion-titulo">Equipamiento de cocina <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-equipo-cocina"><i class="bi bi-plus"></i></button></div>
-    <div id="dyn-equipos-cocina"></div>
+    <div class="subseccion-titulo">¿Con qué equipamiento de cocina cuenta?</div>
+    <div id="chk-equipo-cocina"></div>
 
-    <div class="subseccion-titulo">Equipamiento informático <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-equipo-info"><i class="bi bi-plus"></i></button></div>
-    <div id="dyn-equipos-informaticos"></div>
+    <div class="subseccion-titulo">¿Con cuántas unidades de este equipamiento informático cuenta?</div>
+    <div id="chk-equipo-informatico"></div>
 
     <button class="btn btn-primary mt-3" id="btn-guardar-ee-base"><i class="bi bi-save"></i> Guardar datos de base</button>
     <span id="ee-base-guardado-msg" class="text-success small ms-2"></span>`;
 
-  dynEEAmbientes = dynList('dyn-ambientes', [
-    { key: 'ambiente', label: 'Ambiente' }, { key: 'tiene', label: 'Tiene', type: 'checkbox' }, { key: 'cantidad', label: 'Cantidad', type: 'number' },
-  ], ee.ambientes || []);
-  dynEEServicios = dynList('dyn-servicios', [
-    { key: 'servicio', label: 'Servicio' }, { key: 'valor', label: 'Valor' },
-  ], ee.servicios || []);
-  dynEEEquiposCocina = dynList('dyn-equipos-cocina', [
-    { key: 'equipo', label: 'Equipo' }, { key: 'tiene', label: 'Tiene', type: 'checkbox' },
-  ], ee.equipos_cocina || []);
-  dynEEEquiposInformaticos = dynList('dyn-equipos-informaticos', [
-    { key: 'equipo', label: 'Equipo' }, { key: 'cantidad', label: 'Cantidad', type: 'number' },
-  ], ee.equipos_informaticos || []);
+  chkAmbientes = checklist('chk-ambientes', toItems(AMBIENTES_FIJOS), ambientesASeleccion(ee.ambientes), { extraField: { key: 'cantidad', label: 'Cantidad (si aplica)', type: 'number' } });
+  chkServicios = checklist('chk-servicios', toItems(SERVICIOS_FIJOS), serviciosASeleccion(ee.servicios), { extraField: { key: 'valor', label: 'Detalle / Sí-No', type: 'text' } });
+  chkEquipoCocina = checklist('chk-equipo-cocina', toItems(EQUIPO_COCINA_FIJO), equipoCocinaASeleccion(ee.equipos_cocina));
+  chkEquipoInformatico = checklist('chk-equipo-informatico', toItems(EQUIPO_INFORMATICO_FIJO), equipoInformaticoASeleccion(ee.equipos_informaticos), { extraField: { key: 'cantidad', label: 'Cantidad', type: 'number' } });
 
-  document.getElementById('btn-add-ambiente').addEventListener('click', () => dynEEAmbientes.addRow());
-  document.getElementById('btn-add-servicio').addEventListener('click', () => dynEEServicios.addRow());
-  document.getElementById('btn-add-equipo-cocina').addEventListener('click', () => dynEEEquiposCocina.addRow());
-  document.getElementById('btn-add-equipo-info').addEventListener('click', () => dynEEEquiposInformaticos.addRow());
   document.getElementById('btn-guardar-ee-base').addEventListener('click', () => guardarEspacioBase(ee.id));
 }
 
@@ -133,15 +197,14 @@ async function guardarEspacioBase(eeId) {
     renabap: document.getElementById('eeb-renabap').checked,
     rampa_acceso: document.getElementById('eeb-rampa-acceso').checked,
     activo: true,
-    ambientes: dynEEAmbientes.getValues(),
-    servicios: dynEEServicios.getValues(),
-    equipos_cocina: dynEEEquiposCocina.getValues(),
-    equipos_informaticos: dynEEEquiposInformaticos.getValues(),
+    ambientes: chkAmbientes.getValues().map(s => ({ ambiente: s.valor, tiene: true, cantidad: s.extra ? parseInt(s.extra) : null })),
+    servicios: chkServicios.getValues().map(s => ({ servicio: s.valor, valor: s.extra })),
+    equipos_cocina: chkEquipoCocina.getValues().map(s => ({ equipo: s.valor, tiene: true })),
+    equipos_informaticos: chkEquipoInformatico.getValues().map(s => ({ equipo: s.valor, cantidad: s.extra ? parseInt(s.extra) : null })),
   };
   try {
     await api.put(`/relevamientos/${relevamientoActual.id}/espacios-educativos/${eeId}`, payload);
     await refrescarEspacios(relevamientoActual.id);
-    document.getElementById(`ee-panel-${eeId}`)?.classList.remove('hidden');
     const msg = document.getElementById('ee-base-guardado-msg');
     if (msg) { msg.textContent = 'Guardado ✓'; setTimeout(() => msg.textContent = '', 2000); }
   } catch (err) {
@@ -153,9 +216,17 @@ async function guardarEspacioBase(eeId) {
 // Datos semestrales
 // ============================================================
 
+let chkAcciones = {}, chkZona, chkItinEspacios, chkItinActividades, chkBtuMotivos;
+let chkApoyoPrimContenidos, chkApoyoSecContenidos, chkDigitalTalleres, chkNecesidades;
+let preocupacionesRanking = {};
+
 function renderPanelSemestral(panel, ee) {
+  const accionesPorEjeAgrupadas = {};
+  ACCIONES_POR_EJE.forEach(([eje, accion]) => { (accionesPorEjeAgrupadas[eje] ||= []).push(accion); });
+  const accionesActuales = ee.acciones || [];
+
   panel.innerHTML = `
-    <div class="subseccion-titulo">Asistentes por rango etario</div>
+    <div class="subseccion-titulo">¿Cuántas personas asisten al espacio entre las siguientes edades?</div>
     <div class="row g-2">
       <div class="col"><label class="form-label small">0-6</label><input type="number" class="form-control" id="ees-asistentes-0-6" value="${ee.asistentes_0_6 ?? ''}"></div>
       <div class="col"><label class="form-label small">7-14</label><input type="number" class="form-control" id="ees-asistentes-7-14" value="${ee.asistentes_7_14 ?? ''}"></div>
@@ -165,79 +236,90 @@ function renderPanelSemestral(panel, ee) {
       <div class="col"><label class="form-label small">+50</label><input type="number" class="form-control" id="ees-asistentes-mas-50" value="${ee.asistentes_mas_50 ?? ''}"></div>
     </div>
 
-    <div class="subseccion-titulo">Acciones por eje <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-accion"><i class="bi bi-plus"></i></button></div>
-    <div id="dyn-acciones-ee"></div>
+    <div class="subseccion-titulo">Acciones que se realizan, por eje</div>
+    <div id="acciones-por-eje">
+      ${Object.entries(accionesPorEjeAgrupadas).map(([eje, acciones]) => `
+        <div class="mb-2">
+          <div class="fw-semibold small" style="color:var(--sec-navy)">${eje}</div>
+          <div id="chk-acciones-${eje.replace(/\W/g, '')}"></div>
+        </div>`).join('')}
+    </div>
 
     <div class="subseccion-titulo">Grupo motor / Adolescentes referentes</div>
     <div class="row g-2">
       <div class="col-md-2"><label class="form-label small">Grupo motor (cant.)</label><input type="number" class="form-control" id="ees-grupo-motor-cantidad" value="${ee.grupo_motor_cantidad ?? ''}"></div>
       <div class="col-md-2"><label class="form-label small">Frecuencia reunión</label><input class="form-control" id="ees-grupo-motor-frecuencia" value="${ee.grupo_motor_frecuencia ?? ''}"></div>
-      <div class="col-md-2"><label class="form-label small">Adolescentes referentes</label><input type="number" class="form-control" id="ees-adolescentes-referentes" value="${ee.adolescentes_referentes ?? ''}"></div>
-      <div class="col-md-2"><label class="form-label small">Frecuencia (adolesc.)</label><input class="form-control" id="ees-adolescentes-frecuencia" value="${ee.adolescentes_frecuencia ?? ''}"></div>
+      <div class="col-md-2"><label class="form-label small">Adolescentes referentes (cant.)</label><input type="number" class="form-control" id="ees-adolescentes-referentes" value="${ee.adolescentes_referentes ?? ''}"></div>
+      <div class="col-md-2"><label class="form-label small">Frecuencia de reunión</label><input class="form-control" id="ees-adolescentes-frecuencia" value="${ee.adolescentes_frecuencia ?? ''}"></div>
     </div>
-    <div class="subseccion-titulo">Roles del grupo motor <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-rol-motor"><i class="bi bi-plus"></i></button></div>
-    <div id="dyn-grupo-motor-roles"></div>
+    <div class="small text-muted mt-1">¿Quiénes conforman el grupo motor? Cargá rol y cantidad (hasta 4)</div>
+    <div id="slots-grupo-motor"></div>
 
     <div class="subseccion-titulo">Itinerancia</div>
     <div class="row g-2">
-      <div class="col-md-2"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="ees-itinerancia-realizo" ${ee.itinerancia_realizo ? 'checked' : ''}><label class="form-check-label small">Realizó itinerancia</label></div></div>
+      <div class="col-md-3"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="ees-itinerancia-realizo" ${ee.itinerancia_realizo ? 'checked' : ''}><label class="form-check-label small">Realizó itinerancia</label></div></div>
       <div class="col-md-3"><label class="form-label small">Frecuencia</label><input class="form-control" id="ees-itinerancia-frecuencia" value="${ee.itinerancia_frecuencia ?? ''}"></div>
     </div>
     <div class="row mt-2">
-      <div class="col-md-4">Espacios <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-itin-espacio"><i class="bi bi-plus"></i></button><div id="dyn-itin-espacios"></div></div>
-      <div class="col-md-4">Actividades <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-itin-actividad"><i class="bi bi-plus"></i></button><div id="dyn-itin-actividades"></div></div>
-      <div class="col-md-4">Roles a cargo <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-itin-rol"><i class="bi bi-plus"></i></button><div id="dyn-itin-roles"></div></div>
+      <div class="col-md-4"><div class="small fw-semibold">¿En qué tipo de espacio?</div><div id="chk-itin-espacios"></div></div>
+      <div class="col-md-4"><div class="small fw-semibold">Actividades predominantes</div><div id="chk-itin-actividades"></div></div>
+      <div class="col-md-4"><div class="small fw-semibold">Roles a cargo (hasta 4)</div><div id="slots-itin-roles"></div></div>
     </div>
 
-    <div class="subseccion-titulo">Alfabetización digital</div>
+    <div class="subseccion-titulo">Alfabetización digital y nuevas tecnologías</div>
     <div class="row g-2">
-      <div class="col-md-3"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="ees-internet-acceso" ${ee.internet_acceso ? 'checked' : ''}><label class="form-check-label small">Acceso a internet</label></div></div>
-      <div class="col-md-4"><label class="form-label small">Motivo si falta</label><input class="form-control" id="ees-internet-falta-motivo" value="${ee.internet_falta_motivo ?? ''}"></div>
-      <div class="col-md-3"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="ees-jornadas-formacion-digital" ${ee.jornadas_formacion_digital ? 'checked' : ''}><label class="form-check-label small">Jornadas de formación digital</label></div></div>
+      <div class="col-md-3"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="ees-internet-acceso" ${ee.internet_acceso ? 'checked' : ''}><label class="form-check-label small">Tiene acceso a internet</label></div></div>
+      <div class="col-md-4"><label class="form-label small">Si no tiene, ¿por qué?</label><input class="form-control" id="ees-internet-falta-motivo" value="${ee.internet_falta_motivo ?? ''}"></div>
+      <div class="col-md-4"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="ees-jornadas-formacion-digital" ${ee.jornadas_formacion_digital ? 'checked' : ''}><label class="form-check-label small">Se desarrollaron jornadas de formación digital</label></div></div>
     </div>
-    <div>Talleres digitales realizados <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-digital-taller"><i class="bi bi-plus"></i></button><div id="dyn-digital-talleres"></div></div>
+    <div class="small fw-semibold mt-2">Talleres realizados</div>
+    <div id="chk-digital-talleres"></div>
 
-    <div class="subseccion-titulo">Articulación con nivel superior</div>
+    <div class="subseccion-titulo">Articulación con instituciones de Nivel Superior</div>
     <div class="row g-2">
       <div class="col-md-3"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="ees-articula-nivel-superior" ${ee.articula_nivel_superior ? 'checked' : ''}><label class="form-check-label small">Articula</label></div></div>
-      <div class="col-md-3"><label class="form-label small">Cantidad</label><input type="number" class="form-control" id="ees-nivel-superior-cantidad" value="${ee.nivel_superior_cantidad ?? ''}"></div>
+      <div class="col-md-3"><label class="form-label small">¿Con cuántas instituciones?</label><input type="number" class="form-control" id="ees-nivel-superior-cantidad" value="${ee.nivel_superior_cantidad ?? ''}"></div>
     </div>
-    <div>Instituciones <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-nivel-superior"><i class="bi bi-plus"></i></button><div id="dyn-niveles-superiores"></div></div>
+    <div class="small text-muted mt-1">Detalle por institución (hasta 5)</div>
+    <div id="slots-niveles-superiores"></div>
 
-    <div class="subseccion-titulo">Becas Familiares</div>
+    <div class="subseccion-titulo">Becas Familiares (responder solo si el componente está en este espacio)</div>
     <div class="row g-2">
       <div class="col"><label class="form-label small">Apoyo escolar</label><input type="number" class="form-control" id="ees-bf-apoyo-escolar" value="${ee.bf_apoyo_escolar ?? ''}"></div>
       <div class="col"><label class="form-label small">Nivel inicial</label><input type="number" class="form-control" id="ees-bf-nivel-inicial" value="${ee.bf_nivel_inicial ?? ''}"></div>
       <div class="col"><label class="form-label small">Primaria</label><input type="number" class="form-control" id="ees-bf-primaria" value="${ee.bf_primaria ?? ''}"></div>
       <div class="col"><label class="form-label small">Secundaria</label><input type="number" class="form-control" id="ees-bf-secundaria" value="${ee.bf_secundaria ?? ''}"></div>
-      <div class="col"><label class="form-label small">Asignaciones</label><input type="number" class="form-control" id="ees-bf-asignaciones" value="${ee.bf_asignaciones ?? ''}"></div>
-      <div class="col"><label class="form-label small">Discapacidad</label><input type="number" class="form-control" id="ees-bf-discapacidad" value="${ee.bf_discapacidad ?? ''}"></div>
-      <div class="col"><label class="form-label small">CUD</label><input type="number" class="form-control" id="ees-bf-cud" value="${ee.bf_cud ?? ''}"></div>
+      <div class="col"><label class="form-label small">Con asignaciones</label><input type="number" class="form-control" id="ees-bf-asignaciones" value="${ee.bf_asignaciones ?? ''}"></div>
+      <div class="col"><label class="form-label small">Con discapacidad</label><input type="number" class="form-control" id="ees-bf-discapacidad" value="${ee.bf_discapacidad ?? ''}"></div>
+      <div class="col"><label class="form-label small">Con CUD tramitado</label><input type="number" class="form-control" id="ees-bf-cud" value="${ee.bf_cud ?? ''}"></div>
     </div>
 
-    <div class="subseccion-titulo">Becas Terciarias/Universitarias</div>
+    <div class="subseccion-titulo">Becas Terciarias/Universitarias (BTU)</div>
     <div class="row g-2">
-      <div class="col-md-2"><label class="form-label small">Regulares</label><input type="number" class="form-control" id="ees-btu-regulares" value="${ee.btu_regulares ?? ''}"></div>
+      <div class="col-md-2"><label class="form-label small">Regulares (a junio)</label><input type="number" class="form-control" id="ees-btu-regulares" value="${ee.btu_regulares ?? ''}"></div>
       <div class="col-md-2"><label class="form-label small">Egresados</label><input type="number" class="form-control" id="ees-btu-egresados" value="${ee.btu_egresados ?? ''}"></div>
-      <div class="col-md-2"><label class="form-label small">Abandonaron</label><input type="number" class="form-control" id="ees-btu-abandonaron" value="${ee.btu_abandonaron ?? ''}"></div>
-      <div class="col-md-6">Motivos de abandono <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-btu-motivo"><i class="bi bi-plus"></i></button><div id="dyn-btu-motivos"></div></div>
+      <div class="col-md-2"><label class="form-label small">Dejaron la cursada</label><input type="number" class="form-control" id="ees-btu-abandonaron" value="${ee.btu_abandonaron ?? ''}"></div>
     </div>
+    <div class="small text-muted mt-1">Motivos de abandono más frecuentes (hasta 3)</div>
+    <div id="chk-btu-motivos"></div>
 
-    <div class="subseccion-titulo">Apoyo escolar primario</div>
+    <div class="subseccion-titulo">Apoyo escolar — Nivel Primario</div>
     <div class="row g-2">
       <div class="col-md-2"><label class="form-label small">Niños/as</label><input type="number" class="form-control" id="ees-apoyo-primario-ninos" value="${ee.apoyo_primario_ninos ?? ''}"></div>
       <div class="col-md-3"><label class="form-label small">Frecuencia</label><input class="form-control" id="ees-apoyo-primario-frecuencia" value="${ee.apoyo_primario_frecuencia ?? ''}"></div>
-      <div class="col-md-3"><label class="form-label small">Contenido principal</label><input class="form-control" id="ees-apoyo-primario-contenido-principal" value="${ee.apoyo_primario_contenido_principal ?? ''}"></div>
-      <div class="col-md-4">Otros contenidos <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-apoyo-prim-contenido"><i class="bi bi-plus"></i></button><div id="dyn-apoyo-prim-contenidos"></div></div>
+      <div class="col-md-3"><label class="form-label small">Contenido más trabajado</label><input class="form-control" id="ees-apoyo-primario-contenido-principal" value="${ee.apoyo_primario_contenido_principal ?? ''}"></div>
     </div>
+    <div class="small text-muted mt-1">Contenidos que se dictan</div>
+    <div id="chk-apoyo-prim-contenidos"></div>
 
-    <div class="subseccion-titulo">Apoyo escolar secundario</div>
+    <div class="subseccion-titulo">Apoyo escolar — Nivel Secundario</div>
     <div class="row g-2">
       <div class="col-md-2"><label class="form-label small">Adolescentes</label><input type="number" class="form-control" id="ees-apoyo-secundario-adolescentes" value="${ee.apoyo_secundario_adolescentes ?? ''}"></div>
       <div class="col-md-3"><label class="form-label small">Frecuencia</label><input class="form-control" id="ees-apoyo-secundario-frecuencia" value="${ee.apoyo_secundario_frecuencia ?? ''}"></div>
-      <div class="col-md-3"><label class="form-label small">Contenido principal</label><input class="form-control" id="ees-apoyo-secundario-contenido-principal" value="${ee.apoyo_secundario_contenido_principal ?? ''}"></div>
-      <div class="col-md-4">Otros contenidos <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-apoyo-sec-contenido"><i class="bi bi-plus"></i></button><div id="dyn-apoyo-sec-contenidos"></div></div>
+      <div class="col-md-3"><label class="form-label small">Contenido más trabajado</label><input class="form-control" id="ees-apoyo-secundario-contenido-principal" value="${ee.apoyo_secundario_contenido_principal ?? ''}"></div>
     </div>
+    <div class="small text-muted mt-1">Contenidos que se dictan</div>
+    <div id="chk-apoyo-sec-contenidos"></div>
 
     <div class="subseccion-titulo">Propuesta de Alfabetización</div>
     <div class="row g-2">
@@ -258,60 +340,89 @@ function renderPanelSemestral(panel, ee) {
       <div class="col"><label class="form-label small">15-24</label><input type="number" class="form-control" id="ees-dale-15-24" value="${ee.dale_15_24 ?? ''}"></div>
       <div class="col"><label class="form-label small">25+</label><input type="number" class="form-control" id="ees-dale-25-mas" value="${ee.dale_25_mas ?? ''}"></div>
       <div class="col"><label class="form-label small">Educadores</label><input type="number" class="form-control" id="ees-dale-educadores" value="${ee.dale_educadores ?? ''}"></div>
-      <div class="col"><label class="form-label small">Frecuencia (días)</label><input type="number" class="form-control" id="ees-dale-frecuencia-dias" value="${ee.dale_frecuencia_dias ?? ''}"></div>
+      <div class="col"><label class="form-label small">Frecuencia (días/semana)</label><input type="number" class="form-control" id="ees-dale-frecuencia-dias" value="${ee.dale_frecuencia_dias ?? ''}"></div>
     </div>
 
-    <div class="subseccion-titulo">Necesidades de infraestructura (hasta 3) <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-necesidad"><i class="bi bi-plus"></i></button></div>
-    <div id="dyn-necesidades"></div>
+    <div class="subseccion-titulo">Necesidades de infraestructura prioritarias</div>
+    <div id="chk-necesidades"></div>
 
-    <div class="subseccion-titulo">Preocupaciones sobre adolescentes/jóvenes (ranking 1-8) <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-preocupacion"><i class="bi bi-plus"></i></button></div>
-    <div id="dyn-preocupaciones"></div>
+    <div class="subseccion-titulo">Preocupaciones sobre adolescentes/jóvenes — ordená del 1 (más preocupante) al 8 (menos), sin repetir números</div>
+    <div id="ranking-preocupaciones"></div>
 
-    <div class="subseccion-titulo">Zona <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-zona"><i class="bi bi-plus"></i></button></div>
-    <div id="dyn-zonas"></div>
+    <div class="subseccion-titulo">Zona donde está ubicado el espacio</div>
+    <div id="chk-zona"></div>
 
     <button class="btn btn-primary mt-3" id="btn-guardar-ee-semestral"><i class="bi bi-save"></i> Guardar datos semestrales</button>
     <span id="ee-semestral-guardado-msg" class="text-success small ms-2"></span>`;
 
-  dynEEAcciones = dynList('dyn-acciones-ee', [
-    { key: 'eje', label: 'Eje' }, { key: 'accion', label: 'Acción' }, { key: 'tiene', label: 'Tiene', type: 'checkbox' },
-  ], ee.acciones || []);
-  dynEEGrupoMotorRoles = dynList('dyn-grupo-motor-roles', [
-    { key: 'rol', label: 'Rol' }, { key: 'rol_otro', label: 'Detalle' }, { key: 'cantidad', label: 'Cantidad', type: 'number' },
-  ], ee.grupo_motor_roles || []);
-  dynEEItinEspacios = dynList('dyn-itin-espacios', [
-    { key: 'espacio', label: 'Espacio' }, { key: 'espacio_otro', label: 'Detalle' },
-  ], ee.itinerancia_espacios || []);
-  dynEEItinActividades = dynList('dyn-itin-actividades', [{ key: 'actividad', label: 'Actividad' }], ee.itinerancia_actividades || []);
-  dynEEItinRoles = dynList('dyn-itin-roles', [
-    { key: 'rol', label: 'Rol' }, { key: 'rol_otro', label: 'Detalle' }, { key: 'cantidad', label: 'Cantidad', type: 'number' },
-  ], ee.itinerancia_roles || []);
-  dynEEDigitalTalleres = dynList('dyn-digital-talleres', [{ key: 'taller', label: 'Taller' }], ee.digital_talleres || []);
-  dynEENivelesSuperiores = dynList('dyn-niveles-superiores', [
-    { key: 'nombre_institucion', label: 'Institución' }, { key: 'tipo_acciones', label: 'Tipo de acciones' },
-  ], ee.niveles_superiores || []);
-  dynEEBtuMotivos = dynList('dyn-btu-motivos', [{ key: 'motivo', label: 'Motivo' }], ee.btu_abandono_motivos || []);
-  dynEEApoyoPrimContenidos = dynList('dyn-apoyo-prim-contenidos', [{ key: 'contenido', label: 'Contenido' }], ee.apoyo_primario_contenidos || []);
-  dynEEApoyoSecContenidos = dynList('dyn-apoyo-sec-contenidos', [{ key: 'contenido', label: 'Contenido' }], ee.apoyo_secundario_contenidos || []);
-  dynEENecesidades = dynList('dyn-necesidades', [
-    { key: 'necesidad', label: 'Necesidad' }, { key: 'orden', label: 'Orden', type: 'number' },
-  ], ee.necesidades_infra || []);
-  dynEEPreocupaciones = dynList('dyn-preocupaciones', [
-    { key: 'preocupacion', label: 'Preocupación' }, { key: 'ranking', label: 'Ranking (1-8)', type: 'number' },
-  ], ee.preocupaciones_joven || []);
-  dynEEZonas = dynList('dyn-zonas', [{ key: 'zona', label: 'Zona' }], ee.ubicacion_zonas || []);
+  Object.keys(accionesPorEjeAgrupadas).forEach(eje => {
+    const items = toItems(accionesPorEjeAgrupadas[eje]);
+    const seleccion = accionesActuales.filter(a => a.eje === eje && a.tiene).map(a => ({ valor: a.accion }));
+    chkAcciones[eje] = checklist(`chk-acciones-${eje.replace(/\W/g, '')}`, items, seleccion);
+  });
 
-  const botones = {
-    'btn-add-accion': dynEEAcciones, 'btn-add-rol-motor': dynEEGrupoMotorRoles,
-    'btn-add-itin-espacio': dynEEItinEspacios, 'btn-add-itin-actividad': dynEEItinActividades, 'btn-add-itin-rol': dynEEItinRoles,
-    'btn-add-digital-taller': dynEEDigitalTalleres, 'btn-add-nivel-superior': dynEENivelesSuperiores,
-    'btn-add-btu-motivo': dynEEBtuMotivos, 'btn-add-apoyo-prim-contenido': dynEEApoyoPrimContenidos,
-    'btn-add-apoyo-sec-contenido': dynEEApoyoSecContenidos, 'btn-add-necesidad': dynEENecesidades,
-    'btn-add-preocupacion': dynEEPreocupaciones, 'btn-add-zona': dynEEZonas,
-  };
-  Object.entries(botones).forEach(([id, dyn]) => document.getElementById(id).addEventListener('click', () => dyn.addRow()));
+  chkZona = checklist('chk-zona', toItems(ZONA_FIJA), (ee.ubicacion_zonas || []).map(z => ({ valor: z.zona })));
+  chkItinEspacios = checklist('chk-itin-espacios', toItems(ITINERANCIA_ESPACIOS_FIJO), (ee.itinerancia_espacios || []).map(i => ({ valor: i.espacio, otro: i.espacio_otro })));
+  chkItinActividades = checklist('chk-itin-actividades', toItems(ITINERANCIA_ACTIVIDADES_FIJO), (ee.itinerancia_actividades || []).map(i => ({ valor: i.actividad })), { maxSelected: 3 });
+  chkBtuMotivos = checklist('chk-btu-motivos', toItems(BTU_ABANDONO_FIJO), (ee.btu_abandono_motivos || []).map(m => ({ valor: BTU_ABANDONO_FIJO.includes(m.motivo) ? m.motivo : 'Otro:', otro: BTU_ABANDONO_FIJO.includes(m.motivo) ? null : m.motivo })), { maxSelected: 3 });
+  chkApoyoPrimContenidos = checklist('chk-apoyo-prim-contenidos', toItems(CONTENIDOS_ESCOLARES_FIJO), (ee.apoyo_primario_contenidos || []).map(c => ({ valor: CONTENIDOS_ESCOLARES_FIJO.includes(c.contenido) ? c.contenido : 'Otro:', otro: CONTENIDOS_ESCOLARES_FIJO.includes(c.contenido) ? null : c.contenido })));
+  chkApoyoSecContenidos = checklist('chk-apoyo-sec-contenidos', toItems(CONTENIDOS_ESCOLARES_FIJO), (ee.apoyo_secundario_contenidos || []).map(c => ({ valor: CONTENIDOS_ESCOLARES_FIJO.includes(c.contenido) ? c.contenido : 'Otro:', otro: CONTENIDOS_ESCOLARES_FIJO.includes(c.contenido) ? null : c.contenido })));
+  chkDigitalTalleres = checklist('chk-digital-talleres', toItems(DIGITAL_TALLERES_FIJO), (ee.digital_talleres || []).map(t => ({ valor: t.taller })));
+  chkNecesidades = checklist('chk-necesidades', toItemsCatalogo(catNecesidadInfra), (ee.necesidades_infra || []).map(n => ({ valor: n.necesidad })), { maxSelected: 3 });
+
+  renderSlotsFijos('slots-grupo-motor', 4, ee.grupo_motor_roles || [], ['rol', 'cantidad']);
+  renderSlotsFijos('slots-itin-roles', 4, ee.itinerancia_roles || [], ['rol', 'cantidad']);
+  renderSlotsFijos('slots-niveles-superiores', 5, ee.niveles_superiores || [], ['nombre_institucion', 'tipo_acciones']);
+
+  renderRankingPreocupaciones(ee.preocupaciones_joven || []);
 
   document.getElementById('btn-guardar-ee-semestral').addEventListener('click', () => guardarEspacioSemestral(ee.id));
+}
+
+function renderSlotsFijos(containerId, cantidad, datosExistentes, campos) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  for (let i = 0; i < cantidad; i++) {
+    const actual = datosExistentes[i] || {};
+    const row = document.createElement('div');
+    row.className = 'row g-2 mb-1 fila-slot-fijo';
+    row.innerHTML = campos.map(campo => {
+      const tipo = campo === 'cantidad' ? 'number' : 'text';
+      const placeholder = { rol: 'Rol', cantidad: 'Cantidad', nombre_institucion: `Institución ${i + 1}`, tipo_acciones: 'Tipo de acciones' }[campo];
+      return `<div class="col"><input type="${tipo}" class="form-control form-control-sm" data-campo="${campo}" placeholder="${placeholder}" value="${actual[campo] ?? ''}"></div>`;
+    }).join('');
+    container.appendChild(row);
+  }
+}
+
+function leerSlotsFijos(containerId, campoClave) {
+  return Array.from(document.querySelectorAll(`#${containerId} .fila-slot-fijo`))
+    .map(row => {
+      const obj = {};
+      row.querySelectorAll('[data-campo]').forEach(input => {
+        obj[input.dataset.campo] = input.type === 'number' ? (input.value ? parseInt(input.value) : null) : (input.value || null);
+      });
+      return obj;
+    })
+    .filter(obj => obj[campoClave]);
+}
+
+function renderRankingPreocupaciones(seleccionadas) {
+  const container = document.getElementById('ranking-preocupaciones');
+  container.innerHTML = catPreocupacionJoven.map(c => {
+    const actual = seleccionadas.find(p => p.preocupacion === c.valor);
+    return `
+      <div class="row g-2 align-items-center mb-1 fila-ranking" data-valor="${c.valor}">
+        <div class="col-md-8">${c.valor}</div>
+        <div class="col-md-2"><input type="number" min="1" max="8" class="form-control form-control-sm" value="${actual?.ranking ?? ''}"></div>
+      </div>`;
+  }).join('');
+}
+
+function leerRankingPreocupaciones() {
+  return Array.from(document.querySelectorAll('#ranking-preocupaciones .fila-ranking'))
+    .map(fila => ({ preocupacion: fila.dataset.valor, ranking: fila.querySelector('input').value ? parseInt(fila.querySelector('input').value) : null }))
+    .filter(p => p.ranking !== null);
 }
 
 const CAMPOS_SEMESTRALES_NUM = [
@@ -333,20 +444,25 @@ const CAMPOS_SEMESTRALES_BOOL = ['itinerancia_realizo', 'internet_acceso', 'jorn
 function idDeCampo(campo) { return `ees-${campo.replace(/_/g, '-')}`; }
 
 async function guardarEspacioSemestral(eeId) {
+  const acciones = [];
+  Object.entries(chkAcciones).forEach(([eje, chk]) => {
+    chk.getValues().forEach(s => acciones.push({ eje, accion: s.valor, tiene: true }));
+  });
+
   const payload = {
-    acciones: dynEEAcciones.getValues(),
-    grupo_motor_roles: dynEEGrupoMotorRoles.getValues(),
-    itinerancia_espacios: dynEEItinEspacios.getValues(),
-    itinerancia_actividades: dynEEItinActividades.getValues(),
-    itinerancia_roles: dynEEItinRoles.getValues(),
-    digital_talleres: dynEEDigitalTalleres.getValues(),
-    niveles_superiores: dynEENivelesSuperiores.getValues(),
-    btu_abandono_motivos: dynEEBtuMotivos.getValues(),
-    apoyo_primario_contenidos: dynEEApoyoPrimContenidos.getValues(),
-    apoyo_secundario_contenidos: dynEEApoyoSecContenidos.getValues(),
-    necesidades_infra: dynEENecesidades.getValues(),
-    preocupaciones_joven: dynEEPreocupaciones.getValues(),
-    ubicacion_zonas: dynEEZonas.getValues(),
+    acciones,
+    grupo_motor_roles: leerSlotsFijos('slots-grupo-motor', 'rol'),
+    itinerancia_espacios: chkItinEspacios.getValues().map(s => ({ espacio: s.valor, espacio_otro: s.otro })),
+    itinerancia_actividades: chkItinActividades.getValues().map(s => ({ actividad: s.valor })),
+    itinerancia_roles: leerSlotsFijos('slots-itin-roles', 'rol'),
+    digital_talleres: chkDigitalTalleres.getValues().map(s => ({ taller: s.valor })),
+    niveles_superiores: leerSlotsFijos('slots-niveles-superiores', 'nombre_institucion'),
+    btu_abandono_motivos: chkBtuMotivos.getValues().map(s => ({ motivo: valorOtro(s) })),
+    apoyo_primario_contenidos: chkApoyoPrimContenidos.getValues().map(s => ({ contenido: valorOtro(s) })),
+    apoyo_secundario_contenidos: chkApoyoSecContenidos.getValues().map(s => ({ contenido: valorOtro(s) })),
+    necesidades_infra: chkNecesidades.getValues().map((s, i) => ({ necesidad: s.valor, orden: i + 1 })),
+    preocupaciones_joven: leerRankingPreocupaciones(),
+    ubicacion_zonas: chkZona.getValues().map(s => ({ zona: s.valor })),
   };
 
   CAMPOS_SEMESTRALES_NUM.forEach(c => {
@@ -365,7 +481,6 @@ async function guardarEspacioSemestral(eeId) {
   try {
     await api.put(`/relevamientos/${relevamientoActual.id}/espacios-educativos/${eeId}/datos-semestrales`, payload);
     await refrescarEspacios(relevamientoActual.id);
-    document.getElementById(`ee-panel-${eeId}`)?.classList.remove('hidden');
     const msg = document.getElementById('ee-semestral-guardado-msg');
     if (msg) { msg.textContent = 'Guardado ✓'; setTimeout(() => msg.textContent = '', 2000); }
   } catch (err) {
