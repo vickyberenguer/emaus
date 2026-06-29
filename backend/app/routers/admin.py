@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
+from sqlalchemy.dialects.mysql import insert as mysql_insert
 from pydantic import BaseModel
 from datetime import datetime, date
 import io
@@ -446,31 +447,35 @@ class ImportarBatchResponse(BaseModel):
 
 @router.post("/padron/importar-batch", response_model=ImportarBatchResponse)
 def importar_padron_batch(body: ImportarBatchRequest, db: Session = Depends(get_db)):
+    """
+    Upsert masivo en una sola sentencia SQL (INSERT ... ON DUPLICATE KEY UPDATE).
+    Insertar fila por fila vía el ORM (db.add por cada item) era demasiado lento para
+    lotes de mil+ filas contra TiDB — superaba el timeout de Lambda y el navegador
+    reportaba "Failed to fetch" (la respuesta de error de API Gateway no trae headers
+    CORS, así que el fetch se cae en vez de mostrar el error real).
+    """
+    if not body.items:
+        return ImportarBatchResponse(procesados=0, insertados=0, actualizados=0)
+
     cueanexos = [item.cueanexo for item in body.items]
-    existentes = {
-        e.cueanexo: e for e in db.query(EstablecimientoEstado)
+    existentes = set(
+        row[0] for row in db.query(EstablecimientoEstado.cueanexo)
         .filter(EstablecimientoEstado.cueanexo.in_(cueanexos)).all()
-    }
-    procesados = insertados = actualizados = 0
+    )
+
     hoy = date.today()
+    filas = [{**item.model_dump(), "actualizado_en": hoy} for item in body.items]
 
-    for item in body.items:
-        procesados += 1
-        valores = item.model_dump(exclude={"cueanexo"})
-        if item.cueanexo in existentes:
-            estab = existentes[item.cueanexo]
-            for campo, valor in valores.items():
-                setattr(estab, campo, valor)
-            estab.actualizado_en = hoy
-            actualizados += 1
-        else:
-            estab = EstablecimientoEstado(cueanexo=item.cueanexo, actualizado_en=hoy, **valores)
-            db.add(estab)
-            existentes[item.cueanexo] = estab
-            insertados += 1
-
+    tabla = EstablecimientoEstado.__table__
+    stmt = mysql_insert(tabla).values(filas)
+    columnas_actualizables = [c.name for c in tabla.columns if c.name not in ("id", "cueanexo")]
+    stmt = stmt.on_duplicate_key_update({col: stmt.inserted[col] for col in columnas_actualizables})
+    db.execute(stmt)
     db.commit()
-    return ImportarBatchResponse(procesados=procesados, insertados=insertados, actualizados=actualizados)
+
+    insertados = sum(1 for c in cueanexos if c not in existentes)
+    actualizados = len(body.items) - insertados
+    return ImportarBatchResponse(procesados=len(body.items), insertados=insertados, actualizados=actualizados)
 
 
 class RegistrarImportacionRequest(BaseModel):
