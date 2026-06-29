@@ -104,6 +104,6 @@ def login(
         access_token=token,
         token_type="bearer",
         rol=user.rol,
-        nombre=f"{user.nombre} {user.apellido}",
+        nombre=f"{user.nombre} {user.apellido}".strip(),
         emaus_id=user.emaus_id,
     )
