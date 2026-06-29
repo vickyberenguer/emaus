@@ -467,11 +467,58 @@ Todos aceptan filtros: `?anio=&semestre=&diocesis_id=&emaus_id=`
 - [x] `backend/app/routers/admin.py` — usuarios (CRUD), asignación responsable↔Emaús, catálogos (CRUD), importación de padrón (.xlsx, upsert por cueanexo, fila 13 de encabezados) y estado del padrón. Todo bajo `require_rol("admin")`.
 - [x] `backend/migrations/003_padron_importacion.sql` — tabla de auditoría de importaciones
 
+- [x] Frontend con sistema de diseño de SEC CRM/Referidos (Bootstrap 5, navy/blue, Space Grotesk), logo y favicon oficiales de Emaús
+- [x] `frontend/pages/admin.html` + `js/admin.js` — panel de admin funcional (usuarios, asignaciones, catálogos, padrón, listado de Emaús/Diócesis de referencia)
+- [x] `frontend/pages/relevamiento.html` + 5 archivos JS — formulario ATL completo: selector/creación de relevamiento, Pastoral PI, Espacios Educativos (datos de base + semestrales), Talleres, Establecimientos. Verificado end-to-end en producción con datos reales (creación, guardado, persistencia confirmada en TiDB).
+- [x] `backend/app/routers/catalogos.py` — GET /catalogos/{categoria} de solo lectura para cualquier usuario autenticado (los catálogos estaban antes solo bajo /admin)
+
 ### Pendiente
-- [ ] Formulario ATL (4 secciones, frontend)
-- [ ] Panel responsable (validación)
-- [ ] Panel admin (frontend)
-- [ ] Tablero de indicadores
+- [ ] Panel de Responsable (validación de relevamientos enviados: validar/rechazar con comentario)
+- [ ] Tablero de indicadores (dashboard con los indicadores de la sección 11)
+- [ ] Endpoints + UI para que el admin cree/edite Diócesis y Emaús (hoy esas tablas solo se pueden cargar por SQL directo en TiDB — ver sección 15)
+- [ ] Rediseño del formulario ATL para que se parezca más a la planilla de Google Sheets que usaban antes (ver sección 14 — nota de UX crítica)
 
 ### Notas / riesgos conocidos
 - El mapeo de encabezados del Excel del padrón (`ENCABEZADOS_PADRON` en `admin.py`) está armado a partir de la descripción de la spec, sin haber visto un archivo real del Ministerio. Hay que validar contra el Excel real y ajustar los nombres de columna esperados antes de usarlo en producción.
+- El formulario ATL actual (`frontend/pages/relevamiento.html` y sus JS) es funcionalmente completo pero visualmente es un formulario web genérico (inputs sueltos, subtablas con botones +/-). Los ATL tienen poca práctica con computadoras y están acostumbrados a la planilla de Google Sheets — **antes de poner esto en uso real, conviene rediseñar la UX para que se parezca más a una planilla** (ver sección 14).
+
+---
+
+## 14. Nota de UX crítica — simplicidad para el usuario ATL
+
+Los ATL son el perfil de usuario con menos experiencia informática del sistema. Hoy completan el relevamiento en una planilla de Google Sheets, a la que están acostumbrados. El formulario web actual, aunque funcionalmente completo, tiene una interfaz típica de formulario (inputs, checkboxes, botones "+" para agregar filas a subtablas) que puede resultarles más difícil que la planilla.
+
+**Para la próxima sesión, antes de dar por terminado el frontend ATL, evaluar:**
+- Layout más parecido a una grilla/tabla (como una hoja de cálculo) en lugar de formularios con muchos campos sueltos agrupados en cards.
+- Reducir al mínimo los clics necesarios para agregar una fila a una subtabla (hoy hay que clickear "+" y completar cada celda a mano).
+- Para los campos que en la planilla son listas desplegables (enfermedades, temáticas, articulaciones, ejes de acción, necesidades de infraestructura, preocupaciones de jóvenes — todos viven en la tabla `catalogo`), usar `<select>` con las opciones reales del catálogo en lugar de inputs de texto libre. Esto está pendiente: las subtablas hoy usan `<input>` de texto plano para esos campos (ver `dynlist.js` y los `seccion-*.js`), cuando deberían ser selects poblados desde `GET /catalogos/{categoria}`.
+- Considerar revisar la planilla de Google Sheets original junto con la usuaria para calcar el orden y agrupación de campos tal como los ATL ya los conocen.
+- Posiblemente conviene un modo de "autoguardado" (guardar cada campo al perder foco) en vez de un botón "Guardar" único al final de una sección larga, para reducir el riesgo de perder el trabajo.
+
+---
+
+## 15. Datos a cargar para dejar el sistema operativo
+
+Antes de que los ATL puedan usar el sistema, el admin necesita cargar (hoy por SQL directo en TiDB, ya que no hay UI para esto — ver pendientes):
+
+1. **Diócesis** (tabla `diocesis`): `nombre`, `provincia`, una fila por cada diócesis real de la red Emaús.
+2. **Emaús** (tabla `emaus`): `diocesis_id`, `nombre`, `direccion`, `geolocalizacion`, `renabap`, `frecuencia_acciones`, `activo` — una fila por cada uno de los ~40 Emaús reales, vinculado a su diócesis.
+3. **Espacios Educativos de base** (tabla `espacio_educativo` + subtablas `ee_ambiente`, `ee_servicio`, `ee_equipo_cocina`, `ee_equipo_informatico`): el admin debería cargar los Espacios Educativos ya existentes de cada Emaús **antes** de que el ATL entre por primera vez, para que aparezcan listos en la pestaña "Espacios Educativos" del formulario y el ATL solo tenga que revisar/actualizar datos semestrales, no crear todo desde cero. Esto coincide con la regla del spec de "pre-carga de datos de base" (sección 5).
+4. **Usuarios** (esto sí tiene UI, en el panel de admin → pestaña Usuarios):
+   - Un usuario `atl` por cada Emaús, con `emaus_id` apuntando al Emaús correspondiente.
+   - Usuarios `responsable` (4 en total según spec), sin `emaus_id`.
+   - Asignar los Emaús a cada responsable desde la pestaña "Asignaciones".
+5. **Catálogos**: ya vienen con seed inicial (migración 001) para `enfermedad_ninos`, `enfermedad_embarazadas`, `tematica_pi`, `articulacion`, `eje_accion`, `necesidad_infra`, `preocupacion_joven`. Revisar desde la pestaña "Catálogos" si faltan opciones específicas de la red antes de habilitar el uso real.
+6. **Padrón de establecimientos**: importar el Excel oficial del Ministerio desde la pestaña "Padrón" del admin — **probar primero con el archivo real**, ya que el mapeo de encabezados (`ENCABEZADOS_PADRON` en `backend/app/routers/admin.py`) fue armado sin ver el archivo real (ver nota en sección 13).
+
+---
+
+## 16. Próximos pasos (orden sugerido para la siguiente sesión)
+
+1. Revisar la planilla de Google Sheets original junto con la usuaria y decidir el rediseño de UX del formulario ATL (sección 14).
+2. Reemplazar los inputs de texto libre por `<select>` poblados desde `/catalogos/{categoria}` en las subtablas que correspondan a catálogos fijos.
+3. Cargar los datos reales de Diócesis y Emaús (sección 15, punto 1-2) — decidir si se hace por SQL directo una vez, o si conviene primero construir un endpoint/UI mínimo de alta de Emaús en el admin para que la usuaria no dependa de SQL.
+4. Cargar los Espacios Educativos de base de al menos un Emaús piloto, crear su usuario ATL, y hacer una prueba real de uso end-to-end con la usuaria antes de escalar a los ~40 Emaús.
+5. Construir el panel de Responsable (validar/rechazar relevamientos enviados).
+6. Construir el tablero de indicadores.
+7. Validar la importación del padrón con el Excel real del Ministerio y ajustar `ENCABEZADOS_PADRON` si hace falta.
