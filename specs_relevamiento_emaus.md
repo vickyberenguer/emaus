@@ -463,8 +463,9 @@ Todos aceptan filtros: `?anio=&semestre=&diocesis_id=&emaus_id=`
 - [x] Netlify conectado (`relevamientoemaus.netlify.app` — `emaus.netlify.app` no estaba disponible)
 - [x] Backend desplegado en AWS Lambda + API Gateway, verificado end-to-end (login real devuelve JWT)
 
+- [x] Endpoints de secciones del formulario: `pastoral-pi`, `espacios-educativos` (+ `/datos-semestrales`), `talleres` (CRUD), `establecimientos` (búsqueda en padrón + articulación) — guardado parcial por sección, verificado end-to-end local
+
 ### Pendiente
-- [ ] Endpoints de secciones del formulario (pastoral-pi, espacios-educativos, talleres, establecimientos) — guardado parcial por sección
 - [ ] Formulario ATL (4 secciones, frontend)
 - [ ] Panel responsable (validación)
 - [ ] Panel admin (usuarios, padrón, catálogos)

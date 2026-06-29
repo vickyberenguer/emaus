@@ -51,14 +51,18 @@ def _emaus_ids_responsable(db: Session, responsable_id: int) -> list[int]:
     return [r[0] for r in rows]
 
 
-def _get_relevamiento_or_404(db: Session, relevamiento_id: int) -> Relevamiento:
+def get_relevamiento_or_404(db: Session, relevamiento_id: int) -> Relevamiento:
     relevamiento = db.query(Relevamiento).filter(Relevamiento.id == relevamiento_id).first()
     if not relevamiento:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Relevamiento no encontrado")
     return relevamiento
 
 
-def _check_acceso_lectura(relevamiento: Relevamiento, current_user: Usuario, db: Session):
+# Alias interno usado por los endpoints de este mismo módulo
+_get_relevamiento_or_404 = get_relevamiento_or_404
+
+
+def check_acceso_lectura(relevamiento: Relevamiento, current_user: Usuario, db: Session):
     if current_user.rol == "admin":
         return
     if current_user.rol == "atl":
@@ -69,6 +73,23 @@ def _check_acceso_lectura(relevamiento: Relevamiento, current_user: Usuario, db:
         if relevamiento.emaus_id not in _emaus_ids_responsable(db, current_user.id):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tenés acceso a este relevamiento")
         return
+
+
+_check_acceso_lectura = check_acceso_lectura
+
+
+def check_acceso_escritura(relevamiento: Relevamiento, current_user: Usuario):
+    """Solo el ATL dueño del relevamiento (mientras está en borrador) o un admin pueden editar sus secciones."""
+    if current_user.rol == "admin":
+        return
+    if current_user.rol == "atl" and relevamiento.emaus_id == current_user.emaus_id:
+        if relevamiento.estado != EstadoEnum.borrador:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Solo se puede editar un relevamiento en borrador",
+            )
+        return
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tenés permiso para editar este relevamiento")
 
 
 # --- Endpoints ---
