@@ -9,6 +9,7 @@ class Diocesis(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(200), nullable=False)
     provincia = Column(String(100), nullable=False)
+    region = Column(String(50))
 
     emaus_list = relationship("Emaus", back_populates="diocesis")
 

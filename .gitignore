@@ -32,3 +32,6 @@ emaus_setup.tar.gz
 
 # Generado en build de Netlify
 frontend/js/env.js
+
+# Datos de carga manual (no van al repo público)
+archivosdatos/
