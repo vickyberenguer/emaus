@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app import models  # noqa: F401 — registra los modelos en el mapper de SQLAlchemy
-from app.routers import auth, relevamientos, pastoral_pi, espacios_educativos, talleres, establecimientos, admin
+from app.routers import auth, relevamientos, pastoral_pi, espacios_educativos, talleres, establecimientos, admin, catalogos
 
 settings = get_settings()
 
@@ -29,6 +29,7 @@ app.include_router(espacios_educativos.router)
 app.include_router(talleres.router)
 app.include_router(establecimientos.router)
 app.include_router(admin.router)
+app.include_router(catalogos.router)
 
 
 @app.get("/health")
