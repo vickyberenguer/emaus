@@ -30,13 +30,38 @@ const api = {
       throw new Error(err.detail || 'Error en la solicitud');
     }
 
-    return res.json();
+    if (res.status === 204) return null;
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
   },
 
   get:    (path)        => api.request('GET',    path),
   post:   (path, body)  => api.request('POST',   path, body),
   put:    (path, body)  => api.request('PUT',    path, body),
   delete: (path)        => api.request('DELETE', path),
+
+  async upload(path, file) {
+    const token = sessionStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+
+    if (res.status === 401) {
+      sessionStorage.clear();
+      window.location.href = '/index.html';
+      return;
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Error al subir el archivo' }));
+      throw new Error(err.detail || 'Error al subir el archivo');
+    }
+    return res.json();
+  },
 
   async login(email, password) {
     // Login usa form-urlencoded (OAuth2PasswordRequestForm)

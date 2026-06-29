@@ -1,121 +1,102 @@
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+/* ===== Sistema de diseño Emaús — mismo lenguaje visual que SEC CRM / Referidos ===== */
 :root {
-  --color-bg:       #f5f5f0;
-  --color-surface:  #ffffff;
-  --color-primary:  #2d6a4f;
-  --color-primary-hover: #1b4332;
-  --color-text:     #1a1a1a;
-  --color-muted:    #6b7280;
-  --color-error:    #dc2626;
-  --color-border:   #d1d5db;
-  --radius:         8px;
-  --shadow:         0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --sec-navy:       #0F2D52;
+  --sec-blue:       #1565C0;
+  --sec-blue-dark:  #0D4A96;
+  --sec-blue-light: #E8F1FB;
+  --sec-bg:         #F4F6FB;
+  --sec-border:     #E3E8F0;
+  --sec-text:       #1C2733;
+  --sec-text-muted: #6B7785;
+  --sec-radius:     .75rem;
 }
 
-body {
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 16px;
-  color: var(--color-text);
-  background: var(--color-bg);
-  line-height: 1.5;
+* { font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.font-mono, code { font-family: 'IBM Plex Mono', monospace; }
+
+html { font-size: 14px; }
+body { background: var(--sec-bg); color: var(--sec-text); font-size: .9rem; line-height: 1.45; }
+
+h1, h2, h3, h4, h5, h6 { font-weight: 600; letter-spacing: -.015em; }
+.small, small { font-size: .8rem; }
+.btn { font-size: .85rem; }
+.form-control, .form-select { font-size: .85rem; }
+
+/* Navbar institucional */
+.navbar.navbar-sec {
+  background: var(--sec-navy);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 2px 8px rgba(15,45,82,.15);
 }
+.navbar-brand { font-weight: 700; letter-spacing: .3px; }
+
+/* Tabs principales */
+.nav-tabs {
+  border-bottom: 2px solid var(--sec-border);
+  gap: .25rem;
+  flex-wrap: wrap;
+}
+.nav-tabs .nav-link {
+  border: none;
+  border-radius: .6rem .6rem 0 0;
+  color: var(--sec-text-muted);
+  font-weight: 500;
+  padding: .65rem 1.1rem;
+  transition: background-color .15s ease, color .15s ease;
+}
+.nav-tabs .nav-link:hover {
+  background: var(--sec-blue-light);
+  color: var(--sec-blue);
+  border-color: transparent;
+}
+.nav-tabs .nav-link.active {
+  color: var(--sec-blue);
+  background: var(--sec-blue-light);
+  border: none;
+  box-shadow: inset 0 -3px 0 var(--sec-blue);
+  font-weight: 600;
+}
+
+.btn-primary {
+  background-color: var(--sec-blue);
+  border-color: var(--sec-blue);
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+  background-color: var(--sec-blue-dark) !important;
+  border-color: var(--sec-blue-dark) !important;
+}
+.btn-outline-primary {
+  color: var(--sec-blue);
+  border-color: var(--sec-blue);
+}
+.btn-outline-primary:hover {
+  background-color: var(--sec-blue);
+  border-color: var(--sec-blue);
+}
+a { color: var(--sec-blue); }
+
+.card { border-radius: var(--sec-radius); }
+.card.shadow-sm { box-shadow: 0 1px 3px rgba(15,45,82,.06), 0 1px 2px rgba(15,45,82,.08) !important; }
+.tab-pane { padding-top: 1.5rem; }
+
+.table thead th {
+  font-size: .78rem; text-transform: uppercase; letter-spacing: .03em;
+  color: var(--sec-text-muted); font-weight: 600;
+}
+
+.badge-estado-borrador  { background: var(--sec-text-muted); }
+.badge-estado-enviado   { background: #F9A825; color: #1C2733; }
+.badge-estado-validado  { background: #2E7D32; }
+.badge-estado-rechazado { background: #C62828; }
 
 /* Login */
-.login-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.login-card { width: 100%; max-width: 380px; }
+
+.subseccion-titulo {
+  font-size: .95rem; font-weight: 600; color: var(--sec-navy);
+  margin-top: 1.25rem; margin-bottom: .5rem;
+  border-bottom: 1px solid var(--sec-border); padding-bottom: .4rem;
 }
 
-.login-container {
-  width: 100%;
-  max-width: 400px;
-  padding: 1rem;
-}
-
-.login-card {
-  background: var(--color-surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 2.5rem 2rem;
-}
-
-.login-card h1 {
-  font-size: 1.75rem;
-  font-weight: 600;
-  color: var(--color-primary);
-  margin-bottom: 0.25rem;
-}
-
-.login-card .subtitle {
-  color: var(--color-muted);
-  margin-bottom: 2rem;
-  font-size: 0.9rem;
-}
-
-/* Formulario */
-.field {
-  margin-bottom: 1.25rem;
-}
-
-.field label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 0.375rem;
-}
-
-.field input {
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  font-size: 1rem;
-  transition: border-color 0.15s;
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.field input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(45,106,79,0.12);
-}
-
-button[type="submit"] {
-  width: 100%;
-  padding: 0.75rem;
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s;
-  margin-top: 0.5rem;
-}
-
-button[type="submit"]:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-}
-
-button[type="submit"]:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Mensajes */
-.error-msg {
-  color: var(--color-error);
-  font-size: 0.875rem;
-  margin-bottom: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  background: #fef2f2;
-  border-radius: var(--radius);
-  border: 1px solid #fecaca;
-}
-
+.fila-dinamica { background: #fff; border: 1px solid var(--sec-border); border-radius: .5rem; padding: .6rem; margin-bottom: .5rem; }
 .hidden { display: none !important; }

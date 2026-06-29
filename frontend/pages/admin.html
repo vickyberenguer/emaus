@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emaús — Administración</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+
+<nav class="navbar navbar-dark navbar-sec px-3 d-flex justify-content-between">
+  <span class="navbar-brand"><i class="bi bi-gear"></i> Emaús · Administración</span>
+  <div id="navbar-info"></div>
+</nav>
+
+<div class="container-fluid mt-3">
+  <ul class="nav nav-tabs" id="mainTabs">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-usuarios"><i class="bi bi-people"></i> Usuarios</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-asignaciones"><i class="bi bi-diagram-3"></i> Asignaciones</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-catalogos"><i class="bi bi-list-ul"></i> Catálogos</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-padron"><i class="bi bi-file-earmark-arrow-up"></i> Padrón</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-emaus"><i class="bi bi-building"></i> Emaús / Diócesis</a></li>
+  </ul>
+
+  <div class="tab-content" id="mainTabsContent">
+    <!-- USUARIOS -->
+    <div class="tab-pane fade show active" id="tab-usuarios">
+      <div class="card border-0 shadow-sm p-3 mb-3">
+        <h6 class="mb-3"><i class="bi bi-person-plus"></i> Nuevo usuario</h6>
+        <form id="form-usuario" class="row g-2 align-items-end">
+          <input type="hidden" id="u-id">
+          <div class="col-md-2"><label class="form-label small">Nombre</label><input class="form-control" id="u-nombre" required></div>
+          <div class="col-md-2"><label class="form-label small">Apellido</label><input class="form-control" id="u-apellido" required></div>
+          <div class="col-md-3"><label class="form-label small">Email</label><input type="email" class="form-control" id="u-email" required></div>
+          <div class="col-md-2"><label class="form-label small">Contraseña</label><input type="password" class="form-control" id="u-password" placeholder="(dejar vacío para no cambiar)"></div>
+          <div class="col-md-2">
+            <label class="form-label small">Rol</label>
+            <select class="form-select" id="u-rol" required>
+              <option value="atl">ATL</option>
+              <option value="responsable">Responsable</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="col-md-1 d-grid"><button class="btn btn-primary" type="submit"><i class="bi bi-check"></i></button></div>
+          <div class="col-md-3" id="u-emaus-wrapper">
+            <label class="form-label small">Emaús (solo ATL)</label>
+            <select class="form-select" id="u-emaus-id"><option value="">— sin asignar —</option></select>
+          </div>
+          <div class="col-md-2">
+            <div class="form-check mt-4">
+              <input class="form-check-input" type="checkbox" id="u-activo" checked>
+              <label class="form-check-label small" for="u-activo">Activo</label>
+            </div>
+          </div>
+          <div class="col-md-2 d-grid">
+            <button type="button" class="btn btn-outline-secondary" id="btn-cancelar-usuario">Cancelar edición</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card border-0 shadow-sm p-3">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Emaús</th><th>Activo</th><th></th></tr></thead>
+          <tbody id="tabla-usuarios"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ASIGNACIONES -->
+    <div class="tab-pane fade" id="tab-asignaciones">
+      <div class="card border-0 shadow-sm p-3">
+        <h6 class="mb-3"><i class="bi bi-diagram-3"></i> Emaús asignados por Responsable</h6>
+        <div id="lista-asignaciones"></div>
+      </div>
+    </div>
+
+    <!-- CATALOGOS -->
+    <div class="tab-pane fade" id="tab-catalogos">
+      <div class="card border-0 shadow-sm p-3">
+        <div class="row g-2 mb-3">
+          <div class="col-md-4">
+            <label class="form-label small">Categoría</label>
+            <select class="form-select" id="cat-categoria">
+              <option value="enfermedad_ninos">Enfermedades niños/as</option>
+              <option value="enfermedad_embarazadas">Enfermedades embarazadas</option>
+              <option value="tematica_pi">Temáticas PI</option>
+              <option value="articulacion">Articulaciones</option>
+              <option value="eje_accion">Ejes de acción EE</option>
+              <option value="necesidad_infra">Necesidades de infraestructura</option>
+              <option value="preocupacion_joven">Preocupaciones jóvenes</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">Nuevo valor</label>
+            <input class="form-control" id="cat-nuevo-valor" placeholder="Agregar opción...">
+          </div>
+          <div class="col-md-1 d-flex align-items-end">
+            <button class="btn btn-primary" id="btn-agregar-catalogo"><i class="bi bi-plus"></i></button>
+          </div>
+        </div>
+        <table class="table table-sm">
+          <thead><tr><th>Valor</th><th>Orden</th><th>Activo</th><th></th></tr></thead>
+          <tbody id="tabla-catalogo"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PADRON -->
+    <div class="tab-pane fade" id="tab-padron">
+      <div class="card border-0 shadow-sm p-3 mb-3">
+        <h6><i class="bi bi-bar-chart"></i> Estado actual</h6>
+        <div id="padron-estado" class="text-muted small">Cargando...</div>
+      </div>
+      <div class="card border-0 shadow-sm p-3">
+        <h6><i class="bi bi-upload"></i> Importar nuevo padrón (.xlsx)</h6>
+        <p class="small text-muted">Encabezados en la fila 13 del Excel oficial del Ministerio. Se actualizan los registros existentes por <code>cueanexo</code> y se insertan los nuevos; nada se elimina automáticamente.</p>
+        <input type="file" class="form-control mb-2" id="padron-file" accept=".xlsx,.xlsm">
+        <button class="btn btn-primary" id="btn-importar-padron" style="width:fit-content"><i class="bi bi-upload"></i> Importar</button>
+        <div id="padron-resultado" class="mt-2 small"></div>
+      </div>
+    </div>
+
+    <!-- EMAUS / DIOCESIS -->
+    <div class="tab-pane fade" id="tab-emaus">
+      <div class="alert alert-light border small">
+        La gestión completa de Diócesis y Emaús (alta/edición) todavía no tiene endpoints dedicados — se gestiona por ahora directamente en TiDB. Esta pestaña solo lista los Emaús existentes para referencia.
+      </div>
+      <div class="card border-0 shadow-sm p-3">
+        <table class="table table-sm">
+          <thead><tr><th>ID</th><th>Nombre</th><th>Diócesis</th><th>Activo</th></tr></thead>
+          <tbody id="tabla-emaus"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/env.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/session.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

@@ -9,7 +9,7 @@ from openpyxl import load_workbook
 
 from app.database import get_db
 from app.models.usuario import Usuario, RolEnum
-from app.models.emaus import Emaus, ResponsableEmaus
+from app.models.emaus import Diocesis, Emaus, ResponsableEmaus
 from app.models.catalogo import Catalogo
 from app.models.establecimiento import EstablecimientoEstado
 from app.models.padron_importacion import PadronImportacion
@@ -53,6 +53,26 @@ class UsuarioResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class EmausResponse(BaseModel):
+    id: int
+    nombre: str
+    diocesis_id: int
+    diocesis_nombre: str | None = None
+    activo: bool
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/emaus", response_model=list[EmausResponse])
+def listar_emaus(db: Session = Depends(get_db)):
+    rows = db.query(Emaus, Diocesis.nombre).join(Diocesis, Emaus.diocesis_id == Diocesis.id).order_by(Emaus.nombre).all()
+    return [
+        EmausResponse(id=e.id, nombre=e.nombre, diocesis_id=e.diocesis_id, diocesis_nombre=d_nombre, activo=e.activo)
+        for e, d_nombre in rows
+    ]
 
 
 @router.get("/usuarios", response_model=list[UsuarioResponse])
