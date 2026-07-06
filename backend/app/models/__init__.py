@@ -35,3 +35,4 @@ from app.models.espacio_educativo import (
 from app.models.taller import Taller
 from app.models.establecimiento import EstablecimientoEstado, EstablecimientoArticulado
 from app.models.padron_importacion import PadronImportacion
+from app.models.control import ControlRelevamiento, ControlValidacionDetalle, ControlAprobacion

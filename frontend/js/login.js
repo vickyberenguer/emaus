@@ -23,7 +23,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     const destino = {
       atl:          '/pages/relevamiento.html',
       responsable:  '/pages/validacion.html',
-      admin:        '/pages/admin.html',
+      admin:        '/pages/control.html',
     }[data.rol] || '/index.html';
 
     window.location.href = destino;

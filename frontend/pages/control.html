@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emaús — Control de Relevamiento</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+</head>
+<body>
+
+<nav class="navbar navbar-dark navbar-sec px-3 d-flex justify-content-between align-items-center">
+  <span class="navbar-brand d-flex align-items-center gap-0 p-0">
+    <span class="navbar-logo-bg">
+      <img src="/img/logo-emaus.png" alt="Emaús" style="height:28px">
+    </span>
+    <span class="d-flex align-items-center gap-2 ms-2">
+      <span class="navbar-module-switcher">
+        <a href="/pages/control.html" class="module-btn active"><i class="bi bi-bar-chart-line"></i> Control</a>
+        <a href="/pages/admin.html"   class="module-btn" id="link-admin"><i class="bi bi-gear"></i> Admin</a>
+      </span>
+    </span>
+  </span>
+  <div id="navbar-info"></div>
+</nav>
+
+<div class="container-fluid mt-3">
+
+  <!-- Barra de herramientas -->
+  <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+    <h5 class="mb-0">Control 2026 — Semestre 1</h5>
+    <button id="btn-sync" class="btn btn-outline-primary btn-sm d-none">
+      <i class="bi bi-arrow-clockwise"></i> Sincronizar
+    </button>
+    <span id="sync-status" class="text-muted small"></span>
+    <div class="ms-auto d-flex gap-2">
+      <input type="text" id="filtro-emaus" class="form-control form-control-sm" placeholder="Filtrar Emaús..." style="width:180px">
+    </div>
+  </div>
+
+  <!-- Resumen estadístico -->
+  <div class="row g-2 mb-3" id="stats-row">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-2">
+        <div class="small text-muted">Emaús totales</div>
+        <div class="fs-4 fw-semibold" id="stat-total">—</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-2">
+        <div class="small text-muted">Listos para aprobar</div>
+        <div class="fs-4 fw-semibold text-success" id="stat-listos">—</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-2">
+        <div class="small text-muted">Con errores</div>
+        <div class="fs-4 fw-semibold text-danger" id="stat-errores">—</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-2">
+        <div class="small text-muted">Aprobados</div>
+        <div class="fs-4 fw-semibold text-primary" id="stat-aprobados">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de control -->
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover table-sm align-middle mb-0" id="tabla-control">
+        <thead class="table-light">
+          <tr>
+            <th>Emaús</th>
+            <th class="text-center">EE total</th>
+            <th class="text-center">EE completos</th>
+            <th class="text-center">EE errores</th>
+            <th class="text-center">PI</th>
+            <th class="text-center">Talleres</th>
+            <th class="text-center">Estab.</th>
+            <th class="text-center">Asistentes</th>
+            <th class="text-center">Talleres #</th>
+            <th class="text-center">Estab. #</th>
+            <th class="text-center">Último sync</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-control">
+          <tr><td colspan="13" class="text-center text-muted py-4">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de detalle -->
+<div class="modal fade" id="modalDetalle" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-title">Detalle de validaciones</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modal-body">Cargando...</div>
+      <div class="modal-footer d-flex justify-content-between">
+        <a id="modal-link-sheet" href="#" target="_blank" class="btn btn-outline-secondary btn-sm d-none">
+          <i class="bi bi-box-arrow-up-right"></i> Abrir planilla
+        </a>
+        <div class="d-flex gap-2" id="modal-acciones"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal aprobar/rechazar -->
+<div class="modal fade" id="modalAprobar" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-aprobar-title">Aprobar Emaús</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Observaciones (opcional)</label>
+          <textarea class="form-control" id="obs-texto" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success" id="btn-confirmar-aprobar">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/env.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/session.js"></script>
+<script>
+const ANIO = 2026;
+const SEMESTRE = '1';
+let datosControl = [];
+let emausSeleccionado = null;
+let accionPendiente = null;
+let esAdmin = false;
+
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', async () => {
+  session.requireRol(['admin', 'responsable']);
+  session.pintarNavbar('Control de relevamiento');
+
+  esAdmin = session.rol() === 'admin';
+  if (esAdmin) {
+    document.getElementById('btn-sync').classList.remove('d-none');
+  }
+
+  await cargarDatos();
+
+  document.getElementById('filtro-emaus').addEventListener('input', renderTabla);
+  document.getElementById('btn-sync').addEventListener('click', triggerSync);
+});
+
+// ---------------------------------------------------------------------------
+// Carga de datos
+// ---------------------------------------------------------------------------
+async function cargarDatos() {
+  try {
+    datosControl = await api.get(`/control?anio=${ANIO}&semestre=${SEMESTRE}`);
+    renderStats();
+    renderTabla();
+  } catch (e) {
+    document.getElementById('tbody-control').innerHTML =
+      `<tr><td colspan="13" class="text-center text-danger py-4">Error al cargar datos: ${e.message}</td></tr>`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Estadísticas
+// ---------------------------------------------------------------------------
+function renderStats() {
+  const total = datosControl.length;
+  const listos = datosControl.filter(d => d.listo_para_aprobar).length;
+  const conErrores = datosControl.filter(d => d.ee_con_errores > 0 || d.pi_con_errores).length;
+  const aprobados = datosControl.filter(d => d.aprobacion?.estado === 'aprobado').length;
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-listos').textContent = listos;
+  document.getElementById('stat-errores').textContent = conErrores;
+  document.getElementById('stat-aprobados').textContent = aprobados;
+}
+
+// ---------------------------------------------------------------------------
+// Tabla
+// ---------------------------------------------------------------------------
+function renderTabla() {
+  const filtro = document.getElementById('filtro-emaus').value.toLowerCase();
+  const datos = datosControl.filter(d =>
+    !filtro || d.emaus_nombre.toLowerCase().includes(filtro)
+  );
+
+  if (!datos.length) {
+    document.getElementById('tbody-control').innerHTML =
+      `<tr><td colspan="13" class="text-center text-muted py-4">Sin datos</td></tr>`;
+    return;
+  }
+
+  document.getElementById('tbody-control').innerHTML = datos.map(d => `
+    <tr>
+      <td>
+        <div class="fw-semibold">${d.emaus_nombre}</div>
+        <div class="text-muted small">${d.diocesis_nombre}</div>
+      </td>
+      <td class="text-center">${d.ee_count}</td>
+      <td class="text-center">${badgeEECompletos(d)}</td>
+      <td class="text-center">${badgeErrores(d.ee_con_errores)}</td>
+      <td class="text-center">${badgePI(d)}</td>
+      <td class="text-center">${iconCheck(d.talleres_completo)}</td>
+      <td class="text-center">${iconCheck(d.establecimientos_completo)}</td>
+      <td class="text-center">${d.total_asistentes_ee.toLocaleString('es-AR')}</td>
+      <td class="text-center">${d.cantidad_talleres}</td>
+      <td class="text-center">${d.cantidad_establecimientos}</td>
+      <td class="text-center text-muted small">${formatSync(d.ultimo_sync)}</td>
+      <td class="text-center">${badgeEstado(d)}</td>
+      <td class="text-center">
+        <div class="d-flex gap-1 justify-content-center">
+          <button class="btn btn-outline-secondary btn-sm" onclick="abrirDetalle(${d.emaus_id})" title="Ver detalle">
+            <i class="bi bi-clipboard-data"></i>
+          </button>
+          ${botonAprobar(d)}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ---------------------------------------------------------------------------
+// Helpers de badges/iconos
+// ---------------------------------------------------------------------------
+function badgeEECompletos(d) {
+  if (d.ee_count === 0) return '<span class="text-muted">—</span>';
+  const cls = d.ee_declarados_completos === d.ee_count ? 'success' : 'warning';
+  return `<span class="badge bg-${cls}-subtle text-${cls}-emphasis border border-${cls}-subtle">
+    ${d.ee_declarados_completos}/${d.ee_count}
+  </span>`;
+}
+
+function badgeErrores(n) {
+  if (n === 0) return '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">0</span>';
+  return `<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle">${n}</span>`;
+}
+
+function badgePI(d) {
+  if (!d.pi_existe) return '<span class="text-muted">—</span>';
+  if (d.pi_con_errores) return '<i class="bi bi-exclamation-circle text-danger" title="Con errores"></i>';
+  if (d.pi_completa) return '<i class="bi bi-check-circle text-success" title="Completa"></i>';
+  return '<i class="bi bi-clock text-warning" title="Pendiente"></i>';
+}
+
+function iconCheck(val) {
+  return val
+    ? '<i class="bi bi-check-circle text-success"></i>'
+    : '<i class="bi bi-clock text-warning"></i>';
+}
+
+function badgeEstado(d) {
+  const estado = d.aprobacion?.estado || 'pendiente';
+  const map = {
+    pendiente: d.listo_para_aprobar
+      ? '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">Listo</span>'
+      : '<span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle">Pendiente</span>',
+    aprobado: '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle">Aprobado</span>',
+    rechazado: '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle">Rechazado</span>',
+  };
+  return map[estado] || estado;
+}
+
+function botonAprobar(d) {
+  const estado = d.aprobacion?.estado;
+  if (estado === 'aprobado') {
+    return `<button class="btn btn-outline-danger btn-sm" onclick="iniciarAccion(${d.emaus_id},'rechazado')" title="Rechazar">
+      <i class="bi bi-x-circle"></i>
+    </button>`;
+  }
+  if (d.listo_para_aprobar) {
+    return `<button class="btn btn-success btn-sm" onclick="iniciarAccion(${d.emaus_id},'aprobado')" title="Aprobar">
+      <i class="bi bi-check-circle"></i> Aprobar
+    </button>`;
+  }
+  return `<button class="btn btn-outline-success btn-sm" disabled title="Completar todas las hojas primero">
+    <i class="bi bi-check-circle"></i>
+  </button>`;
+}
+
+function formatSync(dt) {
+  if (!dt) return '—';
+  const d = new Date(dt);
+  return d.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'}) + ' ' +
+         d.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+}
+
+// ---------------------------------------------------------------------------
+// Modal de detalle
+// ---------------------------------------------------------------------------
+async function abrirDetalle(emausId) {
+  emausSeleccionado = emausId;
+  const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
+  document.getElementById('modal-body').innerHTML = 'Cargando...';
+  document.getElementById('modal-acciones').innerHTML = '';
+  modal.show();
+
+  try {
+    const d = await api.get(`/control/${emausId}?anio=${ANIO}&semestre=${SEMESTRE}`);
+    document.getElementById('modal-title').textContent = `${d.emaus_nombre} — Validaciones`;
+
+    const linkSheet = document.getElementById('modal-link-sheet');
+    if (d.spreadsheet_url) {
+      linkSheet.href = d.spreadsheet_url;
+      linkSheet.classList.remove('d-none');
+    } else {
+      linkSheet.classList.add('d-none');
+    }
+
+    const errores = d.validaciones.filter(v => v.severity === 'error');
+    const warnings = d.validaciones.filter(v => v.severity === 'warning');
+
+    let html = '';
+
+    if (!errores.length && !warnings.length) {
+      html = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> Todas las validaciones pasaron correctamente.</div>';
+    }
+
+    if (errores.length) {
+      html += `<h6 class="text-danger"><i class="bi bi-exclamation-circle"></i> Errores (${errores.length})</h6>
+        <ul class="list-group mb-3">
+          ${errores.map(e => `
+            <li class="list-group-item list-group-item-danger">
+              <div class="fw-semibold small">${e.hoja_nombre}</div>
+              <div>${e.mensaje}</div>
+            </li>`).join('')}
+        </ul>`;
+    }
+
+    if (warnings.length) {
+      html += `<h6 class="text-warning"><i class="bi bi-exclamation-triangle"></i> Advertencias (${warnings.length})</h6>
+        <ul class="list-group mb-3">
+          ${warnings.map(w => `
+            <li class="list-group-item list-group-item-warning">
+              <div class="fw-semibold small">${w.hoja_nombre}</div>
+              <div>${w.mensaje}</div>
+            </li>`).join('')}
+        </ul>`;
+    }
+
+    // Resumen de hojas
+    html += `<hr><h6>Resumen de hojas</h6>
+      <table class="table table-sm table-bordered">
+        <thead><tr><th>Hoja</th><th class="text-center">Estado</th></tr></thead>
+        <tbody>
+          <tr><td>EE completados</td><td class="text-center">${d.ee_declarados_completos}/${d.ee_count}</td></tr>
+          <tr><td>EE con errores</td><td class="text-center">${d.ee_con_errores}</td></tr>
+          ${d.pi_existe ? `<tr><td>Pastoral Primera Infancia</td><td class="text-center">${d.pi_con_errores ? '❌ Con errores' : d.pi_completa ? '✅ Completa' : '⏳ Pendiente'}</td></tr>` : ''}
+          <tr><td>Talleres</td><td class="text-center">${d.talleres_completo ? '✅ Completa' : '⏳ Pendiente'}</td></tr>
+          <tr><td>Establecimientos</td><td class="text-center">${d.establecimientos_completo ? '✅ Completa' : '⏳ Pendiente'}</td></tr>
+        </tbody>
+      </table>`;
+
+    document.getElementById('modal-body').innerHTML = html;
+
+    // Botones de aprobar/rechazar en el modal
+    const accs = document.getElementById('modal-acciones');
+    if (d.listo_para_aprobar && d.aprobacion?.estado !== 'aprobado') {
+      accs.innerHTML = `
+        <button class="btn btn-success btn-sm" onclick="iniciarAccion(${emausId},'aprobado')">
+          <i class="bi bi-check-circle"></i> Aprobar
+        </button>`;
+    } else if (d.aprobacion?.estado === 'aprobado') {
+      accs.innerHTML = `
+        <button class="btn btn-outline-danger btn-sm" onclick="iniciarAccion(${emausId},'rechazado')">
+          <i class="bi bi-x-circle"></i> Rechazar
+        </button>`;
+    }
+
+  } catch (e) {
+    document.getElementById('modal-body').innerHTML =
+      `<div class="alert alert-danger">Error al cargar: ${e.message}</div>`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Aprobar / Rechazar
+// ---------------------------------------------------------------------------
+function iniciarAccion(emausId, accion) {
+  emausSeleccionado = emausId;
+  accionPendiente = accion;
+  const d = datosControl.find(x => x.emaus_id === emausId);
+  document.getElementById('modal-aprobar-title').textContent =
+    accion === 'aprobado' ? `Aprobar — ${d?.emaus_nombre}` : `Rechazar — ${d?.emaus_nombre}`;
+  document.getElementById('obs-texto').value = '';
+  document.getElementById('btn-confirmar-aprobar').className =
+    accion === 'aprobado' ? 'btn btn-success' : 'btn btn-danger';
+  document.getElementById('btn-confirmar-aprobar').textContent =
+    accion === 'aprobado' ? 'Confirmar aprobación' : 'Confirmar rechazo';
+
+  // Cerrar modal de detalle si estaba abierto
+  const detalle = bootstrap.Modal.getInstance(document.getElementById('modalDetalle'));
+  if (detalle) detalle.hide();
+
+  new bootstrap.Modal(document.getElementById('modalAprobar')).show();
+}
+
+document.getElementById('btn-confirmar-aprobar').addEventListener('click', async () => {
+  const obs = document.getElementById('obs-texto').value.trim();
+  try {
+    await api.request('PATCH', `/control/${emausSeleccionado}/aprobar?anio=${ANIO}&semestre=${SEMESTRE}`, {
+      estado: accionPendiente,
+      observaciones: obs || null,
+    });
+    bootstrap.Modal.getInstance(document.getElementById('modalAprobar')).hide();
+    await cargarDatos();
+  } catch (e) {
+    alert(`Error: ${e.message}`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Sync (solo admin)
+// ---------------------------------------------------------------------------
+async function triggerSync() {
+  const btn = document.getElementById('btn-sync');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Sincronizando...';
+  document.getElementById('sync-status').textContent = '';
+
+  try {
+    await api.post(`/control/sync?anio=${ANIO}&semestre=${SEMESTRE}`, {});
+    document.getElementById('sync-status').textContent =
+      'Sync iniciado en background. Los datos se actualizarán en unos minutos.';
+    setTimeout(cargarDatos, 30000);
+  } catch (e) {
+    document.getElementById('sync-status').textContent = `Error: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Sincronizar';
+  }
+}
+
+</script>
+</body>
+</html>

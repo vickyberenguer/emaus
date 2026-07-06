@@ -15,10 +15,17 @@
 </head>
 <body>
 
-<nav class="navbar navbar-dark navbar-sec px-3 d-flex justify-content-between">
-  <span class="navbar-brand d-flex align-items-center gap-2">
-    <img src="/img/logo-emaus.png" alt="Emaús" style="height:28px">
-    <span class="text-white-50">· Administración</span>
+<nav class="navbar navbar-dark navbar-sec px-3 d-flex justify-content-between align-items-center">
+  <span class="navbar-brand d-flex align-items-center gap-0 p-0">
+    <span class="navbar-logo-bg">
+      <img src="/img/logo-emaus.png" alt="Emaús" style="height:28px">
+    </span>
+    <span class="d-flex align-items-center gap-2 ms-2">
+      <span class="navbar-module-switcher">
+        <a href="/pages/control.html" class="module-btn"><i class="bi bi-bar-chart-line"></i> Control</a>
+        <a href="/pages/admin.html"   class="module-btn active"><i class="bi bi-gear"></i> Admin</a>
+      </span>
+    </span>
   </span>
   <div id="navbar-info"></div>
 </nav>

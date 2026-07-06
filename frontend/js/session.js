@@ -25,5 +25,10 @@ const session = {
           <i class="bi bi-box-arrow-right"></i> Salir
         </button>`;
     }
+    // Ocultar el botón Admin si el usuario no es admin
+    const linkAdmin = document.getElementById('link-admin');
+    if (linkAdmin && this.rol() !== 'admin') {
+      linkAdmin.style.display = 'none';
+    }
   },
 };

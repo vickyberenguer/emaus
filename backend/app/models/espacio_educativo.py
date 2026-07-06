@@ -111,6 +111,8 @@ class RelevamientoEE(Base):
 
     internet_acceso = Column(Boolean, default=False)
     internet_falta_motivo = Column(String(200))
+    internet_uso_social = Column(Boolean, nullable=True)
+    internet_uso_estudio = Column(Boolean, nullable=True)
     jornadas_formacion_digital = Column(Boolean, default=False)
 
     articula_nivel_superior = Column(Boolean, default=False)
@@ -150,7 +152,7 @@ class RelevamientoEE(Base):
     dale_15_24 = Column(Integer)
     dale_25_mas = Column(Integer)
     dale_educadores = Column(Integer)
-    dale_frecuencia_dias = Column(Integer)
+    dale_frecuencia_dias = Column(String(100))
 
     relevamiento = relationship("Relevamiento", back_populates="relevamientos_ee")
     espacio_educativo = relationship("EspacioEducativo", back_populates="relevamientos_ee")

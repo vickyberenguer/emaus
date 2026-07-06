@@ -25,6 +25,7 @@ class Emaus(Base):
     renabap = Column(Boolean, default=False)
     frecuencia_acciones = Column(String(100))
     activo = Column(Boolean, default=True)
+    spreadsheet_id = Column(String(200), nullable=True)
 
     diocesis = relationship("Diocesis", back_populates="emaus_list")
     atl = relationship("Usuario", back_populates="emaus")

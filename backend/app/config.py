@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     environment: str = "development"
     cors_origins: str = "http://localhost:3000"
 
+    # Google / Drive (opcionales — solo las usa el scraper, no el backend)
+    gcp_service_account_json_path: str = ""
+    gcp_service_account_json: str = ""
+    drive_folder_id: str = ""
+
     @property
     def database_url(self) -> str:
         return (
