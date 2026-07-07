@@ -95,6 +95,7 @@
         <tbody id="tbody-control">
           <tr><td colspan="13" class="text-center text-muted py-4">Cargando...</td></tr>
         </tbody>
+        <tfoot id="tfoot-control"></tfoot>
       </table>
     </div>
   </div>
@@ -242,6 +243,30 @@ function renderTabla() {
       </td>
     </tr>
   `).join('');
+
+  // Totales en tfoot (solo columnas numéricas relevantes)
+  const sum = (fn) => datos.reduce((acc, d) => acc + (fn(d) || 0), 0);
+  const totalEECompletos = sum(d => d.ee_declarados_completos);
+  const totalEEErrores   = sum(d => d.ee_con_errores);
+  const totalAsistentes  = sum(d => d.total_asistentes_ee);
+  const totalTalleres    = sum(d => d.cantidad_talleres);
+  const totalEstab       = sum(d => d.cantidad_establecimientos);
+
+  const tc = (val) =>
+    `<td class="text-center tfoot-sum">${val.toLocaleString('es-AR')}</td>`;
+
+  document.getElementById('tfoot-control').innerHTML = `
+    <tr class="tfoot-totals">
+      <td class="tfoot-label">Total</td>
+      <td></td>
+      ${tc(totalEECompletos)}
+      ${tc(totalEEErrores)}
+      <td></td><td></td><td></td>
+      ${tc(totalAsistentes)}
+      ${tc(totalTalleres)}
+      ${tc(totalEstab)}
+      <td></td><td></td><td></td>
+    </tr>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -305,8 +330,9 @@ function botonAprobar(d) {
 function formatSync(dt) {
   if (!dt) return '—';
   const d = new Date(dt);
-  return d.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'}) + ' ' +
-         d.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+  const opts = { timeZone: 'America/Argentina/Buenos_Aires' };
+  return d.toLocaleDateString('es-AR', {...opts, day:'2-digit', month:'2-digit'}) + ' ' +
+         d.toLocaleTimeString('es-AR', {...opts, hour:'2-digit', minute:'2-digit'});
 }
 
 // ---------------------------------------------------------------------------

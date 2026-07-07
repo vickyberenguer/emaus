@@ -68,6 +68,25 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; letter-spacing: -.015em; }
   background: #fff;
 }
 
+/* Fila de totales en tfoot */
+.tfoot-totals {
+  background: var(--sec-blue-light);
+  border-top: 2px solid var(--sec-border);
+  font-size: .85rem;
+}
+.tfoot-totals td { padding: .35rem .5rem; }
+.tfoot-label {
+  font-weight: 600;
+  color: var(--sec-text-muted);
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.tfoot-sum {
+  font-weight: 700;
+  color: var(--sec-navy);
+}
+
 /* Tabs principales */
 .nav-tabs {
   border-bottom: 2px solid var(--sec-border);

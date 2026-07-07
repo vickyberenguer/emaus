@@ -511,7 +511,7 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
 
         idx = len(batch_ranges)
         range_index["talleres_data"] = idx
-        batch_ranges.append(f"'{talleres_sheet_name}'!A2:B")
+        batch_ranges.append(f"'{talleres_sheet_name}'!A3:B")
 
     if has_establecimientos:
         idx = len(batch_ranges)
