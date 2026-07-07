@@ -22,7 +22,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     // Redirigir según rol
     const destino = {
       atl:          '/pages/relevamiento.html',
-      responsable:  '/pages/validacion.html',
+      responsable:  '/pages/control.html',
       admin:        '/pages/control.html',
     }[data.rol] || '/index.html';
 
