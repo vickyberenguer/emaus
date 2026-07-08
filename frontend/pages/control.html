@@ -37,7 +37,7 @@
     <button id="btn-sync" class="btn btn-outline-primary btn-sm d-none">
       <i class="bi bi-arrow-clockwise"></i> Sincronizar
     </button>
-    <span id="sync-status" class="text-muted small"></span>
+    <span id="sync-status"></span>
     <div class="ms-auto d-flex gap-2">
       <input type="text" id="filtro-emaus" class="form-control form-control-sm" placeholder="Filtrar Emaús..." style="width:180px">
     </div>
@@ -167,6 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await cargarDatos();
+  if (esAdmin) cargarSyncEstado();
 
   document.getElementById('filtro-emaus').addEventListener('input', renderTabla);
   document.getElementById('btn-sync').addEventListener('click', triggerSync);
@@ -466,19 +467,59 @@ async function triggerSync() {
   const btn = document.getElementById('btn-sync');
   btn.disabled = true;
   btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Sincronizando...';
-  document.getElementById('sync-status').textContent = '';
+  setSyncStatus('corriendo');
 
   try {
     await api.post(`/control/sync?anio=${ANIO}&semestre=${SEMESTRE}`, {});
-    document.getElementById('sync-status').textContent =
-      'Sync iniciado en background. Los datos se actualizarán en unos minutos.';
-    setTimeout(cargarDatos, 30000);
+    pollSyncEstado();
   } catch (e) {
-    document.getElementById('sync-status').textContent = `Error: ${e.message}`;
-  } finally {
+    setSyncStatus('error', e.message);
     btn.disabled = false;
     btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Sincronizar';
   }
+}
+
+let _pollTimer = null;
+function pollSyncEstado() {
+  if (_pollTimer) clearInterval(_pollTimer);
+  _pollTimer = setInterval(async () => {
+    try {
+      const s = await api.get('/control/sync/estado');
+      setSyncStatus(s.estado, null, s);
+      if (s.estado === 'ok' || s.estado === 'error') {
+        clearInterval(_pollTimer);
+        _pollTimer = null;
+        document.getElementById('btn-sync').disabled = false;
+        document.getElementById('btn-sync').innerHTML =
+          '<i class="bi bi-arrow-clockwise"></i> Sincronizar';
+        if (s.estado === 'ok') cargarDatos();
+      }
+    } catch (_) {}
+  }, 5000);
+}
+
+function setSyncStatus(estado, msg, data) {
+  const el = document.getElementById('sync-status');
+  const hora = data?.finalizado_en
+    ? new Date(data.finalizado_en).toLocaleTimeString('es-AR',
+        {timeZone:'America/Argentina/Buenos_Aires', hour:'2-digit', minute:'2-digit'})
+    : '';
+  const configs = {
+    corriendo: { cls: 'text-primary',  icon: 'bi-hourglass-split', txt: 'Sincronizando...' },
+    ok:        { cls: 'text-success',  icon: 'bi-check-circle',    txt: `OK · ${data?.ok_count ?? ''} Emaús · ${hora}` },
+    error:     { cls: 'text-danger',   icon: 'bi-x-circle',        txt: msg || `Error · ${hora}` },
+    nunca:     { cls: 'text-muted',    icon: 'bi-dash-circle',     txt: 'Sin datos de sync' },
+  };
+  const c = configs[estado] || configs.nunca;
+  el.innerHTML = `<span class="${c.cls} small"><i class="bi ${c.icon} me-1"></i>${c.txt}</span>`;
+}
+
+async function cargarSyncEstado() {
+  try {
+    const s = await api.get('/control/sync/estado');
+    setSyncStatus(s.estado, null, s);
+    if (s.estado === 'corriendo') pollSyncEstado();
+  } catch (_) {}
 }
 
 </script>
