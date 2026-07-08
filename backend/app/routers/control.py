@@ -295,27 +295,12 @@ def trigger_sync(
     if not folder_id:
         raise HTTPException(status_code=500, detail="DRIVE_FOLDER_ID no configurado")
 
-    lambda_name = os.getenv("AWS_LAMBDA_FUNCTION_NAME", "")
-
-    if lambda_name:
-        # Estamos en Lambda — invocar asíncronamente con payload de EventBridge-like
-        import boto3
-        payload = {"source": "manual-sync", "anio": anio, "semestre": semestre}
-        if emaus_id:
-            payload["emaus_id"] = emaus_id
-        boto3.client("lambda").invoke(
-            FunctionName=lambda_name,
-            InvocationType="Event",  # asíncrono — no espera respuesta
-            Payload=json.dumps(payload).encode(),
-        )
-    else:
-        # Local — correr directo en background thread
-        import threading
-        from scripts.scraper_control import run_sync
-        threading.Thread(
-            target=run_sync,
-            args=(folder_id, anio, semestre, emaus_id),
-            daemon=True,
-        ).start()
+    import threading
+    from scripts.scraper_control import run_sync
+    threading.Thread(
+        target=run_sync,
+        args=(folder_id, anio, semestre, emaus_id),
+        daemon=False,  # daemon=False permite que Lambda siga vivo hasta que termine
+    ).start()
 
     return {"ok": True, "message": "Sync iniciado"}
