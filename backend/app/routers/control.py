@@ -262,24 +262,15 @@ def trigger_sync(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
     emaus_id: Optional[int] = None,
-    db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin")),
 ):
     """Dispara el scraper en background. Solo admin."""
-    import subprocess, sys, os
-    from pathlib import Path
+    import os
+    from scripts.scraper_control import run_sync
 
     folder_id = os.getenv("DRIVE_FOLDER_ID", "")
     if not folder_id:
         raise HTTPException(status_code=500, detail="DRIVE_FOLDER_ID no configurado")
 
-    script = Path(__file__).parent.parent.parent / "scripts" / "scraper_control.py"
-    cmd = [sys.executable, str(script),
-           "--anio", str(anio),
-           "--semestre", semestre,
-           "--folder-id", folder_id]
-    if emaus_id:
-        cmd += ["--emaus-id", str(emaus_id)]
-
-    background_tasks.add_task(subprocess.run, cmd)
+    background_tasks.add_task(run_sync, folder_id, anio, semestre, emaus_id)
     return {"ok": True, "message": "Sync iniciado en background"}

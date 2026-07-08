@@ -793,5 +793,53 @@ def main():
         print("(dry-run: no se modificó nada)")
 
 
+def run_sync(folder_id: str, anio: int = ANIO_DEFAULT, semestre: str = SEMESTRE_DEFAULT,
+             emaus_id: int = None, dry_run: bool = False, apply_reset: bool = False) -> dict:
+    """
+    Entrada callable para Lambda/router — misma lógica que main() pero sin argparse.
+    Retorna {"ok": int, "err": int, "skip": int}.
+    """
+    spec = load_validations(YAML_PATH)
+    sheets_svc, drive_svc = build_services()
+    engine = get_engine()
+
+    all_spreadsheets = list_spreadsheets(drive_svc, folder_id, NAME_CONTAINS)
+    emaus_list = get_all_emaus(engine)
+    sheet_map: Dict[str, str] = {
+        item.get("emaus_nombre", "").strip(): item["id"]
+        for item in all_spreadsheets
+        if item.get("emaus_nombre", "").strip()
+    }
+
+    ok = err = skip = 0
+
+    for emaus in emaus_list:
+        if emaus_id and emaus["id"] != emaus_id:
+            continue
+
+        spreadsheet_id = emaus.get("spreadsheet_id") or sheet_map.get(emaus["nombre"])
+        if not spreadsheet_id:
+            skip += 1
+            continue
+
+        try:
+            metrics = scrape_spreadsheet(
+                sheets_svc, spreadsheet_id, spec,
+                anio, semestre, dry_run,
+                apply_reset=apply_reset,
+            )
+            metrics["_spreadsheet_id"] = spreadsheet_id
+            if not dry_run:
+                upsert_control(engine, emaus["id"], anio, semestre, metrics)
+            ok += 1
+        except Exception:
+            err += 1
+            time.sleep(5)
+        else:
+            time.sleep(1.5)
+
+    return {"ok": ok, "err": err, "skip": skip}
+
+
 if __name__ == "__main__":
     main()
