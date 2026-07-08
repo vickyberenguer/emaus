@@ -15,7 +15,8 @@ def handler(event, context):
         anio = event.get("anio", int(os.getenv("ANIO_ACTIVO", "2026")))
         semestre = event.get("semestre", os.getenv("SEMESTRE_ACTIVO", "1"))
         emaus_id = event.get("emaus_id", None)
-        result = run_sync(folder_id, anio=anio, semestre=semestre, emaus_id=emaus_id)
+        apply_reset = event.get("apply_reset", True)
+        result = run_sync(folder_id, anio=anio, semestre=semestre, emaus_id=emaus_id, apply_reset=apply_reset)
         print(f"[sync] source={event.get('source','eventbridge')} result={result}")
         return result
 

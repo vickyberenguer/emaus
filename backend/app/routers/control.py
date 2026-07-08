@@ -299,7 +299,7 @@ def trigger_sync(
     if lambda_name:
         # En Lambda: invocar asíncronamente para que corra sin límite de API Gateway
         import boto3, json
-        payload = {"source": "manual-sync", "anio": anio, "semestre": semestre}
+        payload = {"source": "manual-sync", "anio": anio, "semestre": semestre, "apply_reset": True}
         if emaus_id:
             payload["emaus_id"] = emaus_id
         boto3.client("lambda", region_name=os.getenv("AWS_REGION", "us-east-1")).invoke(
@@ -314,6 +314,7 @@ def trigger_sync(
         threading.Thread(
             target=run_sync,
             args=(folder_id, anio, semestre, emaus_id),
+            kwargs={"apply_reset": True},
             daemon=True,
         ).start()
 
