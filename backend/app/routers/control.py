@@ -176,6 +176,28 @@ def listar_control(
     return [build_control_out(ctrl, emaus) for ctrl, emaus in rows]
 
 
+@router.get("/sync/estado")
+def sync_estado(current_user: Usuario = Depends(require_rol("admin", "responsable"))):
+    """Último estado del proceso de sync."""
+    from app.database import engine as db_engine
+    from sqlalchemy import text as sa_text
+    with db_engine.connect() as conn:
+        row = conn.execute(sa_text("""
+            SELECT id, iniciado_en, finalizado_en, estado, ok_count, err_count, skip_count
+            FROM sync_estado ORDER BY id DESC LIMIT 1
+        """)).fetchone()
+    if not row:
+        return {"estado": "nunca", "iniciado_en": None}
+    return {
+        "estado":        row.estado,
+        "iniciado_en":   row.iniciado_en.isoformat() if row.iniciado_en else None,
+        "finalizado_en": row.finalizado_en.isoformat() if row.finalizado_en else None,
+        "ok_count":      row.ok_count,
+        "err_count":     row.err_count,
+        "skip_count":    row.skip_count,
+    }
+
+
 @router.get("/{emaus_id}", response_model=ControlDetalleOut)
 def detalle_control(
     emaus_id: int,
@@ -297,25 +319,3 @@ def trigger_sync(
         ).start()
 
     return {"ok": True, "message": "Sync iniciado"}
-
-
-@router.get("/sync/estado")
-def sync_estado(current_user: Usuario = Depends(require_rol("admin", "responsable"))):
-    """Último estado del proceso de sync."""
-    from app.database import engine as db_engine
-    from sqlalchemy import text as sa_text
-    with db_engine.connect() as conn:
-        row = conn.execute(sa_text("""
-            SELECT id, iniciado_en, finalizado_en, estado, ok_count, err_count, skip_count
-            FROM sync_estado ORDER BY id DESC LIMIT 1
-        """)).fetchone()
-    if not row:
-        return {"estado": "nunca", "iniciado_en": None}
-    return {
-        "estado":        row.estado,
-        "iniciado_en":   row.iniciado_en.isoformat() if row.iniciado_en else None,
-        "finalizado_en": row.finalizado_en.isoformat() if row.finalizado_en else None,
-        "ok_count":      row.ok_count,
-        "err_count":     row.err_count,
-        "skip_count":    row.skip_count,
-    }
