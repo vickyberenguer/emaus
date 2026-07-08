@@ -295,12 +295,26 @@ def trigger_sync(
     if not folder_id:
         raise HTTPException(status_code=500, detail="DRIVE_FOLDER_ID no configurado")
 
-    import threading
-    from scripts.scraper_control import run_sync
-    threading.Thread(
-        target=run_sync,
-        args=(folder_id, anio, semestre, emaus_id),
-        daemon=False,  # daemon=False permite que Lambda siga vivo hasta que termine
-    ).start()
+    lambda_name = os.getenv("AWS_LAMBDA_FUNCTION_NAME", "")
+    if lambda_name:
+        # En Lambda: invocar asíncronamente para que corra sin límite de API Gateway
+        import boto3, json
+        payload = {"source": "manual-sync", "anio": anio, "semestre": semestre}
+        if emaus_id:
+            payload["emaus_id"] = emaus_id
+        boto3.client("lambda", region_name=os.getenv("AWS_REGION", "us-east-1")).invoke(
+            FunctionName=lambda_name,
+            InvocationType="Event",
+            Payload=json.dumps(payload).encode(),
+        )
+    else:
+        # Local: thread en background
+        import threading
+        from scripts.scraper_control import run_sync
+        threading.Thread(
+            target=run_sync,
+            args=(folder_id, anio, semestre, emaus_id),
+            daemon=True,
+        ).start()
 
     return {"ok": True, "message": "Sync iniciado"}

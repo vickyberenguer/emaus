@@ -15,7 +15,10 @@ Uso:
 import argparse
 import json
 import os
+import socket
 import sys
+
+socket.setdefaulttimeout(90)  # 90s máximo por cualquier llamada de red
 import time
 from datetime import datetime
 from pathlib import Path
