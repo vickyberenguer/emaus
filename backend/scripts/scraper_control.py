@@ -60,7 +60,10 @@ TALLERES_SHEET = "Talleres"
 TALLERES_SHEET_ALT = "Talleres enero-junio 2026"
 ESTABLECIMIENTOS_SHEET = "Establecimientos"
 
-YAML_PATH = SCRIPT_DIR.parent.parent / "archivosdatos" / "especificacion_planillas.yaml"
+# Busca el YAML primero junto al script (Lambda), después en archivosdatos/ (local)
+_yaml_local = SCRIPT_DIR.parent.parent / "archivosdatos" / "especificacion_planillas.yaml"
+_yaml_bundled = SCRIPT_DIR / "especificacion_planillas.yaml"
+YAML_PATH = _yaml_bundled if _yaml_bundled.exists() else _yaml_local
 TOKEN_PATH = Path(os.getenv("GOOGLE_TOKEN_PATH", str(SCRIPT_DIR.parent.parent.parent /
     "Informes Emaus" / "2026_Mid" / "token.json")))
 CLIENT_SECRET_PATH = Path(os.getenv("GOOGLE_CLIENT_SECRET_PATH", str(SCRIPT_DIR.parent.parent.parent /

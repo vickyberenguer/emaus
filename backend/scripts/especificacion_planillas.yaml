@@ -1,0 +1,1932 @@
+# =============================================================
+# Especificación de planillas Google Sheets - Emaús
+# Período: 2026 Medio Término
+# Generado para revisión — editar antes de codificar
+# =============================================================
+# NOTA: Las celdas están ajustadas al layout actual (post-eliminación de una fila)
+#       respecto al Apps Script original (validaciones.gs).
+# =============================================================
+
+# -------------------------------------------------------------
+# HOJA EE (una por cada Espacio Educativo del Emaús)
+# Nombre de la hoja: nombre del EE (variable)
+# Completion layout: E4=checkbox, E5=fecha, E6=estado
+# -------------------------------------------------------------
+sheets:
+
+  - id: ee
+    description: "Hoja de cada Espacio Educativo (nombre variable)"
+    completion:
+      checkbox_cell: E4
+      date_cell: E5
+      status_cell: E6
+      declared_values: ["Completa", "Completada", "Completada (con advertencias)"]
+
+    fields:
+      # --- Datos básicos ---
+      - name: Diocesis
+        cell: C3
+        type: texto
+        required: true
+
+      - name: NombreEE
+        cell: C4
+        type: texto
+        required: true
+
+      - name: Direccion
+        cell: C5
+        type: texto
+        required: false
+
+      - name: Geolocalizacion
+        cell: C6
+        type: texto
+        required: false
+
+      - name: BarrioRENABAP
+        cell: C7
+        type: si_no
+        required: false
+
+      # --- Asistentes por franja etaria ---
+      - name: Asistentes_0_6
+        cell: C10
+        type: numerico
+        required: false
+
+      - name: Asistentes_7_14
+        cell: C11
+        type: numerico
+        required: false
+
+      - name: Asistentes_15_24
+        cell: C12
+        type: numerico
+        required: false
+
+      - name: Asistentes_25_34
+        cell: C13
+        type: numerico
+        required: false
+
+      - name: Asistentes_35_50
+        cell: C14
+        type: numerico
+        required: false
+
+      - name: Asistentes_Mas50
+        cell: C15
+        type: numerico
+        required: false
+
+      # --- Acciones (checkboxes Sí/No) ---
+      - name: Accion_PI_Pastoral
+        cell: D19
+        type: si_no
+
+      - name: Accion_PI_Capacitaciones
+        cell: D20
+        type: si_no
+
+      - name: Accion_PI_EspPI
+        cell: D21
+        type: si_no
+
+      - name: Accion_PI_EstimTemprana
+        cell: D22
+        type: si_no
+
+      - name: Accion_ATE_BF
+        cell: D23
+        type: si_no
+
+      - name: Accion_ATE_ApoyoEscolar
+        cell: D24
+        type: si_no
+
+      - name: Accion_ATE_BTU
+        cell: D25
+        type: si_no
+
+      - name: Accion_ATE_AlfabInicial
+        cell: D26
+        type: si_no
+
+      - name: Accion_ATE_DALE
+        cell: D27
+        type: si_no
+
+      - name: Accion_ATE_ActLectoEscOral
+        cell: D28
+        type: si_no
+
+      - name: Accion_ATE_RinconLectura
+        cell: D29
+        type: si_no
+
+      - name: Accion_ATE_AlfabAdultos
+        cell: D30
+        type: si_no
+
+      - name: Accion_ATE_PromSE
+        cell: D31
+        type: si_no
+
+      - name: Accion_IC_Itinerancia
+        cell: D32
+        type: si_no
+
+      - name: Accion_IC_Mochileros
+        cell: D33
+        type: si_no
+
+      - name: Accion_IC_Ludoteca
+        cell: D34
+        type: si_no
+
+      - name: Accion_IC_ActCultRecre
+        cell: D35
+        type: si_no
+
+      - name: Accion_IC_Desarrollo
+        cell: D36
+        type: si_no
+
+      - name: Accion_IC_HabTrabajo
+        cell: D37
+        type: si_no
+
+      - name: Accion_IC_TalleresMuj
+        cell: D38
+        type: si_no
+
+      - name: Accion_IC_Adolescentes
+        cell: D39
+        type: si_no
+
+      - name: Accion_IC_TallOficio
+        cell: D40   # Accion_IC_Potenciar fue eliminada; TallOficio queda en D40
+        type: si_no
+
+      - name: Accion_NT_CapacTall
+        cell: D41
+        type: si_no
+
+      - name: Accion_NT_EquiInfInt
+        cell: D42
+        type: si_no
+
+      - name: Accion_NT_Tramites
+        cell: D43
+        type: si_no
+
+      - name: Accion_NT_AccesoDig
+        cell: D44
+        type: si_no
+
+      - name: Accion_SI_Deportes
+        cell: D45
+        type: si_no
+
+      - name: Accion_SI_Alimentacion
+        cell: D46
+        type: si_no
+
+      - name: Accion_SI_Meriendas
+        cell: D47
+        type: si_no
+
+      - name: Accion_SI_ControlesMed
+        cell: D48
+        type: si_no
+
+      - name: Accion_SI_CapacitTall
+        cell: D49
+        type: si_no
+
+      - name: Accion_SI_Huertas
+        cell: D50
+        type: si_no
+
+      # --- Apoyo Escolar Primario ---
+      - name: ApEscolar_Nro_Primaria
+        cell: C53
+        type: numerico
+
+      - name: ApEscolar_Nro_Secundaria
+        cell: C54
+        type: numerico
+
+      - name: ApEscolar_Freq_Primaria
+        cell: C80
+        type: texto
+
+      - name: ApEscolar_Contenido_Prim_May
+        cell: C81
+        type: texto
+
+      - name: ApEscolar_Contenido_Prim_Otro
+        cell: C82
+        type: texto
+
+      - name: ApEscolar_Lengua
+        cell: C85
+        type: si_no
+
+      - name: ApEscolar_Matematicas
+        cell: C86
+        type: si_no
+
+      - name: ApEscolar_CciasNaturales
+        cell: C87
+        type: si_no
+
+      - name: ApEscolar_CciasSociales
+        cell: C88
+        type: si_no
+
+      - name: ApEscolar_Ingles
+        cell: C89
+        type: si_no
+
+      - name: ApEscolar_Otro
+        cell: C90
+        type: texto
+
+      # --- Apoyo Escolar Secundario ---
+      - name: ApEscolar_Freq_Secundaria
+        cell: C111
+        type: texto
+
+      - name: ApEscolar_Contenido_Sec_May
+        cell: C112
+        type: texto
+
+      - name: ApEscolar_Contenido_Sec_Otro
+        cell: C113
+        type: texto
+
+      - name: ApEscolar_Sec_Lengua
+        cell: C116
+        type: si_no
+
+      - name: ApEscolar_Sec_Matematicas
+        cell: C117
+        type: si_no
+
+      - name: ApEscolar_Sec_CciasNaturales
+        cell: C118
+        type: si_no
+
+      - name: ApEscolar_Sec_CciasSociales
+        cell: C119
+        type: si_no
+
+      - name: ApEscolar_Sec_Ingles
+        cell: C120
+        type: si_no
+
+      - name: ApEscolar_Sec_Otro
+        cell: C121
+        type: texto
+
+      - name: ApEscolar_Sec_Otro_Detalle
+        cell: C122
+        type: texto
+
+      # --- Beneficios Formales ---
+      - name: BF_Nro_ApEscolar
+        cell: C57
+        type: numerico
+
+      - name: BF_Nro_Inicial
+        cell: C58
+        type: numerico
+
+      - name: BF_Nro_Primaria
+        cell: C59
+        type: numerico
+
+      - name: BF_Nro_Secundaria
+        cell: C60
+        type: numerico
+
+      - name: BF_Nro_Asignaciones
+        cell: C61
+        type: numerico
+
+      - name: BF_Nro_Discapacidad
+        cell: C62
+        type: numerico
+
+      - name: BF_Nro_Discapacidad_CUD
+        cell: C63
+        type: numerico
+
+      # --- BTU ---
+      - name: BTU_regulares
+        cell: C67
+        type: numerico
+
+      - name: BTU_egresados
+        cell: C68
+        type: numerico
+
+      - name: BTU_abandono
+        cell: C69
+        type: numerico
+
+      - name: BTU_abandono_horarios
+        cell: C71
+        type: si_no
+
+      - name: BTU_abandono_costotransporte
+        cell: C72
+        type: si_no
+
+      - name: BTU_abandono_cambiodomic
+        cell: C73
+        type: si_no
+
+      - name: BTU_abandono_faltatiempo
+        cell: C74
+        type: si_no
+
+      - name: BTU_abandono_accesotranspor
+        cell: C75
+        type: si_no
+
+      - name: BTU_abandono_accesoboletoestudiantil
+        cell: C76
+        type: si_no
+
+      - name: BTU_abandono_otro
+        cell: C77
+        type: texto
+
+      # --- Alfabetización Inicial ---
+      - name: Alfabetizacion_Nro
+        cell: C93
+        type: numerico
+
+      - name: Alfabetizacion_6_9
+        cell: C94
+        type: numerico
+
+      - name: Alfabetizacion_10_14
+        cell: C95
+        type: numerico
+
+      - name: Alfabetizacion_15_24
+        cell: C96
+        type: numerico
+
+      - name: Alfabetizacion_25mas
+        cell: C97
+        type: numerico
+
+      - name: Alfabetizacion_CantAlfabetizadores
+        cell: C98
+        type: numerico
+
+      - name: Alfabetizacion_Freq
+        cell: C99
+        type: texto
+
+      # --- Propuesta DALE ---
+      - name: DALE_Nro
+        cell: C102
+        type: numerico
+
+      - name: DALE_6_9
+        cell: C103
+        type: numerico
+
+      - name: DALE_10_14
+        cell: C104
+        type: numerico
+
+      - name: DALE_15_24
+        cell: C105
+        type: numerico
+
+      - name: DALE_25mas
+        cell: C106
+        type: numerico
+
+      - name: DALE_EducadoresDale
+        cell: C107
+        type: numerico
+
+      - name: DALE_Freq
+        cell: C108
+        type: texto
+
+      # --- Adolescentes y Jóvenes ---
+      - name: AyJ_Nro
+        cell: C125
+        type: numerico
+
+      - name: AyJ_Freq
+        cell: C126
+        type: texto
+
+      - name: AyJ_rank_suicidio
+        cell: C254
+        type: numerico
+
+      - name: AyJ_rank_faltaproyecto
+        cell: C255
+        type: numerico
+
+      - name: AyJ_rank_consumo
+        cell: C256
+        type: numerico
+
+      - name: AyJ_rank_apuestas
+        cell: C257
+        type: numerico
+
+      - name: AyJ_rank_saludmental
+        cell: C258
+        type: numerico
+
+      - name: AyJ_rank_violencia
+        cell: C259
+        type: numerico
+
+      - name: AyJ_rank_violenciadigital
+        cell: C260
+        type: numerico
+
+      - name: AyJ_rank_desvinculacion
+        cell: C261
+        type: numerico
+
+      # --- Itinerancia ---
+      - name: Itinerancia_Activ
+        cell: C129
+        type: si_no
+
+      - name: Itinerancia_Freq
+        cell: C130
+        type: texto
+
+      - name: Itinerancia_Club
+        cell: C132
+        type: si_no
+
+      - name: Itinerancia_Plaza
+        cell: C133
+        type: si_no
+
+      - name: Itinerancia_Terreno
+        cell: C134
+        type: si_no
+
+      - name: Itinerancia_Paraje
+        cell: C135
+        type: si_no
+
+      - name: Itinerancia_Otro
+        cell: C136
+        type: texto
+
+      - name: Itinerancia_Act_Estim
+        cell: C138
+        type: si_no
+
+      - name: Itinerancia_Act_PI
+        cell: C139
+        type: si_no
+
+      - name: Itinerancia_Act_Alfabetizacion
+        cell: C140
+        type: si_no
+
+      - name: Itinerancia_Act_Merienda
+        cell: C141
+        type: si_no
+
+      - name: Itinerancia_Act_Recreacion
+        cell: C142
+        type: si_no
+
+      - name: Itinerancia_Act_Talleres
+        cell: C143
+        type: si_no
+
+      - name: Itinerancia_Act_Charlas
+        cell: C144
+        type: si_no
+
+      - name: Itinerancia_Act_Festividades
+        cell: C145
+        type: si_no
+
+      - name: Itinerancia_Act_Reuniones
+        cell: C146
+        type: si_no
+
+      - name: Itinerancia_Rol1
+        cell: C148
+        type: texto
+
+      - name: Itinerancia_Rol1_Cant
+        cell: D148
+        type: numerico
+
+      - name: Itinerancia_Rol1_Otro
+        cell: E148
+        type: texto
+
+      - name: Itinerancia_Rol2
+        cell: C149
+        type: texto
+
+      - name: Itinerancia_Rol2_Cant
+        cell: D149
+        type: numerico
+
+      - name: Itinerancia_Rol3
+        cell: C150
+        type: texto
+
+      - name: Itinerancia_Rol3_Cant
+        cell: D150
+        type: numerico
+
+      - name: Itinerancia_Rol4
+        cell: C151
+        type: texto
+
+      - name: Itinerancia_Rol4_Cant
+        cell: D151
+        type: numerico
+
+      # --- Alfabetización Digital y NT ---
+      - name: AlfabDig_NT_AccesoInternet
+        cell: C154
+        type: si_no
+
+      - name: AlfabDig_NT_AccesoInternet_Falta
+        cell: C155
+        type: si_no
+
+      - name: AlfabDig_NT_Formacion
+        cell: C156
+        type: si_no
+
+      - name: AlfabDig_NT_Digitales
+        cell: C157
+        type: si_no
+
+      - name: AlfabDig_NT_Tall_Trabajo
+        cell: C158
+        type: si_no
+
+      - name: AlfabDig_NT_Tall_Redes
+        cell: C159
+        type: si_no
+
+      - name: AlfabDig_NT_Tall_Seguridad
+        cell: C160
+        type: si_no
+
+      - name: AlfabDig_NT_Internet_Uso
+        cell: C161
+        type: si_no
+
+      - name: AlfabDig_NT_Internet_Estudio
+        cell: C162
+        type: si_no
+
+      # --- Equipamiento Informático ---
+      - name: EquipInformatico_MonitorTubo
+        cell: C165
+        type: numerico
+
+      - name: EquipInformatico_MonitorPlano
+        cell: C166
+        type: numerico
+
+      - name: EquipInformatico_PCAllinOne
+        cell: C167
+        type: numerico
+
+      - name: EquipInformatico_PCEscritorio
+        cell: C168
+        type: numerico
+
+      - name: EquipInformatico_Notebook
+        cell: C169
+        type: numerico
+
+      - name: EquipInformatico_Tablet
+        cell: C170
+        type: numerico
+
+      - name: EquipInformatico_Impresora
+        cell: C171
+        type: numerico
+
+      - name: EquipInformatico_Multifuncion
+        cell: C172
+        type: numerico
+
+      # --- Grupo de Mujeres ---
+      - name: GM_RC_Nro
+        cell: C175
+        type: numerico
+
+      - name: GM_RC_Freq
+        cell: C176
+        type: texto
+
+      - name: GM_Rol1
+        cell: C178
+        type: texto
+
+      - name: GM_Rol1_Cant
+        cell: D178
+        type: numerico
+
+      - name: GM_Rol2
+        cell: C179
+        type: texto
+
+      - name: GM_Rol2_Cant
+        cell: D179
+        type: numerico
+
+      - name: GM_Rol3
+        cell: C180
+        type: texto
+
+      - name: GM_Rol3_Cant
+        cell: D180
+        type: numerico
+
+      - name: GM_Rol4
+        cell: C181
+        type: texto
+
+      - name: GM_Rol4_Cant
+        cell: D181
+        type: numerico
+
+      # --- Edilicio ---
+      - name: EE_Edil_Titularidad
+        cell: C184
+        type: texto
+
+      - name: EE_Edil_Titular
+        cell: C185
+        type: texto
+
+      - name: EE_Edil_Construccion
+        cell: C186
+        type: texto
+
+      - name: EE_Edil_Rampa
+        cell: C187
+        type: si_no
+
+      - name: EE_Edil_AccesoPor
+        cell: C188
+        type: texto
+
+      - name: EE_Zona_Urbana
+        cell: C191
+        type: si_no
+
+      - name: EE_Zona_Periferica
+        cell: C192
+        type: si_no
+
+      - name: EE_Zona_Rural
+        cell: C193
+        type: si_no
+
+      - name: EE_Zona_Inundable
+        cell: C194
+        type: si_no
+
+      - name: EE_Zona_DifTransporte
+        cell: C195
+        type: si_no
+
+      - name: EE_Cocina
+        cell: C198
+        type: si_no
+
+      - name: EE_Comedor
+        cell: C199
+        type: si_no
+
+      - name: EE_Despensa
+        cell: C200
+        type: si_no
+
+      - name: EE_Banio
+        cell: C201
+        type: si_no
+
+      - name: EE_Banio_Nro
+        cell: C202
+        type: numerico
+
+      - name: EE_EspacioRecreacion
+        cell: C203
+        type: si_no
+
+      - name: EE_Agua_Corriente
+        cell: C206
+        type: si_no
+
+      - name: EE_Agua_AljibeReservorio
+        cell: C207
+        type: si_no
+
+      - name: EE_Agua_FueraDelTerreno
+        cell: C208
+        type: si_no
+
+      - name: EE_Cloacas
+        cell: C211
+        type: si_no
+
+      - name: EE_Luz_Red
+        cell: C212
+        type: si_no
+
+      - name: EE_Residuos
+        cell: C213
+        type: texto
+
+      - name: EE_SenalMovil
+        cell: C214
+        type: si_no
+
+      - name: EE_Internet_Prov
+        cell: C215
+        type: texto
+
+      - name: EE_Combustible_Cocina
+        cell: C216
+        type: texto
+
+      - name: EE_Cocina_Industrial
+        cell: C219
+        type: si_no
+
+      - name: EE_Cocina_Familiar
+        cell: C220
+        type: si_no
+
+      - name: EE_Cocina_Mechero
+        cell: C221
+        type: si_no
+
+      - name: EE_Cocina_HeladeraInd
+        cell: C222
+        type: si_no
+
+      - name: EE_Cocina_HeladeraFam
+        cell: C223
+        type: si_no
+
+      - name: EE_Cocina_FreezerInd
+        cell: C224
+        type: si_no
+
+      - name: EE_Cocina_FreezerFam
+        cell: C225
+        type: si_no
+
+      # --- Prioridades de Infraestructura ---
+      - name: Prioridad_PinturaExterior
+        cell: C228
+        type: si_no
+
+      - name: Prioridad_PinturaInterior
+        cell: C229
+        type: si_no
+
+      - name: Prioridad_Electricidad
+        cell: C230
+        type: si_no
+
+      - name: Prioridad_Agua
+        cell: C231
+        type: si_no
+
+      - name: Prioridad_Gas
+        cell: C232
+        type: si_no
+
+      - name: Prioridad_Arreglos
+        cell: C233
+        type: si_no
+
+      - name: Prioridad_Construccion
+        cell: C234
+        type: si_no
+
+      - name: Prioridad_Climatizacion
+        cell: C235
+        type: si_no
+
+      - name: Prioridad_Banio
+        cell: C236
+        type: si_no
+
+      # --- Articulación Nivel Superior ---
+      - name: Articula_InstNivelSuperior
+        cell: C238
+        type: si_no
+
+      - name: Articula_InstNivelSuperior_Cuantas
+        cell: C239
+        type: numerico
+
+      - name: Articula_Institucion1
+        cell: C242
+        type: texto
+
+      - name: Articula_Institucion1_Acciones
+        cell: C243
+        type: texto
+
+      - name: Articula_Institucion2
+        cell: C244
+        type: texto
+
+      - name: Articula_Institucion2_Acciones
+        cell: C245
+        type: texto
+
+      - name: Articula_Institucion3
+        cell: C246
+        type: texto
+
+      - name: Articula_Institucion3_Acciones
+        cell: C247
+        type: texto
+
+      - name: Articula_Institucion4
+        cell: C248
+        type: texto
+
+      - name: Articula_Institucion4_Acciones
+        cell: C249
+        type: texto
+
+      - name: Articula_Institucion5
+        cell: C250
+        type: texto
+
+      - name: Articula_Institucion5_Acciones
+        cell: C251
+        type: texto
+
+
+# -------------------------------------------------------------
+# HOJA PI (Pastoral Primera Infancia)
+# Nombre fijo: "Pastoral Primera Infancia"
+# Completion layout: E4=checkbox, E5=fecha, E6=estado
+# -------------------------------------------------------------
+
+  - id: pi
+    description: "Hoja Pastoral Primera Infancia"
+    sheet_title: "Pastoral Primera Infancia"
+    completion:
+      checkbox_cell: E4
+      date_cell: E5
+      status_cell: E6
+      declared_values: ["Completa", "Completada", "Completada (con advertencias)"]
+
+    fields:
+      - name: Diocesis
+        cell: C3
+        type: texto
+        required: true
+
+      - name: Capacitadora
+        cell: C4
+        type: texto
+        required: true
+
+      - name: AniosPI
+        cell: C7
+        type: numerico
+
+      - name: MetodologiaPresentada
+        cell: C10
+        type: si_no_desconozco
+
+      - name: MetodologiaPresentada_SinDesarrollo
+        cell: C11
+        type: numerico
+
+      # Comunidades (hasta 4)
+      - name: Comunidad1
+        cell: B14
+        type: texto
+
+      - name: Comunidad1_Emaus
+        cell: C14
+        type: texto
+
+      - name: Comunidad1_Direccion
+        cell: D14
+        type: texto
+
+      - name: Comunidad1_Geolocalizacion
+        cell: E14
+        type: texto
+
+      - name: Comunidad1_BarrioRENABAP
+        cell: F14
+        type: si_no_desconozco
+
+      - name: Comunidad1_FreqAcciones
+        cell: G14
+        type: texto
+
+      - name: Comunidad2
+        cell: B15
+        type: texto
+
+      - name: Comunidad2_Emaus
+        cell: C15
+        type: texto
+
+      - name: Comunidad2_FreqAcciones
+        cell: G15
+        type: texto
+
+      - name: Comunidad3
+        cell: B16
+        type: texto
+
+      - name: Comunidad3_FreqAcciones
+        cell: G16
+        type: texto
+
+      - name: Comunidad4
+        cell: B17
+        type: texto
+
+      - name: Comunidad4_FreqAcciones
+        cell: G17
+        type: texto
+
+      - name: Capacitadoras
+        cell: C20
+        type: numerico
+
+      - name: Lideres
+        cell: C21
+        type: numerico
+
+      - name: MadresEmbarazadas_12_18
+        cell: C24
+        type: numerico
+
+      - name: MadresEmbarazadas_19_30
+        cell: C25
+        type: numerico
+
+      - name: MadresEmbarazadas_30mas
+        cell: C26
+        type: numerico
+
+      - name: MadresNoEmbarazadas
+        cell: C27
+        type: numerico
+
+      - name: Ninos_0_3
+        cell: C28
+        type: numerico
+
+      - name: Ninos_4_6
+        cell: C29
+        type: numerico
+
+      - name: Familias
+        cell: C30
+        type: numerico
+
+      - name: Enfermedad1_Ninos
+        cell: C33
+        type: texto
+
+      - name: Enfermedad2_Ninos
+        cell: C34
+        type: texto
+
+      - name: Enfermedad3_Ninos
+        cell: C35
+        type: texto
+
+      - name: Enfermedad1_Mujeres
+        cell: C38
+        type: texto
+
+      - name: Enfermedad2_Mujeres
+        cell: C39
+        type: texto
+
+      - name: Enfermedad3_Mujeres
+        cell: C40
+        type: texto
+
+      - name: LideresSabenLeerEscribir
+        cell: C43
+        type: si_no_desconozco
+
+      - name: CantLideresNoSabenLeerEscribir
+        cell: C44
+        type: numerico
+
+      - name: AlgunaLiderParticipaDale
+        cell: C45
+        type: si_no_desconozco
+
+      - name: TodasMadresAlfabetizadas
+        cell: C48
+        type: si_no_desconozco
+
+      - name: CantMadresNoAlfabetizadas
+        cell: C49
+        type: numerico
+
+      - name: AlgunaMadreParticipaAlfabetizacion
+        cell: C50
+        type: si_no_desconozco
+
+      - name: LideresCelebracionVida
+        cell: C53
+        type: si_no_desconozco
+
+      - name: LideresCelebracionVida_Frec
+        cell: D53
+        type: texto
+
+      - name: LideresCelebracionVida_Cant
+        cell: E53
+        type: numerico
+
+      - name: LideresVisitaDomiciliaria
+        cell: C54
+        type: si_no_desconozco
+
+      - name: LideresVisitaDomiciliaria_Frec
+        cell: D54
+        type: texto
+
+      - name: LideresVisitaDomiciliaria_Cant
+        cell: E54
+        type: numerico
+
+      - name: LideresReunionEvaluacion
+        cell: C55
+        type: si_no_desconozco
+
+      - name: LideresReunionEvaluacion_Frec
+        cell: D55
+        type: texto
+
+      - name: LideresReunionEvaluacion_Cant
+        cell: E55
+        type: numerico
+
+      # Temas abordados (Sí/No/Desconozco + cantidad comunidades)
+      - name: Abordada_Vacunas
+        cell: C58
+        type: si_no_desconozco
+
+      - name: Abordada_Vacunas_Comunidades
+        cell: D58
+        type: numerico
+
+      - name: Abordada_Higiene
+        cell: C59
+        type: si_no_desconozco
+
+      - name: Abordada_Higiene_Comunidades
+        cell: D59
+        type: numerico
+
+      - name: Abordada_PrimerosaAuxilios
+        cell: C60
+        type: si_no_desconozco
+
+      - name: Abordada_PrimerosaAuxilios_Comunidades
+        cell: D60
+        type: numerico
+
+      - name: Abordada_EstimulacionAdecuada
+        cell: C61
+        type: si_no_desconozco
+
+      - name: Abordada_EstimulacionAdecuada_Comunidades
+        cell: D61
+        type: numerico
+
+      - name: Abordada_Lactancia
+        cell: C62
+        type: si_no_desconozco
+
+      - name: Abordada_Lactancia_Comunidades
+        cell: D62
+        type: numerico
+
+      - name: Abordada_Ternura
+        cell: C63
+        type: si_no_desconozco
+
+      - name: Abordada_Ternura_Comunidades
+        cell: D63
+        type: numerico
+
+      - name: Abordada_Alimentacion
+        cell: C64
+        type: si_no_desconozco
+
+      - name: Abordada_Alimentacion_Comunidades
+        cell: D64
+        type: numerico
+
+      - name: Abordada_DerechosInfancias
+        cell: C65
+        type: si_no_desconozco
+
+      - name: Abordada_DerechosInfancias_Comunidades
+        cell: D65
+        type: numerico
+
+      - name: Abordada_DiscriminacionViolencia
+        cell: C66
+        type: si_no_desconozco
+
+      - name: Abordada_DiscriminacionViolencia_Comunidades
+        cell: D66
+        type: numerico
+
+      - name: Abordada_Autoestima
+        cell: C67
+        type: si_no_desconozco
+
+      - name: Abordada_Autoestima_Comunidades
+        cell: D67
+        type: numerico
+
+      - name: Abordada_Consumoproblematico
+        cell: C68
+        type: si_no_desconozco
+
+      - name: Abordada_Consumoproblematico_Comunidades
+        cell: D68
+        type: numerico
+
+      - name: Abordada_AbusoAcoso
+        cell: C69
+        type: si_no_desconozco
+
+      - name: Abordada_AbusoAcoso_Comunidades
+        cell: D69
+        type: numerico
+
+      - name: Abordada_AdecuacionPI
+        cell: C70
+        type: si_no_desconozco
+
+      - name: Abordada_AdecuacionPI_Comunidades
+        cell: D70
+        type: numerico
+
+      - name: Abordada_MedioAmbiente
+        cell: C71
+        type: si_no_desconozco
+
+      - name: Abordada_MedioAmbiente_Comunidades
+        cell: D71
+        type: numerico
+
+      - name: Abordada_Otras
+        cell: C72
+        type: texto
+
+      - name: Abordada_Otras_Comunidades
+        cell: D72
+        type: numerico
+
+      # Articulaciones
+      - name: Articula_CentroSalud
+        cell: C75
+        type: si_no_desconozco
+
+      - name: Articula_Hospital
+        cell: C76
+        type: si_no_desconozco
+
+      - name: Articula_Municipio
+        cell: C77
+        type: si_no_desconozco
+
+      - name: Articula_DeptGenero
+        cell: C78
+        type: si_no_desconozco
+
+
+# =============================================================
+# VALIDACIONES - Hoja EE
+# =============================================================
+# severity: error = bloquea aprobación | warning = aviso
+# Todas las celdas referencian el layout ACTUAL (post row-deletion)
+# =============================================================
+
+validations:
+
+  # --- Campos básicos obligatorios ---
+  - id: ee_basico_diocesis
+    sheet: ee
+    description: "Diócesis debe estar completa"
+    severity: error
+    when:
+      field: Diocesis
+      is_empty: true
+    message: "Falta completar: Diócesis (C3)"
+
+  - id: ee_basico_nombre
+    sheet: ee
+    description: "Nombre del EE debe estar completo"
+    severity: error
+    when:
+      field: NombreEE
+      is_empty: true
+    message: "Falta completar: Nombre del Espacio Educativo (C4)"
+
+  # --- Alfabetización Inicial (D26) ---
+  - id: alfabinicial_si_requiere_datos
+    sheet: ee
+    description: "Si se realiza Alfabetización Inicial, el cuadro debe estar completo"
+    severity: error
+    when:
+      field: Accion_ATE_AlfabInicial
+      equals: "Sí"
+    require_all:
+      - field: Alfabetizacion_Nro
+        not_empty: true
+      - any_of:
+          - field: Alfabetizacion_6_9
+            not_empty: true
+          - field: Alfabetizacion_10_14
+            not_empty: true
+          - field: Alfabetizacion_15_24
+            not_empty: true
+          - field: Alfabetizacion_25mas
+            not_empty: true
+      - field: Alfabetizacion_CantAlfabetizadores
+        not_empty: true
+      - field: Alfabetizacion_Freq
+        not_empty: true
+    message: "Se respondió que se realiza Alfabetización Inicial pero no se completó el cuadro de \"Propuestas de alfabetización\""
+
+  - id: alfabinicial_no_pero_datos_presentes
+    sheet: ee
+    description: "Si NO se realiza Alfabetización Inicial, el cuadro debe estar vacío"
+    severity: warning
+    when:
+      field: Accion_ATE_AlfabInicial
+      equals: "No"
+    require_all:
+      - field: Alfabetizacion_Nro
+        is_empty: true
+      - field: Alfabetizacion_6_9
+        is_empty: true
+      - field: Alfabetizacion_10_14
+        is_empty: true
+      - field: Alfabetizacion_15_24
+        is_empty: true
+      - field: Alfabetizacion_25mas
+        is_empty: true
+      - field: Alfabetizacion_CantAlfabetizadores
+        is_empty: true
+      - field: Alfabetizacion_Freq
+        is_empty: true
+    message: "Se completó el cuadro de \"Propuestas de alfabetización\" pero se respondió que NO se realiza Alfabetización Inicial"
+
+  # --- Propuesta DALE (D27) ---
+  - id: dale_si_requiere_datos
+    sheet: ee
+    description: "Si se realiza Propuesta DALE, el cuadro debe estar completo"
+    severity: error
+    when:
+      field: Accion_ATE_DALE
+      equals: "Sí"
+    require_all:
+      - field: DALE_Nro
+        not_empty: true
+      - any_of:
+          - field: DALE_6_9
+            not_empty: true
+          - field: DALE_10_14
+            not_empty: true
+          - field: DALE_15_24
+            not_empty: true
+          - field: DALE_25mas
+            not_empty: true
+      - field: DALE_EducadoresDale
+        not_empty: true
+      - field: DALE_Freq
+        not_empty: true
+    message: "Se respondió que se realiza Propuesta DALE pero no se completó el cuadro de \"Propuesta DALE\""
+
+  - id: dale_no_pero_datos_presentes
+    sheet: ee
+    description: "Si NO se realiza DALE, el cuadro debe estar vacío"
+    severity: warning
+    when:
+      field: Accion_ATE_DALE
+      equals: "No"
+    require_all:
+      - field: DALE_Nro
+        is_empty: true
+      - field: DALE_EducadoresDale
+        is_empty: true
+      - field: DALE_Freq
+        is_empty: true
+    message: "Se completó el cuadro de \"Propuesta DALE\" pero se respondió que NO se realiza la acción"
+
+  # --- Itinerancia (D32) ---
+  - id: itinerancia_si_requiere_activ
+    sheet: ee
+    description: "Si se realiza Itinerancia, Itinerancia_Activ debe ser Sí"
+    severity: error
+    when:
+      field: Accion_IC_Itinerancia
+      equals: "Sí"
+    require_all:
+      - field: Itinerancia_Activ
+        equals: "Sí"
+    message: "Se respondió que se realiza Itinerancia pero no se completó el cuadro de \"Itinerancia\""
+
+  - id: itinerancia_no_pero_activ_presente
+    sheet: ee
+    description: "Si NO se realiza Itinerancia, Itinerancia_Activ debe ser No"
+    severity: warning
+    when:
+      field: Accion_IC_Itinerancia
+      equals: "No"
+    require_all:
+      - field: Itinerancia_Activ
+        not_equals: "Sí"
+    message: "Se completó el cuadro de \"Itinerancia\" pero se respondió que NO se realiza la acción"
+
+  # --- Equipamiento Informático e Internet (D42) ---
+  - id: equipinf_si_requiere_datos
+    sheet: ee
+    description: "Si cuenta con equipamiento/internet, debe completar sección AlfabDig/Equipamiento"
+    severity: error
+    when:
+      field: Accion_NT_EquiInfInt
+      equals: "Sí"
+    require_any_of:
+      - field: AlfabDig_NT_AccesoInternet
+        equals: "Sí"
+      - any_of:
+          - field: EquipInformatico_MonitorTubo
+            greater_than: 0
+          - field: EquipInformatico_MonitorPlano
+            greater_than: 0
+          - field: EquipInformatico_PCAllinOne
+            greater_than: 0
+          - field: EquipInformatico_PCEscritorio
+            greater_than: 0
+          - field: EquipInformatico_Notebook
+            greater_than: 0
+          - field: EquipInformatico_Tablet
+            greater_than: 0
+          - field: EquipInformatico_Impresora
+            greater_than: 0
+          - field: EquipInformatico_Multifuncion
+            greater_than: 0
+    message: "Se respondió que cuenta con Equipamiento informático e internet pero no se completó el cuadro de \"Alfabetización Digital y NT\" / \"Equipamiento informático\""
+
+  - id: equipinf_no_pero_datos_presentes
+    sheet: ee
+    description: "Si NO cuenta con equipamiento, las secciones AlfabDig/Equipamiento deben estar vacías"
+    severity: warning
+    when:
+      field: Accion_NT_EquiInfInt
+      equals: "No"
+    message: "Se respondió que NO cuenta con Equipamiento informático e internet pero se completaron datos en esas secciones"
+
+  # --- AlfabDig: sub-validaciones (cuando D42=Sí) ---
+  - id: alfabdig_sin_internet_requiere_motivo
+    sheet: ee
+    description: "Si no hay acceso a internet, debe indicarse el motivo"
+    severity: error
+    when:
+      field: AlfabDig_NT_AccesoInternet
+      equals: "No"
+    require_all:
+      - field: AlfabDig_NT_AccesoInternet_Falta
+        not_empty: true
+    message: "Alfabetización Digital: si no tiene acceso a internet, indicar causa (C155)"
+
+  - id: alfabdig_formacion_requiere_talleres
+    sheet: ee
+    description: "Si se desarrollaron jornadas de formación digital, deben completarse los tipos de taller"
+    severity: error
+    when:
+      field: AlfabDig_NT_Formacion
+      equals: "Sí"
+    require_all:
+      - field: AlfabDig_NT_Digitales
+        not_empty: true
+      - field: AlfabDig_NT_Tall_Trabajo
+        not_empty: true
+      - field: AlfabDig_NT_Tall_Redes
+        not_empty: true
+      - field: AlfabDig_NT_Tall_Seguridad
+        not_empty: true
+    message: "Formación digital: si se realizaron jornadas, completar los tipos de taller (C157-C160)"
+
+  - id: alfabdig_con_internet_requiere_uso
+    sheet: ee
+    description: "Si tiene acceso a internet, indicar si lo usan para trámites/sociales y estudio"
+    severity: error
+    when:
+      field: AlfabDig_NT_AccesoInternet
+      equals: "Sí"
+    require_all:
+      - field: AlfabDig_NT_Internet_Uso
+        not_empty: true
+      - field: AlfabDig_NT_Internet_Estudio
+        not_empty: true
+    message: "Alfabetización Digital: con acceso a internet, completar el uso (C161, C162)"
+
+  # --- Apoyo Escolar Primario ---
+  - id: apescolar_primaria_con_alumnos_requiere_freq
+    sheet: ee
+    description: "Si hay alumnos de primaria en apoyo escolar, debe completarse el cuadro de nivel primario"
+    severity: error
+    when:
+      field: ApEscolar_Nro_Primaria
+      greater_than: 0
+    require_all:
+      - field: ApEscolar_Freq_Primaria
+        not_empty: true
+    message: "Si hay niños de nivel primario en apoyo escolar, debe completarse el cuadro \"Apoyo escolar Nivel Primario\""
+
+  - id: apescolar_primaria_sin_alumnos_sin_datos
+    sheet: ee
+    description: "Si no hay alumnos de primaria, el cuadro de nivel primario debe estar vacío"
+    severity: warning
+    when:
+      field: ApEscolar_Nro_Primaria
+      equals: 0
+    require_all:
+      - field: ApEscolar_Freq_Primaria
+        is_empty: true
+    message: "No hay alumnos de nivel primario pero está completado el cuadro \"Apoyo escolar Nivel Primario\""
+
+  # --- Apoyo Escolar Secundario ---
+  - id: apescolar_secundaria_con_alumnos_requiere_freq
+    sheet: ee
+    description: "Si hay alumnos de secundaria en apoyo escolar, debe completarse el cuadro de nivel secundario"
+    severity: error
+    when:
+      field: ApEscolar_Nro_Secundaria
+      greater_than: 0
+    require_all:
+      - field: ApEscolar_Freq_Secundaria
+        not_empty: true
+    message: "Si hay adolescentes de nivel secundario en apoyo escolar, debe completarse el cuadro \"Apoyo escolar Nivel Secundario\""
+
+  - id: apescolar_secundaria_sin_alumnos_sin_datos
+    sheet: ee
+    description: "Si no hay alumnos de secundaria, el cuadro de nivel secundario debe estar vacío"
+    severity: warning
+    when:
+      field: ApEscolar_Nro_Secundaria
+      equals: 0
+    require_all:
+      - field: ApEscolar_Freq_Secundaria
+        is_empty: true
+    message: "No hay alumnos de nivel secundario pero está completado el cuadro \"Apoyo escolar Nivel Secundario\""
+
+
+  # --- Apoyo Escolar: coherencia acción vs datos ---
+  - id: apescolar_accion_si_requiere_alumnos
+    sheet: ee
+    description: "Si se realiza Apoyo Escolar, debe haber al menos alumnos de primaria o secundaria"
+    severity: error
+    when:
+      field: Accion_ATE_ApoyoEscolar
+      equals: "Sí"
+    require_any_of:
+      - field: ApEscolar_Nro_Primaria
+        greater_than: 0
+      - field: ApEscolar_Nro_Secundaria
+        greater_than: 0
+    message: "Se respondió que se realiza Apoyo Escolar pero no hay alumnos de nivel primario ni secundario registrados"
+
+  # --- BTU: coherencia abandono vs motivos ---
+  - id: btu_abandono_requiere_motivo
+    sheet: ee
+    description: "Si hay abandonos de BTU, debe indicarse al menos un motivo"
+    severity: error
+    when:
+      field: BTU_abandono
+      greater_than: 0
+    require_any_of:
+      - field: BTU_abandono_horarios
+        equals: "Sí"
+      - field: BTU_abandono_costotransporte
+        equals: "Sí"
+      - field: BTU_abandono_cambiodomic
+        equals: "Sí"
+      - field: BTU_abandono_faltatiempo
+        equals: "Sí"
+      - field: BTU_abandono_accesotranspor
+        equals: "Sí"
+      - field: BTU_abandono_accesoboletoestudiantil
+        equals: "Sí"
+      - field: BTU_abandono_otro
+        not_empty: true
+    message: "Hay abandonos de BTU registrados pero no se indicó ningún motivo"
+
+  # --- Itinerancia: coherencia espacios y actividades ---
+  - id: itinerancia_activ_requiere_espacio
+    sheet: ee
+    description: "Si se realiza Itinerancia, debe indicarse al menos un espacio donde se desarrolla"
+    severity: error
+    when:
+      field: Itinerancia_Activ
+      equals: "Sí"
+    require_any_of:
+      - field: Itinerancia_Club
+        equals: "Sí"
+      - field: Itinerancia_Plaza
+        equals: "Sí"
+      - field: Itinerancia_Terreno
+        equals: "Sí"
+      - field: Itinerancia_Paraje
+        equals: "Sí"
+      - field: Itinerancia_Otro
+        not_empty: true
+    message: "Itinerancia activa pero no se indicó en qué espacio se desarrolla (club, plaza, terreno, paraje u otro)"
+
+  - id: itinerancia_activ_requiere_actividad
+    sheet: ee
+    description: "Si se realiza Itinerancia, debe indicarse al menos una actividad"
+    severity: error
+    when:
+      field: Itinerancia_Activ
+      equals: "Sí"
+    require_any_of:
+      - field: Itinerancia_Act_Estim
+        equals: "Sí"
+      - field: Itinerancia_Act_PI
+        equals: "Sí"
+      - field: Itinerancia_Act_Alfabetizacion
+        equals: "Sí"
+      - field: Itinerancia_Act_Merienda
+        equals: "Sí"
+      - field: Itinerancia_Act_Recreacion
+        equals: "Sí"
+      - field: Itinerancia_Act_Talleres
+        equals: "Sí"
+      - field: Itinerancia_Act_Charlas
+        equals: "Sí"
+      - field: Itinerancia_Act_Festividades
+        equals: "Sí"
+      - field: Itinerancia_Act_Reuniones
+        equals: "Sí"
+    message: "Itinerancia activa pero no se indicó ninguna actividad que se desarrolla"
+
+  - id: itinerancia_activ_requiere_freq
+    sheet: ee
+    description: "Si se realiza Itinerancia, debe indicarse la frecuencia"
+    severity: error
+    when:
+      field: Itinerancia_Activ
+      equals: "Sí"
+    require_all:
+      - field: Itinerancia_Freq
+        not_empty: true
+    message: "Itinerancia activa pero falta la frecuencia (C130)"
+
+  # --- Adolescentes y Jóvenes ---
+  - id: ayj_accion_si_requiere_nro
+    sheet: ee
+    description: "Si se realizan actividades de AyJ, debe haber número de participantes"
+    severity: error
+    when:
+      field: Accion_IC_Adolescentes
+      equals: "Sí"
+    require_all:
+      - field: AyJ_Nro
+        greater_than: 0
+    message: "Se respondió que se realizan actividades con Adolescentes y Jóvenes pero falta la cantidad (C125)"
+
+  - id: ayj_con_participantes_requiere_freq
+    sheet: ee
+    description: "Si hay participantes de AyJ, debe indicarse la frecuencia"
+    severity: error
+    when:
+      field: AyJ_Nro
+      greater_than: 0
+    require_all:
+      - field: AyJ_Freq
+        not_empty: true
+    message: "Hay participantes de AyJ registrados pero falta la frecuencia (C126)"
+
+  # --- Grupo de Mujeres ---
+  - id: gm_con_participantes_requiere_freq
+    sheet: ee
+    description: "Si hay participantes en Grupo de Mujeres, debe indicarse la frecuencia"
+    severity: error
+    when:
+      field: GM_RC_Nro
+      greater_than: 0
+    require_all:
+      - field: GM_RC_Freq
+        not_empty: true
+    message: "Hay participantes en Grupo de Mujeres registrados pero falta la frecuencia (C176)"
+
+  # --- Edilicio: coherencia baño ---
+  - id: banio_si_requiere_nro
+    sheet: ee
+    description: "Si tiene baño, debe indicarse la cantidad"
+    severity: error
+    when:
+      field: EE_Banio
+      equals: "Sí"
+    require_all:
+      - field: EE_Banio_Nro
+        greater_than: 0
+    message: "El EE tiene baño pero no se indicó la cantidad (C202)"
+
+  # --- Edilicio: zona ---
+  - id: zona_al_menos_una
+    sheet: ee
+    description: "Debe indicarse al menos un tipo de zona"
+    severity: error
+    require_any_of:
+      - field: EE_Zona_Urbana
+        equals: "Sí"
+      - field: EE_Zona_Periferica
+        equals: "Sí"
+      - field: EE_Zona_Rural
+        equals: "Sí"
+    message: "No se indicó el tipo de zona del EE (urbana, periférica o rural) — C191/C192/C193"
+
+  # --- Articulación Nivel Superior ---
+  - id: articula_ns_si_requiere_cuantas_e_institucion
+    sheet: ee
+    description: "Si articula con instituciones de nivel superior, indicar cuántas y al menos una institución"
+    severity: error
+    when:
+      field: Articula_InstNivelSuperior
+      equals: "Sí"
+    require_all:
+      - field: Articula_InstNivelSuperior_Cuantas
+        greater_than: 0
+      - field: Articula_Institucion1
+        not_empty: true
+    message: "Se respondió que articula con instituciones de nivel superior pero falta la cantidad o el nombre de la primera institución"
+
+  # --- Asistentes ---
+  - id: asistentes_al_menos_uno
+    sheet: ee
+    description: "Debe haber al menos un asistente registrado en alguna franja etaria"
+    severity: warning
+    require_any_of:
+      - field: Asistentes_0_6
+        greater_than: 0
+      - field: Asistentes_7_14
+        greater_than: 0
+      - field: Asistentes_15_24
+        greater_than: 0
+      - field: Asistentes_25_34
+        greater_than: 0
+      - field: Asistentes_35_50
+        greater_than: 0
+      - field: Asistentes_Mas50
+        greater_than: 0
+    message: "No hay asistentes registrados en ninguna franja etaria — verificar si es correcto"
+
+
+# =============================================================
+# VALIDACIONES - Hoja PI
+# =============================================================
+
+  - id: pi_con_encabezado_requiere_comunidad
+    sheet: pi
+    description: "Si hay Diócesis y Capacitadora, debe haber al menos una comunidad registrada"
+    severity: error
+    when:
+      all_of:
+        - field: Diocesis
+          not_empty: true
+        - field: Capacitadora
+          not_empty: true
+    require_all:
+      - field: Comunidad1
+        not_empty: true
+    message: "PI tiene datos de encabezado pero no se registró ninguna comunidad (B14)"
+
+  - id: pi_con_encabezado_requiere_lideres
+    sheet: pi
+    description: "Si hay datos de encabezado, debe haber cantidad de líderes"
+    severity: error
+    when:
+      all_of:
+        - field: Diocesis
+          not_empty: true
+        - field: Capacitadora
+          not_empty: true
+    require_all:
+      - field: Lideres
+        greater_than: 0
+    message: "PI con datos de encabezado pero sin cantidad de líderes registrada (C21)"
+
+  - id: pi_con_encabezado_requiere_poblacion
+    sheet: pi
+    description: "Si hay datos de encabezado, debe haber al menos datos de población (niños o familias)"
+    severity: error
+    when:
+      all_of:
+        - field: Diocesis
+          not_empty: true
+        - field: Capacitadora
+          not_empty: true
+    require_any_of:
+      - field: Ninos_0_3
+        greater_than: 0
+      - field: Ninos_4_6
+        greater_than: 0
+      - field: Familias
+        greater_than: 0
+    message: "PI con datos de encabezado pero sin datos de población (niños 0-3, 4-6 o familias)"
+
+  - id: pi_con_encabezado_requiere_acciones_lideres
+    sheet: pi
+    description: "Si hay líderes, debe indicarse al menos una acción que realizan"
+    severity: error
+    when:
+      field: Lideres
+      greater_than: 0
+    require_any_of:
+      - field: LideresCelebracionVida
+        not_empty: true
+      - field: LideresVisitaDomiciliaria
+        not_empty: true
+      - field: LideresReunionEvaluacion
+        not_empty: true
+    message: "Hay líderes registradas pero no se indicó ninguna acción que realizan (C53-C55)"
+
+  - id: pi_accion_lideres_requiere_frec_y_cant
+    sheet: pi
+    description: "Si una acción de líderes está activa, debe tener frecuencia y cantidad"
+    severity: error
+    when:
+      field: LideresCelebracionVida
+      equals: "Sí"
+    require_all:
+      - field: LideresCelebracionVida_Frec
+        not_empty: true
+      - field: LideresCelebracionVida_Cant
+        greater_than: 0
+    message: "Celebración de la vida marcada como Sí pero falta frecuencia o cantidad (D53, E53)"
+
+  - id: pi_visita_requiere_frec_y_cant
+    sheet: pi
+    description: "Si visita domiciliaria está activa, debe tener frecuencia y cantidad"
+    severity: error
+    when:
+      field: LideresVisitaDomiciliaria
+      equals: "Sí"
+    require_all:
+      - field: LideresVisitaDomiciliaria_Frec
+        not_empty: true
+      - field: LideresVisitaDomiciliaria_Cant
+        greater_than: 0
+    message: "Visita domiciliaria marcada como Sí pero falta frecuencia o cantidad (D54, E54)"
+
+  - id: pi_reunion_requiere_frec_y_cant
+    sheet: pi
+    description: "Si reunión de evaluación está activa, debe tener frecuencia y cantidad"
+    severity: error
+    when:
+      field: LideresReunionEvaluacion
+      equals: "Sí"
+    require_all:
+      - field: LideresReunionEvaluacion_Frec
+        not_empty: true
+      - field: LideresReunionEvaluacion_Cant
+        greater_than: 0
+    message: "Reunión de evaluación marcada como Sí pero falta frecuencia o cantidad (D55, E55)"
+
+  - id: pi_con_encabezado_requiere_temas_abordados
+    sheet: pi
+    description: "Si hay datos de encabezado, debe haber al menos un tema abordado"
+    severity: warning
+    when:
+      all_of:
+        - field: Diocesis
+          not_empty: true
+        - field: Capacitadora
+          not_empty: true
+    require_any_of:
+      - field: Abordada_Vacunas
+        equals: "Sí"
+      - field: Abordada_Higiene
+        equals: "Sí"
+      - field: Abordada_EstimulacionAdecuada
+        equals: "Sí"
+      - field: Abordada_Lactancia
+        equals: "Sí"
+      - field: Abordada_Alimentacion
+        equals: "Sí"
+      - field: Abordada_DerechosInfancias
+        equals: "Sí"
+      - field: Abordada_Otras
+        not_empty: true
+    message: "PI completa pero no se indicó ningún tema abordado en las reuniones"
+
+  - id: pi_lideres_no_alfabetizadas_requiere_cant
+    sheet: pi
+    description: "Si no todas las líderes saben leer/escribir, debe indicarse cuántas no saben"
+    severity: error
+    when:
+      field: LideresSabenLeerEscribir
+      equals: "No"
+    require_all:
+      - field: CantLideresNoSabenLeerEscribir
+        greater_than: 0
+    message: "Se indicó que no todas las líderes saben leer/escribir pero falta la cantidad (C44)"
+
+  - id: pi_madres_no_alfabetizadas_requiere_cant
+    sheet: pi
+    description: "Si no todas las madres están alfabetizadas, debe indicarse cuántas no lo están"
+    severity: error
+    when:
+      field: TodasMadresAlfabetizadas
+      equals: "No"
+    require_all:
+      - field: CantMadresNoAlfabetizadas
+        greater_than: 0
+    message: "Se indicó que no todas las madres están alfabetizadas pero falta la cantidad (C49)"
+
+
+# =============================================================
+# FLUJO DE VALIDACIÓN Y APROBACIÓN
+# =============================================================
+#
+# TRIGGER: El ATL marca el check "Completa" en una hoja de la planilla
+#
+# PASO 1 — El sistema detecta el check y corre las validaciones de esa hoja
+#
+# PASO 2A — Si hay errores (severity=error):
+#   - Se resetea el check a "Pendiente" en esa hoja via Sheets API
+#   - Se guarda el reporte de validaciones fallidas en TiDB
+#   - El responsable ve en el módulo de control que esa hoja tiene errores
+#   - El responsable revisa el reporte con el ATL para corregir
+#   - El ATL corrige y vuelve a marcar "Completa" → vuelve al PASO 1
+#
+# PASO 2B — Si solo hay warnings (severity=warning):
+#   - El check queda en "Completa" (no se resetea)
+#   - Los warnings se guardan en el reporte pero no bloquean
+#
+# PASO 2C — Si no hay errores ni warnings:
+#   - El check queda en "Completa"
+#
+# CRITERIO DE APROBACIÓN DEL EMAÚS:
+#   1. Todas las hojas EE tienen check = Completa
+#   2. La hoja PI tiene check = Completa (si el Emaús tiene PI activa)
+#   3. La hoja Talleres tiene check = Completa
+#   4. La hoja Establecimientos tiene check = Completa
+#   5. Ninguna hoja tiene errores pendientes
+#   → El Emaús queda disponible para que el Responsable o Admin lo apruebe
+#
+# NOTA: Los warnings se registran pero no bloquean la aprobación.
+#       Si en producción se decide que deben bloquear, cambiar severity a error.
+# =============================================================
+
+
+# =============================================================
+# PENDIENTES / PARA REVISAR
+# =============================================================
+# - ¿Hay más validaciones EE o PI a agregar?
+# - ¿Las validaciones de tipo warning también deben bloquear la aprobación?
+# - ¿Hay validaciones cruzadas entre hojas (ej: si EE marca acción PI,
+#   la hoja PI debe estar completa)?
+# =============================================================
