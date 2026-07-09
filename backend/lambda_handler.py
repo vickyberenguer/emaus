@@ -6,8 +6,13 @@ _mangum = Mangum(app, lifespan="off")
 
 
 def handler(event, context):
-    # Evento de EventBridge Scheduler o invocación directa (botón sync) — no tiene httpMethod
-    if "httpMethod" not in event and "requestContext" not in event:
+    # Detectar evento HTTP (API Gateway REST = httpMethod, HTTP API v2 = requestContext.http)
+    is_http = "httpMethod" in event or (
+        "requestContext" in event and isinstance(event.get("requestContext"), dict)
+        and "http" in event["requestContext"]
+    )
+    print(f"[handler] source={event.get('source','?')} is_http={is_http} keys={list(event.keys())[:8]}")
+    if not is_http:
         from scripts.scraper_control import run_sync
         folder_id = os.getenv("DRIVE_FOLDER_ID", "")
         if not folder_id:
