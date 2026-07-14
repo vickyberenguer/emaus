@@ -90,10 +90,11 @@
     }
     .kpi-value { font-size: 28px; font-weight: 700; line-height: 1; }
     .kpi-sub { font-size: 11px; color: #6b7280; margin-top: 4px; }
-    .kpi-blue  .kpi-value { color: #2563eb; }
-    .kpi-green .kpi-value { color: #16a34a; }
+    .kpi-blue   .kpi-value { color: #2563eb; }
+    .kpi-green  .kpi-value { color: #16a34a; }
+    .kpi-teal   .kpi-value { color: #0d9488; }
     .kpi-yellow .kpi-value { color: #d97706; }
-    .kpi-red   .kpi-value { color: #dc2626; }
+    .kpi-red    .kpi-value { color: #dc2626; }
 
     /* Charts row */
     .charts-row {
@@ -159,9 +160,10 @@
       font-weight: 600;
       white-space: nowrap;
     }
-    .badge-listo    { background: #dcfce7; color: #16a34a; }
+    .badge-aprobado  { background: #ccfbf1; color: #0d9488; }
+    .badge-listo     { background: #dcfce7; color: #16a34a; }
     .badge-pendiente { background: #fef3c7; color: #d97706; }
-    .badge-error    { background: #fee2e2; color: #dc2626; }
+    .badge-error     { background: #fee2e2; color: #dc2626; }
     .ee-counts { font-size: 11px; color: #6b7280; white-space: nowrap; }
 
     /* Asistentes */
@@ -226,10 +228,15 @@
       <div class="kpi-value" id="kpi-total">—</div>
       <div class="kpi-sub">en este semestre</div>
     </div>
+    <div class="kpi-card kpi-teal">
+      <div class="kpi-label">Aprobados</div>
+      <div class="kpi-value" id="kpi-aprobados">—</div>
+      <div class="kpi-sub">aprobación confirmada</div>
+    </div>
     <div class="kpi-card kpi-green">
       <div class="kpi-label">Listos para aprobar</div>
       <div class="kpi-value" id="kpi-listos">—</div>
-      <div class="kpi-sub">todos los EE completos</div>
+      <div class="kpi-sub">completos, sin aprobar aún</div>
     </div>
     <div class="kpi-card kpi-yellow">
       <div class="kpi-label">Con carga pendiente</div>
@@ -240,11 +247,6 @@
       <div class="kpi-label">Con errores</div>
       <div class="kpi-value" id="kpi-errores">—</div>
       <div class="kpi-sub">EEs vueltos a Pendiente</div>
-    </div>
-    <div class="kpi-card kpi-blue">
-      <div class="kpi-label">Total asistentes</div>
-      <div class="kpi-value" id="kpi-asistentes">—</div>
-      <div class="kpi-sub">en EEs completados</div>
     </div>
   </div>
 
@@ -288,6 +290,7 @@
       <div class="t-card-title">Avance de carga por Emaús</div>
       <div class="bar-chart" id="bar-emaus"></div>
       <div class="bar-legend">
+        <span><i style="background:#5eead4"></i>Aprobado</span>
         <span><i style="background:#86efac"></i>Completos</span>
         <span><i style="background:#fcd34d"></i>Pendientes</span>
         <span><i style="background:#fca5a5"></i>Con errores</span>
@@ -364,11 +367,11 @@ function renderizar(d) {
   const r = d.resumen;
 
   // KPIs
-  document.getElementById('kpi-total').textContent       = r.total_emaus;
-  document.getElementById('kpi-listos').textContent      = r.emaus_listos;
-  document.getElementById('kpi-pendientes').textContent  = r.emaus_pendientes;
-  document.getElementById('kpi-errores').textContent     = r.emaus_con_errores;
-  document.getElementById('kpi-asistentes').textContent  = r.total_asistentes.toLocaleString('es-AR');
+  document.getElementById('kpi-total').textContent      = r.total_emaus;
+  document.getElementById('kpi-aprobados').textContent  = r.emaus_aprobados;
+  document.getElementById('kpi-listos').textContent     = r.emaus_listos;
+  document.getElementById('kpi-pendientes').textContent = r.emaus_pendientes;
+  document.getElementById('kpi-errores').textContent    = r.emaus_con_errores;
 
   // Donut
   const C = 2 * Math.PI * 44; // circunferencia
@@ -401,28 +404,46 @@ function renderizar(d) {
   barContainer.innerHTML = '';
   d.emaus.forEach(e => {
     const tot = e.ee_total || 1;
-    const pComp = (e.ee_completos / tot * 100).toFixed(1);
-    const pPend = (e.ee_pendientes / tot * 100).toFixed(1);
-    const pErr  = (e.ee_errores / tot * 100).toFixed(1);
     const pctLabel = Math.round(e.ee_completos / tot * 100);
-    barContainer.innerHTML += `
-      <div class="bar-row">
-        <span class="bar-name" title="${e.emaus_nombre}">${e.emaus_nombre}</span>
-        <div class="bar-track">
-          <div class="bar-seg" style="width:${pComp}%;background:#86efac"></div>
-          <div class="bar-seg" style="width:${pPend}%;background:#fcd34d"></div>
-          <div class="bar-seg" style="width:${pErr}%;background:#fca5a5"></div>
-        </div>
-        <span class="bar-pct">${pctLabel}%</span>
-      </div>`;
+    // Aprobados: barra sólida teal al 100%
+    if (e.estado === 'aprobado') {
+      barContainer.innerHTML += `
+        <div class="bar-row">
+          <span class="bar-name" title="${e.emaus_nombre}">${e.emaus_nombre}</span>
+          <div class="bar-track">
+            <div class="bar-seg" style="width:100%;background:#5eead4"></div>
+          </div>
+          <span class="bar-pct" style="color:#0d9488">✓</span>
+        </div>`;
+    } else {
+      const pComp = (e.ee_completos / tot * 100).toFixed(1);
+      const pPend = (e.ee_pendientes / tot * 100).toFixed(1);
+      const pErr  = (e.ee_errores / tot * 100).toFixed(1);
+      barContainer.innerHTML += `
+        <div class="bar-row">
+          <span class="bar-name" title="${e.emaus_nombre}">${e.emaus_nombre}</span>
+          <div class="bar-track">
+            <div class="bar-seg" style="width:${pComp}%;background:#86efac"></div>
+            <div class="bar-seg" style="width:${pPend}%;background:#fcd34d"></div>
+            <div class="bar-seg" style="width:${pErr}%;background:#fca5a5"></div>
+          </div>
+          <span class="bar-pct">${pctLabel}%</span>
+        </div>`;
+    }
   });
 
   // Estado por Emaús
   const estadoList = document.getElementById('estado-list');
   estadoList.innerHTML = '';
   d.emaus.forEach(e => {
-    const badgeClass = e.estado === 'listo' ? 'badge-listo' : e.estado === 'error' ? 'badge-error' : 'badge-pendiente';
-    const badgeLabel = e.estado === 'listo' ? 'Listo' : e.estado === 'error' ? 'Con errores' : 'Pendiente';
+    const badgeClass = e.estado === 'aprobado' ? 'badge-aprobado'
+      : e.estado === 'listo'  ? 'badge-listo'
+      : e.estado === 'error'  ? 'badge-error'
+      : 'badge-pendiente';
+    const badgeLabel = e.estado === 'aprobado' ? 'Aprobado'
+      : e.estado === 'listo'  ? 'Listo'
+      : e.estado === 'error'  ? 'Con errores'
+      : 'Pendiente';
     estadoList.innerHTML += `
       <div class="estado-row">
         <span class="estado-nombre" title="${e.emaus_nombre}">${e.emaus_nombre}</span>

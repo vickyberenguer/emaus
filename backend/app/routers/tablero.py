@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.usuario import Usuario
 from app.models.emaus import Emaus, ResponsableEmaus
-from app.models.control import ControlRelevamiento
+from app.models.control import ControlRelevamiento, ControlAprobacion
 from app.routers.auth import get_current_user, require_rol
 from app.routers.control import ANIO_ACTIVO, SEMESTRE_ACTIVO, emaus_ids_for_user
 
@@ -48,8 +48,13 @@ def estado_carga(
         allowed_ids = resp_ids
 
     query = (
-        db.query(ControlRelevamiento, Emaus)
+        db.query(ControlRelevamiento, Emaus, ControlAprobacion)
         .join(Emaus, Emaus.id == ControlRelevamiento.emaus_id)
+        .outerjoin(ControlAprobacion, (
+            ControlAprobacion.emaus_id == ControlRelevamiento.emaus_id,
+            ControlAprobacion.anio == ControlRelevamiento.anio,
+            ControlAprobacion.semestre == ControlRelevamiento.semestre,
+        ))
         .filter(
             ControlRelevamiento.anio == anio,
             ControlRelevamiento.semestre == semestre,
@@ -61,13 +66,17 @@ def estado_carga(
     rows = query.order_by(Emaus.nombre).all()
 
     emaus_list = []
-    for ctrl, emaus in rows:
+    for ctrl, emaus, aprobacion in rows:
         ee_total = ctrl.ee_count or 0
         ee_completos = ctrl.ee_declarados_completos or 0
         ee_errores = ctrl.ee_con_errores or 0
         ee_pendientes = max(0, ee_total - ee_completos - ee_errores)
 
-        if ctrl.ee_con_errores > 0 or ctrl.pi_con_errores:
+        aprobado = aprobacion is not None and aprobacion.estado == "aprobado"
+
+        if aprobado:
+            estado = "aprobado"
+        elif ctrl.ee_con_errores > 0 or ctrl.pi_con_errores:
             estado = "error"
         elif ee_completos >= ee_total and ee_total > 0:
             estado = "listo"
@@ -89,8 +98,9 @@ def estado_carga(
 
     # Totales globales
     total_emaus = len(emaus_list)
-    listos = sum(1 for e in emaus_list if e["estado"] == "listo")
-    pendientes = sum(1 for e in emaus_list if e["estado"] == "pendiente")
+    aprobados   = sum(1 for e in emaus_list if e["estado"] == "aprobado")
+    listos      = sum(1 for e in emaus_list if e["estado"] == "listo")
+    pendientes  = sum(1 for e in emaus_list if e["estado"] == "pendiente")
     con_errores = sum(1 for e in emaus_list if e["estado"] == "error")
     total_ee = sum(e["ee_total"] for e in emaus_list)
     total_ee_completos = sum(e["ee_completos"] for e in emaus_list)
@@ -101,6 +111,7 @@ def estado_carga(
     return {
         "resumen": {
             "total_emaus": total_emaus,
+            "emaus_aprobados": aprobados,
             "emaus_listos": listos,
             "emaus_pendientes": pendientes,
             "emaus_con_errores": con_errores,
