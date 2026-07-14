@@ -208,7 +208,7 @@
 
 <!-- Filtro por responsable (solo admin) -->
 <div class="filtro-bar" id="filtro-bar" style="display:none!important">
-  <label>Responsable</label>
+  <label for="sel-responsable">Responsable</label>
   <select id="sel-responsable">
     <option value="">Todos los responsables</option>
   </select>
@@ -319,7 +319,7 @@ let esAdmin = false;
 let datos = null;
 
 async function init() {
-  await session.requireAuth();
+  session.requireRol(['admin', 'responsable']);
   session.pintarNavbar('Tablero');
   esAdmin = session.rol() === 'admin';
 
@@ -348,10 +348,16 @@ async function cargarResponsables() {
 }
 
 async function cargarDatos() {
-  const respId = esAdmin ? document.getElementById('sel-responsable').value : '';
-  const url = `/tablero/estado-carga?anio=${ANIO}&semestre=${SEMESTRE}` + (respId ? `&responsable_id=${respId}` : '');
-  datos = await api.get(url);
-  renderizar(datos);
+  try {
+    const respId = esAdmin ? document.getElementById('sel-responsable').value : '';
+    const url = `/tablero/estado-carga?anio=${ANIO}&semestre=${SEMESTRE}` + (respId ? `&responsable_id=${respId}` : '');
+    datos = await api.get(url);
+    renderizar(datos);
+  } catch (e) {
+    console.error('[tablero] error cargando datos:', e);
+    document.getElementById('tab-estado-carga').innerHTML =
+      `<div class="alert alert-danger m-3">Error cargando datos: ${e.message}</div>`;
+  }
 }
 
 function renderizar(d) {
