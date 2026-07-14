@@ -182,6 +182,60 @@
       .charts-row { grid-template-columns: 1fr; }
       .bottom-row { grid-template-columns: 1fr; }
     }
+
+    /* ── Tablero Participantes ── */
+    #tab-participantes { display: none; padding: 16px 24px; }
+
+    .part-filters {
+      background: #fff; border: 1px solid #e2e5ed; border-radius: 10px;
+      padding: 12px 16px; margin-bottom: 14px;
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+    .part-filters label { font-size: 12px; color: #6b7280; }
+    .part-filters select {
+      padding: 5px 9px; border-radius: 6px; border: 1px solid #e2e5ed;
+      font-size: 12px; background: #f5f6fa; color: #374151;
+    }
+    .part-filters select.sel-periodo { border-color: #2563eb; background: #eff6ff; color: #2563eb; font-weight: 600; }
+
+    .part-top { display: grid; grid-template-columns: 1fr 160px 1fr; gap: 12px; margin-bottom: 14px; }
+
+    .part-hero {
+      background: #fff; border: 1px solid #e2e5ed; border-radius: 10px;
+      padding: 16px; border-left: 4px solid;
+    }
+    .part-hero-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .part-hero-val { font-size: 34px; font-weight: 700; line-height: 1; }
+    .part-hero-note { font-size: 11px; color: #9ca3af; margin-top: 3px; }
+
+    .part-ee-card {
+      background: #fff; border: 1px solid #e2e5ed; border-radius: 10px;
+      padding: 16px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center;
+    }
+    .part-ee-val { font-size: 48px; font-weight: 700; color: #0d9488; line-height: 1; }
+    .part-ee-label { font-size: 11px; color: #6b7280; margin-top: 4px; }
+
+    .part-mini-bars { margin-top: 12px; border-top: 1px solid #f0f1f5; padding-top: 12px; display: flex; flex-direction: column; gap: 5px; }
+    .part-bar-row { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+    .part-bar-lbl { width: 90px; color: #6b7280; text-align: right; flex-shrink: 0; }
+    .part-bar-track { flex: 1; border-radius: 3px; height: 13px; overflow: hidden; }
+    .part-bar-fill { height: 100%; border-radius: 3px; }
+    .part-bar-val { width: 44px; font-weight: 600; text-align: right; font-size: 11px; }
+
+    .part-progs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .prog-card {
+      background: #fff; border: 1px solid #e2e5ed; border-radius: 10px; overflow: hidden;
+    }
+    .prog-head { padding: 12px 14px 10px; border-left: 4px solid; }
+    .prog-head-name { font-size: 11px; color: #6b7280; margin-bottom: 3px; }
+    .prog-head-val { font-size: 26px; font-weight: 700; line-height: 1; }
+    .prog-body { padding: 10px 14px 12px; border-top: 1px solid #f5f6fa; display: flex; flex-direction: column; gap: 5px; }
+    .prog-row { display: flex; align-items: center; gap: 7px; font-size: 11px; }
+    .prog-lbl { width: 105px; color: #6b7280; text-align: right; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .prog-track { flex: 1; background: #f5f6fa; border-radius: 3px; height: 13px; overflow: hidden; }
+    .prog-fill { height: 100%; border-radius: 3px; }
+    .prog-val { width: 38px; font-weight: 600; text-align: right; font-size: 11px; }
   </style>
 </head>
 <body>
@@ -205,7 +259,7 @@
 <!-- Tabs del tablero -->
 <div class="tablero-tabs">
   <a href="#" class="tablero-tab active" data-tab="estado-carga">Estado de carga</a>
-  <!-- Futuros tableros se agregan aquí -->
+  <a href="#" class="tablero-tab" data-tab="participantes">Participantes</a>
 </div>
 
 <!-- Filtro por responsable (solo admin) -->
@@ -219,7 +273,7 @@
 </div>
 
 <!-- Contenido del tablero -->
-<div class="content-area" id="tab-estado-carga">
+<div class="content-area tab-content" id="tab-estado-carga">
 
   <!-- KPIs -->
   <div class="kpi-grid">
@@ -312,6 +366,93 @@
 
 </div>
 
+<!-- Tab Participantes -->
+<div id="tab-participantes" class="tab-content">
+
+  <!-- Filtros -->
+  <div class="part-filters">
+    <label>Período</label>
+    <select id="part-anio" class="sel-periodo">
+      <option value="2026">2026</option>
+      <option value="2025">2025</option>
+    </select>
+    <select id="part-semestre" class="sel-periodo">
+      <option value="1">Sem. 1</option>
+      <option value="2">Sem. 2</option>
+    </select>
+    <select id="part-region"><option value="">Todas las regiones</option></select>
+    <select id="part-provincia"><option value="">Todas las provincias</option></select>
+    <select id="part-emaus"><option value="">Todos los Emaús</option></select>
+    <select id="part-ee"><option value="">Todos los EEs</option></select>
+    <button onclick="partDatos=null;cargarParticipantes()" style="padding:5px 14px;border-radius:6px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:12px;cursor:pointer">Aplicar</button>
+  </div>
+  <div id="part-error" class="alert alert-danger mx-0 mb-3" style="display:none"></div>
+
+  <!-- Top: Asistentes | EE count | Colaboradores -->
+  <div class="part-top">
+
+    <div class="part-hero" style="border-color:#2563eb">
+      <div class="part-hero-label">Asistentes</div>
+      <div class="part-hero-val" id="part-asist-val" style="color:#2563eb">—</div>
+      <div class="part-hero-note">personas que asisten a los EEs</div>
+      <div class="part-mini-bars" id="part-age-bars"></div>
+    </div>
+
+    <div class="part-ee-card">
+      <div class="part-ee-val" id="part-ee-val">—</div>
+      <div class="part-ee-label">Espacios<br>Educativos</div>
+    </div>
+
+    <div class="part-hero" style="border-color:#7c3aed">
+      <div class="part-hero-label">Colaboradores</div>
+      <div class="part-hero-val" id="part-colab-val" style="color:#7c3aed">—</div>
+      <div class="part-hero-note">itinerancia + grupo motor</div>
+      <div class="part-mini-bars" id="part-colab-bars"></div>
+    </div>
+
+  </div>
+
+  <!-- Programas -->
+  <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">
+    Programas — un asistente puede participar en más de uno
+  </p>
+  <div class="part-progs">
+
+    <div class="prog-card">
+      <div class="prog-head" style="border-color:#f59e0b">
+        <div class="prog-head-name">Apoyo Escolar</div>
+        <div class="prog-head-val" id="prog-ae-val" style="color:#d97706">—</div>
+      </div>
+      <div class="prog-body" id="prog-ae-body"></div>
+    </div>
+
+    <div class="prog-card">
+      <div class="prog-head" style="border-color:#10b981">
+        <div class="prog-head-name">Alfabetización</div>
+        <div class="prog-head-val" id="prog-alfa-val" style="color:#059669">—</div>
+      </div>
+      <div class="prog-body" id="prog-alfa-body"></div>
+    </div>
+
+    <div class="prog-card">
+      <div class="prog-head" style="border-color:#f97316">
+        <div class="prog-head-name">DALE</div>
+        <div class="prog-head-val" id="prog-dale-val" style="color:#ea580c">—</div>
+      </div>
+      <div class="prog-body" id="prog-dale-body"></div>
+    </div>
+
+    <div class="prog-card">
+      <div class="prog-head" style="border-color:#a78bfa">
+        <div class="prog-head-name">Adolescentes y Jóvenes</div>
+        <div class="prog-head-val" id="prog-ayj-val" style="color:#7c3aed">—</div>
+      </div>
+      <div class="prog-body" style="padding:10px 14px;font-size:11px;color:#9ca3af">Sin desglose disponible</div>
+    </div>
+
+  </div>
+</div>
+
 <script src="/js/api.js"></script>
 <script src="/js/session.js"></script>
 <script>
@@ -334,7 +475,19 @@ async function init() {
     document.getElementById('sel-responsable').addEventListener('change', cargarDatos);
   }
 
+  // Estado de carga activo por defecto
+  document.getElementById('tab-participantes').style.display = 'none';
+
   await cargarDatos();
+  await cargarFiltros();
+
+  // Eventos filtros participantes
+  ['part-anio','part-semestre'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      partDatos = null;
+      cargarFiltros();
+    });
+  });
 }
 
 async function cargarResponsables() {
@@ -471,6 +624,136 @@ function renderizar(d) {
 }
 
 init();
+
+// ── Tab switching ──
+document.querySelectorAll('.tablero-tab').forEach(tab => {
+  tab.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.tablero-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const target = tab.dataset.tab;
+    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+    document.getElementById('tab-' + target).style.display = 'block';
+    if (target === 'participantes' && !partDatos) cargarParticipantes();
+  });
+});
+
+// ── Tablero Participantes ──
+let partDatos = null;
+
+async function cargarParticipantes() {
+  const params = new URLSearchParams({
+    anio: document.getElementById('part-anio').value,
+    semestre: document.getElementById('part-semestre').value,
+  });
+  const region = document.getElementById('part-region').value;
+  const provincia = document.getElementById('part-provincia').value;
+  const emausId = document.getElementById('part-emaus').value;
+  const eeId = document.getElementById('part-ee').value;
+  if (region) params.append('region', region);
+  if (provincia) params.append('provincia', provincia);
+  if (emausId) params.append('emaus_id', emausId);
+  if (eeId) params.append('ee_id', eeId);
+
+  try {
+    partDatos = await api.get('/tablero/participantes?' + params.toString());
+    renderParticipantes(partDatos);
+  } catch(e) {
+    document.getElementById('part-error').textContent = 'Error: ' + e.message;
+    document.getElementById('part-error').style.display = 'block';
+  }
+}
+
+async function cargarFiltros() {
+  const params = new URLSearchParams({
+    anio: document.getElementById('part-anio').value,
+    semestre: document.getElementById('part-semestre').value,
+  });
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelect('part-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelect('part-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelect('part-emaus',    f.emaus);
+    poblarSelect('part-ee',       f.ee);
+  } catch(e) { /* no crítico */ }
+}
+
+function poblarSelect(id, items) {
+  const sel = document.getElementById(id);
+  const current = sel.value;
+  while (sel.options.length > 1) sel.remove(1);
+  items.forEach(item => {
+    const opt = document.createElement('option');
+    opt.value = item.id; opt.textContent = item.nombre;
+    sel.appendChild(opt);
+  });
+  if (current) sel.value = current;
+}
+
+function bar(val, max, color) {
+  const pct = max > 0 ? (val / max * 100).toFixed(1) : 0;
+  return `<div class="part-bar-track" style="background:#f5f6fa"><div class="part-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+}
+
+function progBar(val, max, color) {
+  const pct = max > 0 ? (val / max * 100).toFixed(1) : 0;
+  return `<div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${color}"></div></div>`;
+}
+
+function n(val) { return (val || 0).toLocaleString('es-AR'); }
+
+function renderParticipantes(d) {
+  document.getElementById('part-ee-val').textContent       = n(d.ee_count);
+  document.getElementById('part-asist-val').textContent    = n(d.asistentes.total);
+  document.getElementById('part-colab-val').textContent    = n(d.colaboradores.total);
+
+  const maxAge = Math.max(d.asistentes['0_6'], d.asistentes['7_14'], d.asistentes['15_24'],
+    d.asistentes['25_35'], d.asistentes['35_50'], d.asistentes['mas_50'], 1);
+
+  document.getElementById('part-age-bars').innerHTML = `
+    <div class="part-bar-row"><span class="part-bar-lbl">0 a 6 años</span>${bar(d.asistentes['0_6'], maxAge,'#93c5fd')}<span class="part-bar-val" style="color:#1e40af">${n(d.asistentes['0_6'])}</span></div>
+    <div class="part-bar-row"><span class="part-bar-lbl">7 a 14 años</span>${bar(d.asistentes['7_14'], maxAge,'#93c5fd')}<span class="part-bar-val" style="color:#1e40af">${n(d.asistentes['7_14'])}</span></div>
+    <div class="part-bar-row"><span class="part-bar-lbl">15 a 24 años</span>${bar(d.asistentes['15_24'], maxAge,'#93c5fd')}<span class="part-bar-val" style="color:#1e40af">${n(d.asistentes['15_24'])}</span></div>
+    <div class="part-bar-row"><span class="part-bar-lbl">25 a 34 años</span>${bar(d.asistentes['25_35'], maxAge,'#93c5fd')}<span class="part-bar-val" style="color:#1e40af">${n(d.asistentes['25_35'])}</span></div>
+    <div class="part-bar-row"><span class="part-bar-lbl">35 a 50 años</span>${bar(d.asistentes['35_50'], maxAge,'#93c5fd')}<span class="part-bar-val" style="color:#1e40af">${n(d.asistentes['35_50'])}</span></div>
+    <div class="part-bar-row"><span class="part-bar-lbl">Más de 50</span>${bar(d.asistentes['mas_50'], maxAge,'#93c5fd')}<span class="part-bar-val" style="color:#1e40af">${n(d.asistentes['mas_50'])}</span></div>`;
+
+  const maxColab = Math.max(d.colaboradores.grupo_motor, d.colaboradores.itinerancia, 1);
+  document.getElementById('part-colab-bars').innerHTML = `
+    <div class="part-bar-row"><span class="part-bar-lbl">Grupo Motor</span>${bar(d.colaboradores.grupo_motor, maxColab,'#c4b5fd')}<span class="part-bar-val" style="color:#7c3aed">${n(d.colaboradores.grupo_motor)}</span></div>
+    <div class="part-bar-row"><span class="part-bar-lbl">Itinerancia</span>${bar(d.colaboradores.itinerancia, maxColab,'#c4b5fd')}<span class="part-bar-val" style="color:#7c3aed">${n(d.colaboradores.itinerancia)}</span></div>`;
+
+  // Apoyo Escolar
+  const aeMax = Math.max(d.apoyo_escolar.primaria, d.apoyo_escolar.secundaria, 1);
+  const aeTotal = d.apoyo_escolar.primaria + d.apoyo_escolar.secundaria;
+  document.getElementById('prog-ae-val').textContent = n(aeTotal);
+  document.getElementById('prog-ae-body').innerHTML = `
+    <div class="prog-row"><span class="prog-lbl">Primaria</span>${progBar(d.apoyo_escolar.primaria, aeMax,'#fcd34d')}<span class="prog-val" style="color:#92400e">${n(d.apoyo_escolar.primaria)}</span></div>
+    <div class="prog-row"><span class="prog-lbl">Secundaria</span>${progBar(d.apoyo_escolar.secundaria, aeMax,'#fcd34d')}<span class="prog-val" style="color:#92400e">${n(d.apoyo_escolar.secundaria)}</span></div>`;
+
+  // Alfabetización
+  const alfMax = Math.max(d.alfabetizacion['6_9'], d.alfabetizacion['10_14'], d.alfabetizacion['15_24'], d.alfabetizacion['25_mas'], d.alfabetizacion.alfabetizadores, 1);
+  document.getElementById('prog-alfa-val').textContent = n(d.alfabetizacion.total);
+  document.getElementById('prog-alfa-body').innerHTML = `
+    <div class="prog-row"><span class="prog-lbl">6 a 9 años</span>${progBar(d.alfabetizacion['6_9'], alfMax,'#6ee7b7')}<span class="prog-val" style="color:#065f46">${n(d.alfabetizacion['6_9'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">10 a 14 años</span>${progBar(d.alfabetizacion['10_14'], alfMax,'#6ee7b7')}<span class="prog-val" style="color:#065f46">${n(d.alfabetizacion['10_14'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">15 a 24 años</span>${progBar(d.alfabetizacion['15_24'], alfMax,'#6ee7b7')}<span class="prog-val" style="color:#065f46">${n(d.alfabetizacion['15_24'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">25 o más</span>${progBar(d.alfabetizacion['25_mas'], alfMax,'#6ee7b7')}<span class="prog-val" style="color:#065f46">${n(d.alfabetizacion['25_mas'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">Alfabetizadores</span>${progBar(d.alfabetizacion.alfabetizadores, alfMax,'#a7f3d0')}<span class="prog-val" style="color:#065f46">${n(d.alfabetizacion.alfabetizadores)}</span></div>`;
+
+  // DALE
+  const daleMax = Math.max(d.dale['6_9'], d.dale['10_14'], d.dale['15_24'], d.dale['25_mas'], d.dale.educadores, 1);
+  document.getElementById('prog-dale-val').textContent = n(d.dale.total);
+  document.getElementById('prog-dale-body').innerHTML = `
+    <div class="prog-row"><span class="prog-lbl">6 a 9 años</span>${progBar(d.dale['6_9'], daleMax,'#fed7aa')}<span class="prog-val" style="color:#9a3412">${n(d.dale['6_9'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">10 a 14 años</span>${progBar(d.dale['10_14'], daleMax,'#fed7aa')}<span class="prog-val" style="color:#9a3412">${n(d.dale['10_14'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">15 a 24 años</span>${progBar(d.dale['15_24'], daleMax,'#fed7aa')}<span class="prog-val" style="color:#9a3412">${n(d.dale['15_24'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">25 o más</span>${progBar(d.dale['25_mas'], daleMax,'#fed7aa')}<span class="prog-val" style="color:#9a3412">${n(d.dale['25_mas'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">Educadores Dale</span>${progBar(d.dale.educadores, daleMax,'#ffedd5')}<span class="prog-val" style="color:#9a3412">${n(d.dale.educadores)}</span></div>`;
+
+  // AyJ
+  document.getElementById('prog-ayj-val').textContent = n(d.ayj.total);
+}
 </script>
 
 </body>
