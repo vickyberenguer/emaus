@@ -236,6 +236,39 @@
     .prog-track { flex: 1; background: #f5f6fa; border-radius: 3px; height: 13px; overflow: hidden; }
     .prog-fill { height: 100%; border-radius: 3px; }
     .prog-val { width: 38px; font-weight: 600; text-align: right; font-size: 11px; }
+  /* ── Tab Acciones ── */
+  .acc-leyenda { display:flex; align-items:center; gap:6px; margin-bottom:16px; font-size:13px; }
+  .acc-dot { display:inline-block; width:12px; height:12px; border-radius:2px; }
+  .acc-si  { background:#4ade80; }
+  .acc-no  { background:#f87171; }
+  .acc-sd  { background:#d1d5db; }
+
+  .acc-eje-bloque { margin-bottom:24px; background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.06); overflow:hidden; }
+
+  .acc-eje-header {
+    display:grid; grid-template-columns:220px 1fr;
+    align-items:center; gap:12px;
+    padding:10px 16px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+    font-weight:600; font-size:13px;
+  }
+  .acc-eje-nombre { color:#1e293b; }
+
+  .acc-accion-fila {
+    display:grid; grid-template-columns:220px 1fr;
+    align-items:center; gap:12px;
+    padding:7px 16px;
+    border-bottom:1px solid #f1f5f9;
+    font-size:12.5px; color:#374151;
+  }
+  .acc-accion-fila:last-child { border-bottom:none; }
+  .acc-accion-nombre { padding-left:12px; color:#4b5563; }
+
+  .acc-barra-wrap { display:flex; align-items:center; gap:8px; }
+  .acc-barra { display:flex; height:18px; border-radius:4px; overflow:hidden; flex:1; background:#f3f4f6; }
+  .acc-eje-header .acc-barra { height:22px; }
+  .acc-seg { transition:width .3s; }
+  .acc-pct-si { font-size:12px; font-weight:600; color:#16a34a; min-width:38px; text-align:right; }
   </style>
 </head>
 <body>
@@ -260,6 +293,7 @@
 <div class="tablero-tabs">
   <a href="#" class="tablero-tab active" data-tab="estado-carga">Estado de carga</a>
   <a href="#" class="tablero-tab" data-tab="participantes">Participantes</a>
+  <a href="#" class="tablero-tab" data-tab="acciones">EE - Acciones</a>
 </div>
 
 <!-- Filtro por responsable (solo admin) -->
@@ -352,16 +386,31 @@
     </div>
   </div>
 
-  <!-- Estado + Asistentes -->
-  <div class="bottom-row">
-    <div class="t-card">
-      <div class="t-card-title">Estado por Emaús</div>
-      <div class="estado-list" id="estado-list"></div>
+  <!-- Tabla detalle por Emaús -->
+  <div class="t-card" style="margin-top:16px">
+    <div class="t-card-title">Detalle por Emaús</div>
+    <div style="overflow-x:auto">
+      <table class="table table-sm table-hover align-middle mb-0" id="tabla-emaus-detalle">
+        <thead class="table-light">
+          <tr>
+            <th>Emaús</th>
+            <th>Estado</th>
+            <th class="text-end">EEs</th>
+            <th class="text-end">Asistentes</th>
+            <th class="text-end">BTU</th>
+            <th class="text-end">BTU real</th>
+            <th class="text-end">Dif BTU</th>
+          </tr>
+        </thead>
+        <tbody id="estado-list"></tbody>
+      </table>
     </div>
-    <div class="t-card">
-      <div class="t-card-title">Asistentes por Emaús</div>
-      <div class="asis-list" id="asis-list"></div>
-    </div>
+  </div>
+
+  <!-- Asistentes ranking -->
+  <div class="t-card" style="margin-top:16px;display:none">
+    <div class="t-card-title">Asistentes por Emaús</div>
+    <div class="asis-list" id="asis-list"></div>
   </div>
 
 </div>
@@ -450,6 +499,34 @@
       <div class="prog-body" style="padding:10px 14px;font-size:11px;color:#9ca3af">Sin desglose disponible</div>
     </div>
 
+  </div>
+</div>
+
+<!-- Tab EE - Acciones -->
+<div id="tab-acciones" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label>Período</label>
+    <select id="acc-anio" class="sel-periodo">
+      <option value="2026">2026</option>
+      <option value="2025">2025</option>
+    </select>
+    <select id="acc-semestre" class="sel-periodo">
+      <option value="1">Semestre 1</option>
+      <option value="2">Semestre 2</option>
+    </select>
+    <label>Región</label>
+    <select id="acc-region" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Provincia</label>
+    <select id="acc-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Emaús</label>
+    <select id="acc-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <label>EE</label>
+    <select id="acc-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <button class="btn btn-sm btn-primary" id="btn-acc-filtrar">Filtrar</button>
+  </div>
+
+  <div id="acc-contenido" style="padding:16px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
   </div>
 </div>
 
@@ -597,12 +674,24 @@ function renderizar(d) {
       : e.estado === 'listo'  ? 'Listo'
       : e.estado === 'error'  ? 'Con errores'
       : 'Pendiente';
+    const difBtu = e.dif_btu;
+    const difHtml = difBtu === null || difBtu === undefined
+      ? '<span class="text-muted">—</span>'
+      : difBtu === 0
+        ? '<span class="text-success fw-semibold">0</span>'
+        : difBtu > 0
+          ? `<span class="text-danger fw-semibold">+${difBtu}</span>`
+          : `<span class="text-warning fw-semibold">${difBtu}</span>`;
     estadoList.innerHTML += `
-      <div class="estado-row">
-        <span class="estado-nombre" title="${e.emaus_nombre}">${e.emaus_nombre}</span>
-        <span class="badge-estado ${badgeClass}">${badgeLabel}</span>
-        <span class="ee-counts">${e.ee_completos}/${e.ee_total} EEs</span>
-      </div>`;
+      <tr>
+        <td>${e.emaus_nombre}</td>
+        <td><span class="badge-estado ${badgeClass}">${badgeLabel}</span></td>
+        <td class="text-end">${e.ee_completos}/${e.ee_total}</td>
+        <td class="text-end">${(e.total_asistentes||0).toLocaleString('es-AR')}</td>
+        <td class="text-end">${(e.btu_relevado||0).toLocaleString('es-AR')}</td>
+        <td class="text-end">${e.btu_actual !== null && e.btu_actual !== undefined ? e.btu_actual : '<span class="text-muted">—</span>'}</td>
+        <td class="text-end">${difHtml}</td>
+      </tr>`;
   });
 
   // Asistentes por Emaús
@@ -635,6 +724,7 @@ document.querySelectorAll('.tablero-tab').forEach(tab => {
     document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
     document.getElementById('tab-' + target).style.display = 'block';
     if (target === 'participantes' && !partDatos) cargarParticipantes();
+    if (target === 'acciones') iniciarAcciones();
   });
 });
 
@@ -753,6 +843,118 @@ function renderParticipantes(d) {
 
   // AyJ
   document.getElementById('prog-ayj-val').textContent = n(d.ayj.total);
+}
+
+// ── Tab Acciones ──
+let accionesFiltrosIniciados = false;
+
+async function iniciarAcciones() {
+  if (!accionesFiltrosIniciados) {
+    accionesFiltrosIniciados = true;
+    // Reutilizar filtros del endpoint /tablero/filtros con periodo actual
+    try {
+      const f = await api.get(`/tablero/filtros?anio=${document.getElementById('acc-anio').value}&semestre=${document.getElementById('acc-semestre').value}`);
+      poblarSelect('acc-region',   f.regiones.map(r => ({v: r, l: r})));
+      poblarSelect('acc-provincia',f.provincias.map(p => ({v: p, l: p})));
+      poblarSelect('acc-emaus',    f.emaus.map(e => ({v: e.id, l: e.nombre})));
+      poblarSelect('acc-ee',       f.ee.map(e => ({v: e.id, l: e.nombre})));
+    } catch(e) { console.warn('filtros acciones', e); }
+    document.getElementById('btn-acc-filtrar').addEventListener('click', cargarAcciones);
+  }
+  cargarAcciones();
+}
+
+function poblarSelect(id, items) {
+  const sel = document.getElementById(id);
+  const first = sel.options[0].outerHTML;
+  sel.innerHTML = first + items.map(i => `<option value="${i.v}">${i.l}</option>`).join('');
+}
+
+async function cargarAcciones() {
+  const contenido = document.getElementById('acc-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({
+    anio: document.getElementById('acc-anio').value,
+    semestre: document.getElementById('acc-semestre').value,
+  });
+  const region   = document.getElementById('acc-region').value;
+  const provincia= document.getElementById('acc-provincia').value;
+  const emausId  = document.getElementById('acc-emaus').value;
+  const eeId     = document.getElementById('acc-ee').value;
+  if (region)    params.append('region', region);
+  if (provincia) params.append('provincia', provincia);
+  if (emausId)   params.append('emaus_id', emausId);
+  if (eeId)      params.append('ee_id', eeId);
+
+  try {
+    const d = await api.get('/tablero/acciones?' + params.toString());
+    renderAcciones(d);
+  } catch(e) {
+    contenido.innerHTML = `<div class="alert alert-danger">Error: ${e.message}</div>`;
+  }
+}
+
+function renderBarra(si, no, sin_dato, total) {
+  if (!total) return '<span class="text-muted small">Sin datos</span>';
+  const pSi  = (si  / total * 100).toFixed(1);
+  const pNo  = (no  / total * 100).toFixed(1);
+  const pSD  = (sin_dato / total * 100).toFixed(1);
+  return `
+    <div class="acc-barra-wrap">
+      <div class="acc-barra">
+        <div class="acc-seg acc-si"  style="width:${pSi}%" title="Sí: ${si} (${pSi}%)"></div>
+        <div class="acc-seg acc-no"  style="width:${pNo}%" title="No: ${no} (${pNo}%)"></div>
+        <div class="acc-seg acc-sd"  style="width:${pSD}%" title="Sin dato: ${sin_dato} (${pSD}%)"></div>
+      </div>
+      <span class="acc-pct-si">${pSi}%</span>
+    </div>`;
+}
+
+function renderAcciones(d) {
+  if (!d.total_ee) {
+    document.getElementById('acc-contenido').innerHTML = '<p class="text-muted">Sin datos para el período y filtros seleccionados.</p>';
+    return;
+  }
+
+  const EJE_LABELS = {
+    'Primera infancia': 'PI',
+    'Apoyo a las trayectorias educativas': 'ATE',
+    'Salud integral': 'SI',
+    'Integración comunitaria': 'IC',
+    'Nuevas tecnologías': 'NT',
+  };
+
+  let html = `
+    <div class="acc-leyenda">
+      <span class="acc-dot acc-si"></span> Sí &nbsp;
+      <span class="acc-dot acc-no"></span> No &nbsp;
+      <span class="acc-dot acc-sd"></span> Sin dato &nbsp;
+      <span class="text-muted small ms-2">${d.total_ee} EEs relevados</span>
+    </div>`;
+
+  for (const eje of d.ejes) {
+    const ag = eje.agrupador;
+    html += `
+    <div class="acc-eje-bloque">
+      <div class="acc-eje-header">
+        <span class="acc-eje-nombre">${eje.eje}</span>
+        <div class="acc-eje-barra-wrap">
+          ${renderBarra(ag.si, ag.no, ag.sin_dato, ag.total)}
+        </div>
+      </div>`;
+    for (const a of eje.acciones) {
+      html += `
+      <div class="acc-accion-fila">
+        <span class="acc-accion-nombre">${a.accion}</span>
+        <div class="acc-accion-barra-wrap">
+          ${renderBarra(a.si, a.no, a.sin_dato, a.total)}
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  document.getElementById('acc-contenido').innerHTML = html;
 }
 </script>
 

@@ -23,6 +23,7 @@ class Usuario(Base):
     rol = Column(Enum(RolEnum), nullable=False)
     activo = Column(Boolean, default=True)
     creado_en = Column(DateTime, server_default=func.now())
+    ultimo_ingreso = Column(DateTime, nullable=True)
 
     emaus = relationship("Emaus", back_populates="atl")
     emaus_responsable = relationship("ResponsableEmaus", back_populates="responsable")

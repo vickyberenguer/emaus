@@ -31,9 +31,21 @@ function toggleEmausWrapper() {
   document.getElementById('u-emaus-wrapper').classList.toggle('hidden', rol !== 'atl');
 }
 document.getElementById('u-rol').addEventListener('change', toggleEmausWrapper);
+document.getElementById('filtro-rol-usuario').addEventListener('change', cargarUsuarios);
+
+function formatUltimoIngreso(dt) {
+  if (!dt) return '<span class="text-muted">—</span>';
+  const d = new Date(dt.endsWith('Z') || dt.includes('+') ? dt : dt + 'Z');
+  const opts = { timeZone: 'America/Argentina/Buenos_Aires' };
+  const fecha = d.toLocaleDateString('es-AR', { ...opts, day: '2-digit', month: '2-digit', year: '2-digit' });
+  const hora  = d.toLocaleTimeString('es-AR', { ...opts, hour: '2-digit', minute: '2-digit' });
+  return `${fecha} ${hora}`;
+}
 
 async function cargarUsuarios() {
-  const usuarios = await api.get('/admin/usuarios');
+  const rol = document.getElementById('filtro-rol-usuario')?.value ?? 'responsable';
+  const params = rol ? `?rol=${rol}` : '';
+  const usuarios = await api.get(`/admin/usuarios${params}`);
   document.getElementById('tabla-usuarios').innerHTML = usuarios.map(u => `
     <tr>
       <td>${u.nombre} ${u.apellido}</td>
@@ -41,6 +53,7 @@ async function cargarUsuarios() {
       <td><span class="badge bg-light text-dark border">${u.rol}</span></td>
       <td>${u.emaus_id ? (emausCache.find(e => e.id === u.emaus_id)?.nombre ?? u.emaus_id) : '—'}</td>
       <td>${u.activo ? '<span class="badge bg-success">Sí</span>' : '<span class="badge bg-secondary">No</span>'}</td>
+      <td class="text-muted small">${formatUltimoIngreso(u.ultimo_ingreso)}</td>
       <td>
         <button class="btn btn-sm btn-outline-primary" onclick='editarUsuario(${JSON.stringify(u)})'>
           <i class="bi bi-pencil"></i>
@@ -356,10 +369,105 @@ document.getElementById('btn-generar-relevamientos').addEventListener('click', a
 });
 
 // ============================================================
+// Espacios Educativos
+// ============================================================
+
+let eeCache = [];  // todos los EE cargados
+
+async function cargarEEDeEmaus(emausId) {
+  const emaus = emausCache.find(e => e.id === emausId);
+  if (!emaus) return;
+  try {
+    const lista = await api.get(`/admin/ee?emaus_id=${emausId}`);
+    lista.forEach(ee => { ee._emaus_nombre = emaus.nombre; });
+    // Reemplazar EEs de este Emaús en el cache
+    eeCache = eeCache.filter(e => e._emaus_nombre !== emaus.nombre).concat(lista);
+  } catch (_) {}
+  renderTablaEE();
+}
+
+function renderTablaEE() {
+  const filtroEmausId = parseInt(document.getElementById('ee-filtro-emaus').value) || null;
+  const mostrarInactivos = document.getElementById('ee-mostrar-inactivos').checked;
+
+  const filas = eeCache.filter(ee => {
+    if (filtroEmausId && ee._emaus_id !== filtroEmausId && !ee._emaus_nombre) return false;
+    if (filtroEmausId) {
+      const emaus = emausCache.find(e => e.id === filtroEmausId);
+      if (emaus && ee._emaus_nombre !== emaus.nombre) return false;
+    }
+    if (!mostrarInactivos && !ee.activo) return false;
+    return true;
+  });
+
+  document.getElementById('tabla-ee').innerHTML = filas.map(ee => `
+    <tr class="${ee.activo ? '' : 'text-muted'}">
+      <td>${ee.nombre}</td>
+      <td><code class="small">${ee.nombre_hoja || '—'}</code></td>
+      <td>${ee._emaus_nombre}</td>
+      <td>${ee.activo
+        ? '<span class="badge bg-success">Activo</span>'
+        : '<span class="badge bg-secondary">Baja</span>'}</td>
+      <td>${ee.activo
+        ? `<button class="btn btn-sm btn-outline-danger" onclick="darDeBajaEE(${ee.id}, '${ee.nombre.replace(/'/g, "\\'")}')">
+             <i class="bi bi-x-circle"></i> Dar de baja
+           </button>`
+        : ''}</td>
+    </tr>`).join('');
+}
+
+async function darDeBajaEE(eeId, nombre) {
+  if (!confirm(`¿Dar de baja "${nombre}"?\n\nSe ocultará la hoja en la planilla del Emaús.`)) return;
+  try {
+    const res = await api.patch(`/admin/ee/${eeId}/baja`);
+    const idx = eeCache.findIndex(e => e.id === eeId);
+    if (idx >= 0) eeCache[idx].activo = false;
+    renderTablaEE();
+    alert(`✓ EE dado de baja.\nSheets: ${res.sheets}`);
+  } catch (e) {
+    alert('Error: ' + (e.message || e));
+  }
+}
+
+// Poblar select de Emaús en formulario de alta y filtro
+function poblarSelectsEE() {
+  const opts = emausCache.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+  document.getElementById('ee-emaus-id').innerHTML = '<option value="">— Seleccionar —</option>' + opts;
+  document.getElementById('ee-filtro-emaus').innerHTML = '<option value="">— Todos —</option>' + opts;
+}
+
+document.getElementById('form-ee-alta').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = {
+    emaus_id: parseInt(document.getElementById('ee-emaus-id').value),
+    nombre: document.getElementById('ee-nombre').value.trim(),
+    nombre_hoja: document.getElementById('ee-nombre-hoja').value.trim(),
+  };
+  const res = document.getElementById('ee-alta-resultado');
+  res.innerHTML = '<span class="text-muted">Procesando...</span>';
+  try {
+    const data = await api.post('/admin/ee', body);
+    res.innerHTML = `<span class="text-success">✓ EE creado (id=${data.id}). Sheets: ${data.sheets}</span>`;
+    e.target.reset();
+    await cargarTodosLosEE();
+  } catch (err) {
+    res.innerHTML = `<span class="text-danger">Error: ${err.message || err}</span>`;
+  }
+});
+
+document.getElementById('ee-filtro-emaus').addEventListener('change', async () => {
+  const emausId = parseInt(document.getElementById('ee-filtro-emaus').value);
+  if (emausId) await cargarEEDeEmaus(emausId);
+  else renderTablaEE();
+});
+document.getElementById('ee-mostrar-inactivos').addEventListener('change', renderTablaEE);
+
+// ============================================================
 // Init
 // ============================================================
 
 (async function init() {
   await cargarEmaus();
+  poblarSelectsEE();
   await Promise.all([cargarUsuarios(), cargarAsignaciones(), cargarCatalogo(), cargarEstadoPadron()]);
 })();

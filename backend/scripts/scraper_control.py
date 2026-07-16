@@ -397,6 +397,16 @@ def eval_condition(condition: Dict, field_values: Dict[str, Any]) -> bool:
         return cell_has_value(val)
     if "greater_than" in condition:
         return cell_numeric(val) > float(condition["greater_than"])
+    if "sum_of" in condition:
+        total = sum(cell_numeric(field_values.get(f)) for f in condition["sum_of"])
+        if "equals_field" in condition:
+            return total == cell_numeric(field_values.get(condition["equals_field"]))
+        if "equals" in condition:
+            return total == float(condition["equals"])
+    if "all_unique" in condition:
+        vals = [field_values.get(f) for f in condition["all_unique"]]
+        nums = [cell_numeric(v) for v in vals if cell_has_value(v)]
+        return len(nums) == len(set(nums))
     return False
 
 
@@ -547,6 +557,7 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
     ee_pendientes = 0
     ee_con_errores = 0
     total_asistentes = 0
+    ee_field_data: Dict[str, Dict] = {}  # title → field_values (solo hojas declaradas)
 
     for title in ee_titles:
         completion_vals = get_values(f"ee_completion_{title}")
@@ -559,9 +570,11 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
             asistentes = 0
         total_asistentes += asistentes
 
+        # Leer campos detallados para todos los EE (declarados o no) para poblar relevamiento_ee
+        field_values = read_sheet_fields(sheets, spreadsheet_id, title, ee_field_defs)
+        ee_field_data[title] = field_values
+
         if declared:
-            # Batch 2 (solo hojas declaradas completas): leer todos los campos para validar
-            field_values = read_sheet_fields(sheets, spreadsheet_id, title, ee_field_defs)
             errors = validate_sheet(field_values, validations, "ee")
 
             hard_errors = [e for e in errors if e["severity"] == "error"]
@@ -629,7 +642,213 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
         "cantidad_establecimientos": cantidad_establecimientos,
         "ultimo_sync": now,
         "validation_errors": all_validation_errors,
+        "ee_field_data": ee_field_data,
     }
+
+
+# ---------------------------------------------------------------------------
+# Mapeo de campos de planilla → columnas de relevamiento_ee
+# ---------------------------------------------------------------------------
+
+# Mapeo campo YAML → (eje, nombre acción) para relevamiento_ee_accion
+_ACCION_MAP = {
+    "Accion_PI_Pastoral":        ("Primera infancia",                    "Pastoral PI"),
+    "Accion_PI_Capacitaciones":  ("Primera infancia",                    "Capacitaciones, talleres y encuentros"),
+    "Accion_PI_EspPI":           ("Primera infancia",                    "Espacios de Primera Infancia"),
+    "Accion_PI_EstimTemprana":   ("Primera infancia",                    "Estimulación temprana"),
+    "Accion_ATE_BF":             ("Apoyo a las trayectorias educativas", "Becas Familiares"),
+    "Accion_ATE_ApoyoEscolar":   ("Apoyo a las trayectorias educativas", "Apoyo escolar"),
+    "Accion_ATE_BTU":            ("Apoyo a las trayectorias educativas", "Becas Terciarias y universitarias"),
+    "Accion_ATE_AlfabInicial":   ("Apoyo a las trayectorias educativas", "Alfabetización inicial"),
+    "Accion_ATE_DALE":           ("Apoyo a las trayectorias educativas", "Propuesta DALE"),
+    "Accion_ATE_ActLectoEscOral":("Apoyo a las trayectorias educativas", "Actividades de lectoescritura y oralidad"),
+    "Accion_ATE_RinconLectura":  ("Apoyo a las trayectorias educativas", "Rincón de lectura"),
+    "Accion_ATE_AlfabAdultos":   ("Apoyo a las trayectorias educativas", "Alfabetización de adultos"),
+    "Accion_ATE_PromSE":         ("Apoyo a las trayectorias educativas", "Promotores socio-educativos"),
+    "Accion_IC_Itinerancia":     ("Integración comunitaria",             "Itinerancia"),
+    "Accion_IC_Mochileros":      ("Integración comunitaria",             "Mochileros"),
+    "Accion_IC_Ludoteca":        ("Integración comunitaria",             "Ludoteca"),
+    "Accion_IC_ActCultRecre":    ("Integración comunitaria",             "Actividades culturales y recreativas"),
+    "Accion_IC_Desarrollo":      ("Integración comunitaria",             "Desarrollo habilidades duras y blandas"),
+    "Accion_IC_HabTrabajo":      ("Integración comunitaria",             "Habilidades para el mundo del trabajo"),
+    "Accion_IC_TalleresMuj":     ("Integración comunitaria",             "Talleres para mujeres"),
+    "Accion_IC_Adolescentes":    ("Integración comunitaria",             "Propuestas para adolescentes"),
+    "Accion_IC_TallOficio":      ("Integración comunitaria",             "Talleres de oficio"),
+    "Accion_NT_CapacTall":       ("Nuevas tecnologías",                  "Capacitaciones y talleres"),
+    "Accion_NT_EquiInfInt":      ("Nuevas tecnologías",                  "Equipamiento informático e internet"),
+    "Accion_NT_Tramites":        ("Nuevas tecnologías",                  "Trámites del estado (ANSES, AUH, CUD, etc)"),
+    "Accion_NT_AccesoDig":       ("Nuevas tecnologías",                  "Acceso digital comunitario"),
+    "Accion_SI_Deportes":        ("Salud integral",                      "Deportes"),
+    "Accion_SI_Alimentacion":    ("Salud integral",                      "Alimentación saludable"),
+    "Accion_SI_Meriendas":       ("Salud integral",                      "Meriendas"),
+    "Accion_SI_ControlesMed":    ("Salud integral",                      "Controles médicos"),
+    "Accion_SI_CapacitTall":     ("Salud integral",                      "Capacitaciones, talleres y encuentros"),
+    "Accion_SI_Huertas":         ("Salud integral",                      "Huertas comunitarias"),
+}
+
+_EE_FIELD_MAP = {
+    "Asistentes_0_6":               "asistentes_0_6",
+    "Asistentes_7_14":              "asistentes_7_14",
+    "Asistentes_15_24":             "asistentes_15_24",
+    "Asistentes_25_34":             "asistentes_25_35",  # nombre distinto en DB
+    "Asistentes_35_50":             "asistentes_35_50",
+    "Asistentes_Mas50":             "asistentes_mas_50",
+    "GM_RC_Nro":                    "grupo_motor_cantidad",
+    "GM_RC_Freq":                   "grupo_motor_frecuencia",
+    "AyJ_Nro":                      "adolescentes_referentes",
+    "AyJ_Freq":                     "adolescentes_frecuencia",
+    "Itinerancia_Activ":            "itinerancia_realizo",
+    "Itinerancia_Freq":             "itinerancia_frecuencia",
+    "ApEscolar_Nro_Primaria":       "apoyo_primario_ninos",
+    "ApEscolar_Nro_Secundaria":     "apoyo_secundario_adolescentes",
+    "Alfabetizacion_Nro":           "alfa_total",
+    "Alfabetizacion_6_9":           "alfa_6_9",
+    "Alfabetizacion_10_14":         "alfa_10_14",
+    "Alfabetizacion_15_24":         "alfa_15_24",
+    "Alfabetizacion_25mas":         "alfa_25_mas",
+    "Alfabetizacion_CantAlfabetizadores": "alfa_alfabetizadores",
+    "Alfabetizacion_Freq":          "alfa_frecuencia",
+    "DALE_Nro":                     "dale_total",
+    "DALE_6_9":                     "dale_6_9",
+    "DALE_10_14":                   "dale_10_14",
+    "DALE_15_24":                   "dale_15_24",
+    "DALE_25mas":                   "dale_25_mas",
+    "DALE_EducadoresDale":          "dale_educadores",
+    "DALE_Freq":                    "dale_frecuencia_dias",
+    "BTU_regulares":                "btu_regulares",
+}
+
+_ITINERANCIA_ROLES = [
+    ("Itinerancia_Rol1", "Itinerancia_Rol1_Cant"),
+    ("Itinerancia_Rol2", "Itinerancia_Rol2_Cant"),
+    ("Itinerancia_Rol3", "Itinerancia_Rol3_Cant"),
+    ("Itinerancia_Rol4", "Itinerancia_Rol4_Cant"),
+]
+
+
+def _to_int(val) -> Optional[int]:
+    try:
+        return int(float(str(val).strip())) if val not in (None, "", "None") else None
+    except (ValueError, TypeError):
+        return None
+
+
+def _to_bool(val) -> Optional[bool]:
+    if val is None or val == "":
+        return None
+    s = str(val).strip().lower()
+    if s in ("true", "verdadero", "sí", "si", "1"):
+        return True
+    if s in ("false", "falso", "no", "0"):
+        return False
+    return None
+
+
+def _normalize_ee_name(name: str) -> str:
+    """Normaliza nombre de EE para comparación: quita prefijo 'EE ', espacios y pasa a minúsculas."""
+    s = name.strip()
+    if s.upper().startswith("EE "):
+        s = s[3:].strip()
+    return s.lower()
+
+
+def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
+                           ee_field_data: Dict[str, Dict]) -> None:
+    """Upserta datos detallados de cada EE en relevamiento_ee y relevamiento_ee_itinerancia_rol."""
+    if not ee_field_data:
+        return
+
+    with engine.begin() as conn:
+        # Buscar el relevamiento para este emaus/anio/semestre
+        rel = conn.execute(
+            text("SELECT id FROM relevamiento WHERE emaus_id=:eid AND anio=:a AND semestre=:s LIMIT 1"),
+            {"eid": emaus_id, "a": anio, "s": semestre},
+        ).fetchone()
+        if not rel:
+            return  # no hay relevamiento abierto para este período, nada que hacer
+        relevamiento_id = rel[0]
+
+        # Precargar mapa nombre → id (exacto y normalizado) para este emaus
+        ee_rows = conn.execute(
+            text("SELECT id, nombre, nombre_hoja FROM espacio_educativo "
+                 "WHERE emaus_id = :eid AND activo = TRUE"),
+            {"eid": emaus_id},
+        ).fetchall()
+        ee_by_nombre_exacto = {r[1]: r[0] for r in ee_rows}
+        ee_by_nombre_hoja   = {r[2]: r[0] for r in ee_rows if r[2]}
+        ee_by_normalizado   = {_normalize_ee_name(r[1]): r[0] for r in ee_rows}
+
+        for title, fv in ee_field_data.items():
+            nombre_c4 = str(fv.get("NombreEE") or "").strip()
+            # Prioridad: nombre_hoja exacto > C4 exacto > C4 normalizado > título normalizado
+            ee_id = (
+                ee_by_nombre_hoja.get(title)
+                or (nombre_c4 and ee_by_nombre_exacto.get(nombre_c4))
+                or (nombre_c4 and ee_by_normalizado.get(_normalize_ee_name(nombre_c4)))
+                or ee_by_normalizado.get(_normalize_ee_name(title))
+            )
+            if not ee_id:
+                print(f"      [warn] EE no encontrado: hoja='{title}' C4='{nombre_c4}' (emaus_id={emaus_id})")
+                continue
+
+            # Construir dict de columnas para relevamiento_ee
+            row: Dict[str, Any] = {
+                "relevamiento_id": relevamiento_id,
+                "espacio_educativo_id": ee_id,
+            }
+            for yaml_name, col in _EE_FIELD_MAP.items():
+                raw = fv.get(yaml_name)
+                if col == "itinerancia_realizo":
+                    row[col] = _to_bool(raw)
+                elif col in ("grupo_motor_frecuencia", "adolescentes_frecuencia",
+                             "itinerancia_frecuencia", "alfa_frecuencia", "dale_frecuencia_dias"):
+                    row[col] = str(raw).strip()[:50] if raw not in (None, "") else None
+                else:
+                    row[col] = _to_int(raw)
+
+            cols = list(row.keys())
+            placeholders = ", ".join(f":{c}" for c in cols)
+            updates = ", ".join(f"{c} = VALUES({c})" for c in cols if c not in ("relevamiento_id", "espacio_educativo_id"))
+            conn.execute(
+                text(f"""
+                    INSERT INTO relevamiento_ee ({', '.join(cols)})
+                    VALUES ({placeholders})
+                    ON DUPLICATE KEY UPDATE {updates}
+                """),
+                row,
+            )
+            ree_id = conn.execute(
+                text("SELECT id FROM relevamiento_ee WHERE relevamiento_id=:rid AND espacio_educativo_id=:eid LIMIT 1"),
+                {"rid": relevamiento_id, "eid": ee_id},
+            ).fetchone()[0]
+
+            # Upsert roles de itinerancia
+            for rol_key, cant_key in _ITINERANCIA_ROLES:
+                rol_val = fv.get(rol_key)
+                cant_val = _to_int(fv.get(cant_key))
+                if not rol_val or cant_val is None:
+                    continue
+                conn.execute(text("""
+                    INSERT INTO relevamiento_ee_itinerancia_rol
+                        (relevamiento_ee_id, rol, cantidad)
+                    VALUES (:ree_id, :rol, :cant)
+                    ON DUPLICATE KEY UPDATE cantidad = VALUES(cantidad)
+                """), {"ree_id": ree_id, "rol": str(rol_val)[:50], "cant": cant_val})
+
+            # Upsert acciones (relevamiento_ee_accion)
+            for yaml_name, (eje, accion) in _ACCION_MAP.items():
+                raw = fv.get(yaml_name)
+                if raw is None:
+                    continue
+                tiene = _to_bool(raw)
+                if tiene is None:
+                    continue
+                conn.execute(text("""
+                    INSERT INTO relevamiento_ee_accion
+                        (relevamiento_ee_id, eje, accion, tiene)
+                    VALUES (:ree_id, :eje, :accion, :tiene)
+                    ON DUPLICATE KEY UPDATE tiene = VALUES(tiene)
+                """), {"ree_id": ree_id, "eje": eje, "accion": accion, "tiene": tiene})
 
 
 # ---------------------------------------------------------------------------
@@ -638,6 +857,9 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
 
 def upsert_control(engine, emaus_id: int, anio: int, semestre: str, metrics: Dict):
     errors = metrics.pop("validation_errors", [])
+    ee_field_data = metrics.pop("ee_field_data", {})
+    metrics.setdefault("btu_actual", None)
+    metrics.setdefault("bf_actual", None)
 
     with engine.begin() as conn:
         conn.execute(text("""
@@ -647,14 +869,14 @@ def upsert_control(engine, emaus_id: int, anio: int, semestre: str, metrics: Dic
                  pi_existe, pi_completa, pi_con_errores,
                  talleres_completo, establecimientos_completo,
                  total_asistentes_ee, cantidad_talleres, cantidad_establecimientos,
-                 ultimo_sync)
+                 btu_actual, bf_actual, ultimo_sync)
             VALUES
                 (:emaus_id, :anio, :semestre,
                  :ee_count, :ee_declarados_completos, :ee_pendientes, :ee_con_errores,
                  :pi_existe, :pi_completa, :pi_con_errores,
                  :talleres_completo, :establecimientos_completo,
                  :total_asistentes_ee, :cantidad_talleres, :cantidad_establecimientos,
-                 :ultimo_sync)
+                 :btu_actual, :bf_actual, :ultimo_sync)
             ON DUPLICATE KEY UPDATE
                 ee_count = VALUES(ee_count),
                 ee_declarados_completos = VALUES(ee_declarados_completos),
@@ -668,6 +890,8 @@ def upsert_control(engine, emaus_id: int, anio: int, semestre: str, metrics: Dic
                 total_asistentes_ee = VALUES(total_asistentes_ee),
                 cantidad_talleres = VALUES(cantidad_talleres),
                 cantidad_establecimientos = VALUES(cantidad_establecimientos),
+                btu_actual = COALESCE(VALUES(btu_actual), btu_actual),
+                bf_actual = COALESCE(VALUES(bf_actual), bf_actual),
                 ultimo_sync = VALUES(ultimo_sync)
         """), {**metrics, "emaus_id": emaus_id, "anio": anio, "semestre": semestre})
 
@@ -702,6 +926,81 @@ def upsert_control(engine, emaus_id: int, anio: int, semestre: str, metrics: Dic
             UPDATE emaus SET spreadsheet_id = :sid
             WHERE id = :emaus_id AND (spreadsheet_id IS NULL OR spreadsheet_id = '')
         """), {"sid": metrics.get("_spreadsheet_id", ""), "emaus_id": emaus_id})
+
+    # Upsert datos detallados por EE (fuera de la transacción principal para no mezclar errores)
+    if ee_field_data:
+        upsert_relevamiento_ee(engine, emaus_id, anio, semestre, ee_field_data)
+
+
+_EMAUS_NAME_FIXES = {
+    "San Francisco (Las Varillas)": "Las Varillas",
+    "San Roque": "Roque Saénz Peña",
+}
+
+_BTU_EMAUS_MAP = {
+    "San Francisco (Las Varillas)": "Las Varillas",
+    "San Roque": "Roque Saénz Peña",
+}
+
+
+def leer_btu_planilla(sheets_svc, spreadsheet_id: str) -> Dict[str, int]:
+    """Lee la planilla BTU y retorna {nombre_emaus_normalizado: btu_actual}."""
+    if not spreadsheet_id:
+        return {}
+    try:
+        resp = sheets_svc.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="A1:C60",
+            valueRenderOption="UNFORMATTED_VALUE",
+        ).execute()
+    except Exception as e:
+        print(f"  [warn] No se pudo leer planilla BTU: {e}")
+        return {}
+
+    result = {}
+    for row in resp.get("values", []):
+        if len(row) < 3:
+            continue
+        nombre = str(row[1]).strip()
+        if not nombre or nombre == "DIOCESIS":
+            continue
+        try:
+            cant = int(float(str(row[2])))
+        except (ValueError, TypeError):
+            continue
+        nombre_real = _BTU_EMAUS_MAP.get(nombre, _EMAUS_NAME_FIXES.get(nombre, nombre))
+        result[nombre_real] = cant
+    return result
+
+
+def leer_bf_planilla(sheets_svc, spreadsheet_id: str) -> Dict[str, int]:
+    """Lee la planilla BF y retorna {nombre_emaus: bf_actual}. Col A = nombre, Col B = cantidad."""
+    if not spreadsheet_id:
+        return {}
+    try:
+        resp = sheets_svc.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="A1:B60",
+            valueRenderOption="UNFORMATTED_VALUE",
+        ).execute()
+    except Exception as e:
+        print(f"  [warn] No se pudo leer planilla BF: {e}")
+        return {}
+
+    result = {}
+    for row in resp.get("values", []):
+        if len(row) < 2:
+            continue
+        nombre = str(row[0]).strip()
+        if not nombre:
+            continue
+        try:
+            cant = int(float(str(row[1])))
+        except (ValueError, TypeError):
+            continue
+        nombre_real = _EMAUS_NAME_FIXES.get(nombre, nombre)
+        result[nombre_real] = cant
+    return result
 
 
 def find_emaus_id(engine, nombre: str) -> Optional[int]:
@@ -758,6 +1057,21 @@ def main():
             print(f"    Planilla: {emaus_name} → {item['id'][:20]}...")
 
 
+    # Leer BTU y BF una sola vez antes del loop
+    btu_spreadsheet_id = os.getenv("BTU_SPREADSHEET_ID", "")
+    btu_map: Dict[str, int] = leer_btu_planilla(sheets_svc, btu_spreadsheet_id)
+    if btu_map:
+        print(f"  BTU leídos para {len(btu_map)} Emaús")
+    else:
+        print(f"  [warn] No se leyeron datos BTU (BTU_SPREADSHEET_ID={btu_spreadsheet_id!r})")
+
+    bf_spreadsheet_id = os.getenv("BF_SPREADSHEET_ID", "")
+    bf_map: Dict[str, int] = leer_bf_planilla(sheets_svc, bf_spreadsheet_id)
+    if bf_map:
+        print(f"  BF leídos para {len(bf_map)} Emaús")
+    else:
+        print(f"  [warn] No se leyeron datos BF (BF_SPREADSHEET_ID={bf_spreadsheet_id!r})")
+
     ok = err = skip = 0
 
     for emaus in emaus_list:
@@ -778,6 +1092,8 @@ def main():
                 apply_reset=args.apply_reset,
             )
             metrics["_spreadsheet_id"] = spreadsheet_id
+            metrics["btu_actual"] = btu_map.get(emaus["nombre"])
+            metrics["bf_actual"]  = bf_map.get(emaus["nombre"])
             n_err = len([e for e in metrics["validation_errors"] if e["severity"] == "error"])
             n_warn = len([e for e in metrics["validation_errors"] if e["severity"] == "warning"])
 
@@ -839,6 +1155,21 @@ def run_sync(folder_id: str, anio: int = ANIO_DEFAULT, semestre: str = SEMESTRE_
         if item.get("emaus_nombre", "").strip()
     }
 
+    # Leer datos BTU y BF de planillas externas (una sola vez para todo el sync)
+    btu_spreadsheet_id = os.getenv("BTU_SPREADSHEET_ID", "")
+    btu_map: Dict[str, int] = leer_btu_planilla(sheets_svc, btu_spreadsheet_id)
+    if btu_map:
+        print(f"  BTU leídos para {len(btu_map)} Emaús")
+    else:
+        print(f"  [warn] No se leyeron datos BTU (BTU_SPREADSHEET_ID={btu_spreadsheet_id!r})")
+
+    bf_spreadsheet_id = os.getenv("BF_SPREADSHEET_ID", "")
+    bf_map: Dict[str, int] = leer_bf_planilla(sheets_svc, bf_spreadsheet_id)
+    if bf_map:
+        print(f"  BF leídos para {len(bf_map)} Emaús")
+    else:
+        print(f"  [warn] No se leyeron datos BF (BF_SPREADSHEET_ID={bf_spreadsheet_id!r})")
+
     ok = err = skip = 0
     errores_detalle = []
 
@@ -859,6 +1190,8 @@ def run_sync(folder_id: str, anio: int = ANIO_DEFAULT, semestre: str = SEMESTRE_
                     apply_reset=apply_reset,
                 )
                 metrics["_spreadsheet_id"] = spreadsheet_id
+                metrics["btu_actual"] = btu_map.get(emaus["nombre"])
+                metrics["bf_actual"] = bf_map.get(emaus["nombre"])
                 if not dry_run:
                     upsert_control(engine, emaus["id"], anio, semestre, metrics)
                 ok += 1

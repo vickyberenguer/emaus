@@ -1522,6 +1522,19 @@ validations:
     message: "No hay alumnos de nivel secundario pero está completado el cuadro \"Apoyo escolar Nivel Secundario\""
 
 
+  # --- Becas Familiares: coherencia suma ---
+  - id: bf_apoyo_escolar_suma_niveles
+    sheet: ee
+    description: "La cantidad de BF en apoyo escolar debe coincidir con la suma de niveles inicial, primario y secundario"
+    severity: warning
+    when:
+      field: BF_Nro_ApEscolar
+      greater_than: 0
+    require_all:
+      - sum_of: [BF_Nro_Inicial, BF_Nro_Primaria, BF_Nro_Secundaria]
+        equals_field: BF_Nro_ApEscolar
+    message: "La cantidad de BF en apoyo escolar debe coincidir con la suma de BF que asisten a nivel inicial, nivel primario y nivel secundario (suma de filas 58 a 60 debe coincidir con fila 57)"
+
   # --- Apoyo Escolar: coherencia acción vs datos ---
   - id: apescolar_accion_si_requiere_alumnos
     sheet: ee
@@ -1635,6 +1648,22 @@ validations:
       - field: AyJ_Nro
         greater_than: 0
     message: "Se respondió que se realizan actividades con Adolescentes y Jóvenes pero falta la cantidad (C125)"
+
+  - id: ayj_ranking_sin_repetidos
+    sheet: ee
+    description: "Los valores del ranking de situaciones de AyJ deben ser todos diferentes (sin repetidos)"
+    severity: warning
+    require_all:
+      - all_unique:
+          - AyJ_rank_suicidio
+          - AyJ_rank_faltaproyecto
+          - AyJ_rank_consumo
+          - AyJ_rank_apuestas
+          - AyJ_rank_saludmental
+          - AyJ_rank_violencia
+          - AyJ_rank_violenciadigital
+          - AyJ_rank_desvinculacion
+    message: "El ranking de situaciones preocupantes (C254 a C261) tiene números repetidos. Cada situación debe tener un número diferente del 1 al 8"
 
   - id: ayj_con_participantes_requiere_freq
     sheet: ee

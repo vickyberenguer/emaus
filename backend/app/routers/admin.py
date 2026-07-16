@@ -51,6 +51,7 @@ class UsuarioResponse(BaseModel):
     activo: bool
     emaus_id: int | None
     creado_en: datetime | None
+    ultimo_ingreso: datetime | None
 
     class Config:
         from_attributes = True
@@ -77,8 +78,11 @@ def listar_emaus(db: Session = Depends(get_db)):
 
 
 @router.get("/usuarios", response_model=list[UsuarioResponse])
-def listar_usuarios(db: Session = Depends(get_db)):
-    return db.query(Usuario).order_by(Usuario.apellido, Usuario.nombre).all()
+def listar_usuarios(rol: str | None = None, db: Session = Depends(get_db)):
+    q = db.query(Usuario)
+    if rol:
+        q = q.filter(Usuario.rol == rol)
+    return q.order_by(Usuario.apellido, Usuario.nombre).all()
 
 
 @router.post("/usuarios", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)

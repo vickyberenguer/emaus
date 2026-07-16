@@ -18,6 +18,7 @@ class EspacioEducativo(Base):
     rampa_acceso = Column(Boolean, default=False)
     acceso_principal = Column(String(100))
     activo = Column(Boolean, default=True)
+    nombre_hoja = Column(String(200), nullable=True)
 
     emaus = relationship("Emaus", back_populates="espacios_educativos")
     ambientes = relationship("EEAmbiente", back_populates="espacio_educativo")

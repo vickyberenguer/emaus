@@ -86,6 +86,10 @@
             <th class="text-center">Talleres</th>
             <th class="text-center">Estab.</th>
             <th class="text-center">Asistentes</th>
+            <th class="text-center">BTU</th>
+            <th class="text-center">Dif BTU</th>
+            <th class="text-center">BF</th>
+            <th class="text-center">Dif BF</th>
             <th class="text-center">Talleres #</th>
             <th class="text-center">Estab. #</th>
             <th class="text-center">Último sync</th>
@@ -206,6 +210,17 @@ function renderStats() {
 // ---------------------------------------------------------------------------
 // Tabla
 // ---------------------------------------------------------------------------
+function renderDif(actual, relevado) {
+  if (actual === null || actual === undefined) return '<span class="text-muted">—</span>';
+  const dif = actual - (relevado || 0);
+  if (dif === 0) return '<span class="text-success fw-semibold">0</span>';
+  if (dif > 0) return `<span class="text-danger fw-semibold">+${dif}</span>`;
+  return `<span class="text-warning fw-semibold">${dif}</span>`;
+}
+
+function renderDifBtu(d) { return renderDif(d.btu_actual, d.btu_relevado); }
+function renderDifBf(d)  { return renderDif(d.bf_actual,  d.bf_relevado);  }
+
 function renderTabla() {
   const filtro = document.getElementById('filtro-emaus').value.toLowerCase();
   const datos = datosControl.filter(d =>
@@ -214,7 +229,7 @@ function renderTabla() {
 
   if (!datos.length) {
     document.getElementById('tbody-control').innerHTML =
-      `<tr><td colspan="13" class="text-center text-muted py-4">Sin datos</td></tr>`;
+      `<tr><td colspan="17" class="text-center text-muted py-4">Sin datos</td></tr>`;
     return;
   }
 
@@ -231,6 +246,10 @@ function renderTabla() {
       <td class="text-center">${iconCheck(d.talleres_completo)}</td>
       <td class="text-center">${iconCheck(d.establecimientos_completo)}</td>
       <td class="text-center">${d.total_asistentes_ee.toLocaleString('es-AR')}</td>
+      <td class="text-center">${(d.btu_relevado||0).toLocaleString('es-AR')}</td>
+      <td class="text-center">${renderDifBtu(d)}</td>
+      <td class="text-center">${(d.bf_relevado||0).toLocaleString('es-AR')}</td>
+      <td class="text-center">${renderDifBf(d)}</td>
       <td class="text-center">${d.cantidad_talleres}</td>
       <td class="text-center">${d.cantidad_establecimientos}</td>
       <td class="text-center text-muted small">${formatSync(d.ultimo_sync)}</td>
@@ -251,6 +270,10 @@ function renderTabla() {
   const totalEECompletos = sum(d => d.ee_declarados_completos);
   const totalEEErrores   = sum(d => d.ee_con_errores);
   const totalAsistentes  = sum(d => d.total_asistentes_ee);
+  const totalBtuRel      = sum(d => d.btu_relevado);
+  const totalBtuAct      = sum(d => d.btu_actual);
+  const totalBfRel       = sum(d => d.bf_relevado);
+  const totalBfAct       = sum(d => d.bf_actual);
   const totalTalleres    = sum(d => d.cantidad_talleres);
   const totalEstab       = sum(d => d.cantidad_establecimientos);
 
@@ -265,6 +288,10 @@ function renderTabla() {
       ${tc(totalEEErrores)}
       <td></td><td></td><td></td>
       ${tc(totalAsistentes)}
+      ${tc(totalBtuRel)}
+      ${tc(totalBtuAct)}
+      ${tc(totalBfRel)}
+      ${tc(totalBfAct)}
       ${tc(totalTalleres)}
       ${tc(totalEstab)}
       <td></td><td></td><td></td>
@@ -331,7 +358,8 @@ function botonAprobar(d) {
 
 function formatSync(dt) {
   if (!dt) return '—';
-  const d = new Date(dt);
+  // El backend guarda UTC sin sufijo Z; forzamos parseo como UTC agregándolo
+  const d = new Date(dt.endsWith('Z') || dt.includes('+') ? dt : dt + 'Z');
   const opts = { timeZone: 'America/Argentina/Buenos_Aires' };
   return d.toLocaleDateString('es-AR', {...opts, day:'2-digit', month:'2-digit'}) + ' ' +
          d.toLocaleTimeString('es-AR', {...opts, hour:'2-digit', minute:'2-digit'});

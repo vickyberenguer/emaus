@@ -99,6 +99,9 @@ def login(
             detail="Email o contraseña incorrectos",
         )
 
+    user.ultimo_ingreso = datetime.utcnow()
+    db.commit()
+
     token = create_access_token(user.id, user.rol)
     return TokenResponse(
         access_token=token,

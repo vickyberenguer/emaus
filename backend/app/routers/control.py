@@ -5,10 +5,13 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
+from sqlalchemy import func
 from app.database import get_db
 from app.models.usuario import Usuario
 from app.models.emaus import Emaus, ResponsableEmaus
 from app.models.control import ControlRelevamiento, ControlValidacionDetalle, ControlAprobacion
+from app.models.relevamiento import Relevamiento
+from app.models.espacio_educativo import RelevamientoEE
 from app.routers.auth import get_current_user, require_rol
 
 router = APIRouter(prefix="/control", tags=["control"])
@@ -66,6 +69,10 @@ class ControlEmausOut(BaseModel):
     total_asistentes_ee: int
     cantidad_talleres: int
     cantidad_establecimientos: int
+    btu_actual: Optional[int]
+    btu_relevado: int
+    bf_actual: Optional[int]
+    bf_relevado: int
 
     ultimo_sync: datetime
     spreadsheet_url: Optional[str]
@@ -141,6 +148,10 @@ def build_control_out(ctrl: ControlRelevamiento, emaus: Emaus) -> dict:
         "total_asistentes_ee": ctrl.total_asistentes_ee,
         "cantidad_talleres": ctrl.cantidad_talleres,
         "cantidad_establecimientos": ctrl.cantidad_establecimientos,
+        "btu_actual": ctrl.btu_actual,
+        "btu_relevado": 0,  # se sobreescribe en el endpoint
+        "bf_actual": ctrl.bf_actual,
+        "bf_relevado": 0,  # se sobreescribe en el endpoint
         "ultimo_sync": ctrl.ultimo_sync,
         "spreadsheet_url": spreadsheet_url(emaus.spreadsheet_id),
         "aprobacion": ctrl.aprobacion,
@@ -173,7 +184,47 @@ def listar_control(
         query = query.filter(ControlRelevamiento.emaus_id.in_(allowed_ids))
 
     rows = query.order_by(Emaus.nombre).all()
-    return [build_control_out(ctrl, emaus) for ctrl, emaus in rows]
+
+    # BTU relevado: sum(btu_regulares) de relevamiento_ee por Emaús
+    emaus_ids = [ctrl.emaus_id for ctrl, _ in rows]
+    btu_relevado_map: dict = {}
+    if emaus_ids:
+        btu_rows = (
+            db.query(Relevamiento.emaus_id, func.coalesce(func.sum(RelevamientoEE.btu_regulares), 0))
+            .join(RelevamientoEE, RelevamientoEE.relevamiento_id == Relevamiento.id)
+            .filter(
+                Relevamiento.anio == anio,
+                Relevamiento.semestre == semestre,
+                Relevamiento.emaus_id.in_(emaus_ids),
+            )
+            .group_by(Relevamiento.emaus_id)
+            .all()
+        )
+        btu_relevado_map = {r[0]: int(r[1]) for r in btu_rows}
+
+    # BF relevado: sum(bf_apoyo_escolar) de relevamiento_ee por Emaús
+    bf_relevado_map: dict = {}
+    if emaus_ids:
+        bf_rows = (
+            db.query(Relevamiento.emaus_id, func.coalesce(func.sum(RelevamientoEE.bf_apoyo_escolar), 0))
+            .join(RelevamientoEE, RelevamientoEE.relevamiento_id == Relevamiento.id)
+            .filter(
+                Relevamiento.anio == anio,
+                Relevamiento.semestre == semestre,
+                Relevamiento.emaus_id.in_(emaus_ids),
+            )
+            .group_by(Relevamiento.emaus_id)
+            .all()
+        )
+        bf_relevado_map = {r[0]: int(r[1]) for r in bf_rows}
+
+    result = []
+    for ctrl, emaus in rows:
+        out = build_control_out(ctrl, emaus)
+        out["btu_relevado"] = btu_relevado_map.get(ctrl.emaus_id, 0)
+        out["bf_relevado"] = bf_relevado_map.get(ctrl.emaus_id, 0)
+        result.append(out)
+    return result
 
 
 @router.get("/sync/estado")

@@ -8,7 +8,7 @@ from app.models.usuario import Usuario
 from app.models.emaus import Emaus, Diocesis, ResponsableEmaus
 from app.models.control import ControlRelevamiento, ControlAprobacion
 from app.models.relevamiento import Relevamiento
-from app.models.espacio_educativo import EspacioEducativo, RelevamientoEE, RelevamientoEEItineranciaRol
+from app.models.espacio_educativo import EspacioEducativo, RelevamientoEE, RelevamientoEEItineranciaRol, RelevamientoEEAccion
 from app.routers.auth import get_current_user, require_rol
 from app.routers.control import ANIO_ACTIVO, SEMESTRE_ACTIVO, emaus_ids_for_user
 
@@ -68,6 +68,23 @@ def estado_carga(
 
     rows = query.order_by(Emaus.nombre).all()
 
+    # Calcular BTU relevado (sum btu_regulares) por Emaús en un solo query
+    emaus_ids_en_resultado = [ctrl.emaus_id for ctrl, _, _ in rows]
+    btu_relevado_map: dict = {}
+    if emaus_ids_en_resultado:
+        btu_rows = (
+            db.query(Relevamiento.emaus_id, func.coalesce(func.sum(RelevamientoEE.btu_regulares), 0))
+            .join(RelevamientoEE, RelevamientoEE.relevamiento_id == Relevamiento.id)
+            .filter(
+                Relevamiento.anio == anio,
+                Relevamiento.semestre == semestre,
+                Relevamiento.emaus_id.in_(emaus_ids_en_resultado),
+            )
+            .group_by(Relevamiento.emaus_id)
+            .all()
+        )
+        btu_relevado_map = {r[0]: int(r[1]) for r in btu_rows}
+
     emaus_list = []
     for ctrl, emaus, aprobacion in rows:
         ee_total = ctrl.ee_count or 0
@@ -75,6 +92,8 @@ def estado_carga(
         ee_errores = ctrl.ee_con_errores or 0
         ee_pendientes = max(0, ee_total - ee_completos - ee_errores)
 
+        btu_actual = ctrl.btu_actual
+        btu_relevado = btu_relevado_map.get(ctrl.emaus_id, 0)
         aprobado = aprobacion is not None and aprobacion.estado == "aprobado"
 
         if aprobado:
@@ -96,6 +115,9 @@ def estado_carga(
             "total_asistentes": ctrl.total_asistentes_ee or 0,
             "cantidad_talleres": ctrl.cantidad_talleres or 0,
             "cantidad_establecimientos": ctrl.cantidad_establecimientos or 0,
+            "btu_relevado": btu_relevado,
+            "btu_actual": btu_actual,
+            "dif_btu": (btu_actual - btu_relevado) if btu_actual is not None else None,
             "estado": estado,
         })
 
@@ -163,6 +185,146 @@ def filtros_participantes(
         "emaus":     [{"id": k, "nombre": v} for k, v in sorted(emaus_list.items(), key=lambda x: x[1])],
         "ee":        [{"id": k, "nombre": v} for k, v in sorted(ee_list.items(), key=lambda x: x[1])],
     }
+
+
+@router.get("/debug-periodos")
+def debug_periodos(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin")),
+):
+    """Diagnóstico: qué años/semestres tienen datos en relevamiento_ee."""
+    rows = (
+        db.query(Relevamiento.anio, Relevamiento.semestre, func.count(RelevamientoEE.id))
+        .outerjoin(RelevamientoEE, RelevamientoEE.relevamiento_id == Relevamiento.id)
+        .group_by(Relevamiento.anio, Relevamiento.semestre)
+        .order_by(Relevamiento.anio, Relevamiento.semestre)
+        .all()
+    )
+    total_ree = db.query(func.count(RelevamientoEE.id)).scalar()
+    total_rel = db.query(func.count(Relevamiento.id)).scalar()
+    return {
+        "total_relevamiento": total_rel,
+        "total_relevamiento_ee": total_ree,
+        "por_periodo": [
+            {"anio": r[0], "semestre": r[1], "ree_count": r[2]} for r in rows
+        ],
+    }
+
+
+@router.get("/acciones")
+def acciones(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    ee_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+):
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    # Base query: relevamiento_ee con filtros
+    ree_query = (
+        db.query(RelevamientoEE.id)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region == region)
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+
+    ree_ids = [r[0] for r in ree_query.all()]
+    total_ree = len(ree_ids)
+
+    if not ree_ids:
+        return {"total_ee": 0, "ejes": []}
+
+    from collections import defaultdict
+    from sqlalchemy import case
+
+    # Conteos por eje+accion
+    accion_rows = (
+        db.query(
+            RelevamientoEEAccion.eje,
+            RelevamientoEEAccion.accion,
+            func.count(RelevamientoEEAccion.id).label("total_reg"),
+            func.sum(case((RelevamientoEEAccion.tiene == True, 1), else_=0)).label("si"),
+            func.sum(case((RelevamientoEEAccion.tiene == False, 1), else_=0)).label("no"),
+        )
+        .filter(RelevamientoEEAccion.relevamiento_ee_id.in_(ree_ids))
+        .group_by(RelevamientoEEAccion.eje, RelevamientoEEAccion.accion)
+        .order_by(RelevamientoEEAccion.eje, RelevamientoEEAccion.accion)
+        .all()
+    )
+
+    # Agrupador por eje: EEs con al menos una accion tiene=True en ese eje
+    agrup_rows = (
+        db.query(
+            RelevamientoEEAccion.eje,
+            func.count(func.distinct(RelevamientoEEAccion.relevamiento_ee_id)).label("si"),
+        )
+        .filter(
+            RelevamientoEEAccion.relevamiento_ee_id.in_(ree_ids),
+            RelevamientoEEAccion.tiene == True,
+        )
+        .group_by(RelevamientoEEAccion.eje)
+        .all()
+    )
+    agrup_map = {r[0]: r[1] for r in agrup_rows}
+
+    ejes_dict = defaultdict(list)
+    for row in accion_rows:
+        si = int(row.si or 0)
+        no = int(row.no or 0)
+        sin_dato = max(0, total_ree - si - no)
+        ejes_dict[row.eje].append({
+            "accion": row.accion,
+            "si": si,
+            "no": no,
+            "sin_dato": sin_dato,
+            "total": total_ree,
+        })
+
+    EJE_ORDER = [
+        "Primera infancia",
+        "Apoyo a las trayectorias educativas",
+        "Salud integral",
+        "Integración comunitaria",
+        "Nuevas tecnologías",
+    ]
+
+    ejes = []
+    for eje in EJE_ORDER:
+        if eje not in ejes_dict:
+            continue
+        si_agrup = agrup_map.get(eje, 0)
+        no_agrup = total_ree - si_agrup
+        ejes.append({
+            "eje": eje,
+            "agrupador": {
+                "si": si_agrup,
+                "no": no_agrup,
+                "sin_dato": 0,
+                "total": total_ree,
+            },
+            "acciones": ejes_dict[eje],
+        })
+
+    return {"total_ee": total_ree, "ejes": ejes}
 
 
 def _sum(val):

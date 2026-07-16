@@ -39,6 +39,7 @@
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-catalogos"><i class="bi bi-list-ul"></i> Catálogos</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-padron"><i class="bi bi-file-earmark-arrow-up"></i> Padrón</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-emaus"><i class="bi bi-building"></i> Emaús / Diócesis</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-ee" id="tab-ee-link"><i class="bi bi-door-open"></i> Espacios Educativos</a></li>
   </ul>
 
   <div class="tab-content" id="mainTabsContent">
@@ -78,8 +79,17 @@
       </div>
 
       <div class="card border-0 shadow-sm p-3">
+        <div class="d-flex gap-2 mb-2 align-items-center">
+          <label class="form-label small mb-0">Filtrar por rol:</label>
+          <select class="form-select form-select-sm w-auto" id="filtro-rol-usuario">
+            <option value="responsable">Responsables</option>
+            <option value="atl">ATL</option>
+            <option value="">Todos</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
         <table class="table table-sm align-middle">
-          <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Emaús</th><th>Activo</th><th></th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Emaús</th><th>Activo</th><th>Último ingreso</th><th></th></tr></thead>
           <tbody id="tabla-usuarios"></tbody>
         </table>
       </div>
@@ -164,6 +174,52 @@
           <div class="progress-bar" id="padron-progress-bar" style="width:0%">0%</div>
         </div>
         <div id="padron-resultado" class="mt-2 small"></div>
+      </div>
+    </div>
+
+    <!-- ESPACIOS EDUCATIVOS -->
+    <div class="tab-pane fade" id="tab-ee">
+      <div class="card border-0 shadow-sm p-3 mb-3">
+        <h6 class="mb-3"><i class="bi bi-plus-circle"></i> Nuevo Espacio Educativo</h6>
+        <form id="form-ee-alta" class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label small">Emaús</label>
+            <select class="form-select" id="ee-emaus-id" required></select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Nombre del EE</label>
+            <input class="form-control" id="ee-nombre" required placeholder="Nombre en la DB">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Nombre de hoja en Sheets</label>
+            <input class="form-control" id="ee-nombre-hoja" required placeholder="Nombre exacto de la pestaña">
+          </div>
+          <div class="col-md-2 d-grid">
+            <button class="btn btn-primary" type="submit"><i class="bi bi-plus"></i> Dar de alta</button>
+          </div>
+        </form>
+        <div id="ee-alta-resultado" class="mt-2 small"></div>
+      </div>
+
+      <div class="card border-0 shadow-sm p-3">
+        <div class="row g-2 mb-3 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label small">Filtrar por Emaús</label>
+            <select class="form-select" id="ee-filtro-emaus">
+              <option value="">— Todos —</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <div class="form-check mt-4">
+              <input class="form-check-input" type="checkbox" id="ee-mostrar-inactivos">
+              <label class="form-check-label small" for="ee-mostrar-inactivos">Mostrar dados de baja</label>
+            </div>
+          </div>
+        </div>
+        <table class="table table-sm align-middle">
+          <thead><tr><th>EE</th><th>Hoja en Sheets</th><th>Emaús</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="tabla-ee"></tbody>
+        </table>
       </div>
     </div>
 

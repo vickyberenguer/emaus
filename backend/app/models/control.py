@@ -25,6 +25,8 @@ class ControlRelevamiento(Base):
     total_asistentes_ee = Column(Integer, nullable=False, default=0)
     cantidad_talleres = Column(Integer, nullable=False, default=0)
     cantidad_establecimientos = Column(Integer, nullable=False, default=0)
+    btu_actual = Column(Integer, nullable=True)
+    bf_actual = Column(Integer, nullable=True)
 
     ultimo_sync = Column(DateTime, nullable=False)
 

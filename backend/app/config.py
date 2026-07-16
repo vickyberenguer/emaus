@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     gcp_service_account_json_path: str = ""
     gcp_service_account_json: str = ""
     drive_folder_id: str = ""
+    model_spreadsheet_id: str = ""
+    btu_spreadsheet_id: str = ""
+    bf_spreadsheet_id: str = ""
 
     @property
     def database_url(self) -> str:
@@ -43,6 +46,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = str(REPO_ROOT_ENV)
         env_file_encoding = "utf-8"
+        protected_namespaces = ("settings_",)
 
 
 @lru_cache
