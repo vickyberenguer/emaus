@@ -31,8 +31,7 @@ emaus_setup.tar.gz
 # Claude Code
 .claude/
 
-# Generado en build de Netlify
-frontend/js/env.js
+# env.js se commitea como placeholder vacío; Netlify lo sobreescribe en build
 
 # Datos de carga manual (no van al repo público)
 archivosdatos/
