@@ -154,11 +154,14 @@ def estado_carga(
 def filtros_participantes(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
-    """Valores disponibles para los filtros cascada del tablero de participantes."""
-    base = (
+    """Valores disponibles para los filtros cascada del tablero."""
+    q = (
         db.query(Diocesis.region, Diocesis.provincia, Emaus.id, Emaus.nombre,
                  EspacioEducativo.id, EspacioEducativo.nombre)
         .join(Emaus, Emaus.diocesis_id == Diocesis.id)
@@ -171,13 +174,31 @@ def filtros_participantes(
         .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
         .distinct()
         .order_by(Diocesis.region, Diocesis.provincia, Emaus.nombre, EspacioEducativo.nombre)
-        .all()
     )
 
-    regiones  = sorted({r[0] for r in base if r[0]})
-    provincias = sorted({r[1] for r in base if r[1]})
-    emaus_list = {r[2]: r[3] for r in base}
-    ee_list    = {r[4]: r[5] for r in base}
+    # Para regiones y provincias siempre devolvemos el universo completo del período
+    base_all = q.all()
+    regiones  = sorted({r[0] for r in base_all if r[0]})
+
+    # Provincias filtradas por región si corresponde
+    if region:
+        provincias = sorted({r[1] for r in base_all if r[0] == region and r[1]})
+    else:
+        provincias = sorted({r[1] for r in base_all if r[1]})
+
+    # Emaús filtrados por región y/o provincia
+    base_emaus = base_all
+    if region:
+        base_emaus = [r for r in base_emaus if r[0] == region]
+    if provincia:
+        base_emaus = [r for r in base_emaus if r[1] == provincia]
+    emaus_list = {r[2]: r[3] for r in base_emaus}
+
+    # EE filtrados por región, provincia y/o emaús
+    base_ee = base_emaus
+    if emaus_id:
+        base_ee = [r for r in base_ee if r[2] == emaus_id]
+    ee_list = {r[4]: r[5] for r in base_ee}
 
     return {
         "regiones":  regiones,

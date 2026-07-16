@@ -559,12 +559,27 @@ async function init() {
   await cargarDatos();
   await cargarFiltros();
 
-  // Eventos filtros participantes
+  // Período → recargar filtros completos
   ['part-anio','part-semestre'].forEach(id => {
     document.getElementById(id).addEventListener('change', () => {
       partDatos = null;
+      limpiarFiltrosCascada('part');
       cargarFiltros();
     });
+  });
+
+  // Cascada: región → limpiar provincia/emaús/ee y recargar
+  document.getElementById('part-region').addEventListener('change', () => {
+    limpiarFiltrosCascada('part', 'region');
+    cargarFiltros();
+  });
+  document.getElementById('part-provincia').addEventListener('change', () => {
+    limpiarFiltrosCascada('part', 'provincia');
+    cargarFiltros();
+  });
+  document.getElementById('part-emaus').addEventListener('change', () => {
+    limpiarFiltrosCascada('part', 'emaus');
+    cargarFiltros();
   });
 }
 
@@ -755,30 +770,50 @@ async function cargarParticipantes() {
   }
 }
 
-async function cargarFiltros() {
-  const params = new URLSearchParams({
-    anio: document.getElementById('part-anio').value,
-    semestre: document.getElementById('part-semestre').value,
+// Limpia los selects dependientes según cuál cambió
+// nivel: undefined=todos, 'region'=provincia+emaus+ee, 'provincia'=emaus+ee, 'emaus'=ee
+function limpiarFiltrosCascada(prefijo, nivel) {
+  const orden = ['region', 'provincia', 'emaus', 'ee'];
+  const desde = nivel ? orden.indexOf(nivel) + 1 : 0;
+  orden.slice(desde).forEach(n => {
+    const sel = document.getElementById(`${prefijo}-${n}`);
+    if (sel) sel.value = '';
   });
-  try {
-    const f = await api.get('/tablero/filtros?' + params.toString());
-    poblarSelect('part-region',   f.regiones.map(r => ({id: r, nombre: r})));
-    poblarSelect('part-provincia',f.provincias.map(p => ({id: p, nombre: p})));
-    poblarSelect('part-emaus',    f.emaus);
-    poblarSelect('part-ee',       f.ee);
-  } catch(e) { /* no crítico */ }
 }
 
-function poblarSelect(id, items) {
+function poblarSelectFiltro(id, items, keyId = 'id', keyNombre = 'nombre') {
   const sel = document.getElementById(id);
+  if (!sel) return;
   const current = sel.value;
   while (sel.options.length > 1) sel.remove(1);
   items.forEach(item => {
     const opt = document.createElement('option');
-    opt.value = item.id; opt.textContent = item.nombre;
+    opt.value = item[keyId]; opt.textContent = item[keyNombre];
     sel.appendChild(opt);
   });
-  if (current) sel.value = current;
+  // Mantener selección si sigue disponible
+  if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
+}
+
+async function cargarFiltros() {
+  const params = new URLSearchParams({
+    anio:     document.getElementById('part-anio').value,
+    semestre: document.getElementById('part-semestre').value,
+  });
+  const region   = document.getElementById('part-region').value;
+  const provincia= document.getElementById('part-provincia').value;
+  const emausId  = document.getElementById('part-emaus').value;
+  if (region)    params.set('region', region);
+  if (provincia) params.set('provincia', provincia);
+  if (emausId)   params.set('emaus_id', emausId);
+
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('part-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('part-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('part-emaus',    f.emaus);
+    poblarSelectFiltro('part-ee',       f.ee);
+  } catch(e) { /* no crítico */ }
 }
 
 function bar(val, max, color) {
@@ -849,26 +884,53 @@ function renderParticipantes(d) {
 // ── Tab Acciones ──
 let accionesFiltrosIniciados = false;
 
+async function cargarFiltrosAcciones() {
+  const params = new URLSearchParams({
+    anio:     document.getElementById('acc-anio').value,
+    semestre: document.getElementById('acc-semestre').value,
+  });
+  const region   = document.getElementById('acc-region').value;
+  const provincia= document.getElementById('acc-provincia').value;
+  const emausId  = document.getElementById('acc-emaus').value;
+  if (region)    params.set('region', region);
+  if (provincia) params.set('provincia', provincia);
+  if (emausId)   params.set('emaus_id', emausId);
+
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('acc-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('acc-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('acc-emaus',    f.emaus);
+    poblarSelectFiltro('acc-ee',       f.ee);
+  } catch(e) { console.warn('filtros acciones', e); }
+}
+
 async function iniciarAcciones() {
   if (!accionesFiltrosIniciados) {
     accionesFiltrosIniciados = true;
-    // Reutilizar filtros del endpoint /tablero/filtros con periodo actual
-    try {
-      const f = await api.get(`/tablero/filtros?anio=${document.getElementById('acc-anio').value}&semestre=${document.getElementById('acc-semestre').value}`);
-      poblarSelect('acc-region',   f.regiones.map(r => ({v: r, l: r})));
-      poblarSelect('acc-provincia',f.provincias.map(p => ({v: p, l: p})));
-      poblarSelect('acc-emaus',    f.emaus.map(e => ({v: e.id, l: e.nombre})));
-      poblarSelect('acc-ee',       f.ee.map(e => ({v: e.id, l: e.nombre})));
-    } catch(e) { console.warn('filtros acciones', e); }
+    await cargarFiltrosAcciones();
+
+    ['acc-anio','acc-semestre'].forEach(id => {
+      document.getElementById(id).addEventListener('change', () => {
+        limpiarFiltrosCascada('acc');
+        cargarFiltrosAcciones();
+      });
+    });
+    document.getElementById('acc-region').addEventListener('change', () => {
+      limpiarFiltrosCascada('acc', 'region');
+      cargarFiltrosAcciones();
+    });
+    document.getElementById('acc-provincia').addEventListener('change', () => {
+      limpiarFiltrosCascada('acc', 'provincia');
+      cargarFiltrosAcciones();
+    });
+    document.getElementById('acc-emaus').addEventListener('change', () => {
+      limpiarFiltrosCascada('acc', 'emaus');
+      cargarFiltrosAcciones();
+    });
     document.getElementById('btn-acc-filtrar').addEventListener('click', cargarAcciones);
   }
   cargarAcciones();
-}
-
-function poblarSelect(id, items) {
-  const sel = document.getElementById(id);
-  const first = sel.options[0].outerHTML;
-  sel.innerHTML = first + items.map(i => `<option value="${i.v}">${i.l}</option>`).join('');
 }
 
 async function cargarAcciones() {
