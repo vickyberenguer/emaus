@@ -303,7 +303,9 @@ function renderTabla() {
 // ---------------------------------------------------------------------------
 function badgeEECompletos(d) {
   if (d.ee_count === 0) return '<span class="text-muted">—</span>';
-  const cls = d.ee_declarados_completos === d.ee_count ? 'success' : 'warning';
+  const cls = d.ee_declarados_completos === 0 ? 'danger'
+            : d.ee_declarados_completos === d.ee_count ? 'success'
+            : 'warning';
   return `<span class="badge bg-${cls}-subtle text-${cls}-emphasis border border-${cls}-subtle">
     ${d.ee_declarados_completos}/${d.ee_count}
   </span>`;
