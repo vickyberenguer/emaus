@@ -716,6 +716,7 @@ _EE_FIELD_MAP = {
     "DALE_EducadoresDale":          "dale_educadores",
     "DALE_Freq":                    "dale_frecuencia_dias",
     "BTU_regulares":                "btu_regulares",
+    "BF_Nro_ApEscolar":            "bf_apoyo_escolar",
 }
 
 _ITINERANCIA_ROLES = [
