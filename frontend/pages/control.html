@@ -267,6 +267,7 @@ function renderTabla() {
 
   // Totales en tfoot (solo columnas numéricas relevantes)
   const sum = (fn) => datos.reduce((acc, d) => acc + (fn(d) || 0), 0);
+  const totalEETotal     = sum(d => d.ee_count);
   const totalEECompletos = sum(d => d.ee_declarados_completos);
   const totalEEErrores   = sum(d => d.ee_con_errores);
   const totalAsistentes  = sum(d => d.total_asistentes_ee);
@@ -283,7 +284,7 @@ function renderTabla() {
   document.getElementById('tfoot-control').innerHTML = `
     <tr class="tfoot-totals">
       <td class="tfoot-label">Total</td>
-      <td></td>
+      ${tc(totalEETotal)}
       ${tc(totalEECompletos)}
       ${tc(totalEEErrores)}
       <td></td><td></td><td></td>
