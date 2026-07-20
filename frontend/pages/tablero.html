@@ -296,6 +296,7 @@
   <a href="#" class="tablero-tab" data-tab="acciones">EE - Acciones</a>
   <a href="#" class="tablero-tab" data-tab="apoyo-escolar">EE - Apoyo Escolar</a>
   <a href="#" class="tablero-tab" data-tab="internet">EE - Internet</a>
+  <a href="#" class="tablero-tab" data-tab="edilicias">EE - Características edilicias</a>
 </div>
 
 <!-- Filtro por responsable (solo admin) -->
@@ -528,6 +529,27 @@
   </div>
 
   <div id="acc-contenido" style="padding:16px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
+  </div>
+</div>
+
+<!-- Tab EE - Características Edilicias -->
+<div id="tab-edilicias" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label>Período</label>
+    <select id="ed-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
+    <select id="ed-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
+    <label>Región</label>
+    <select id="ed-region" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Provincia</label>
+    <select id="ed-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Emaús</label>
+    <select id="ed-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <label>EE</label>
+    <select id="ed-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <button class="btn btn-sm btn-primary" id="btn-ed-filtrar">Filtrar</button>
+  </div>
+  <div id="ed-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
   </div>
 </div>
@@ -825,6 +847,7 @@ document.querySelectorAll('.tablero-tab').forEach(tab => {
     if (target === 'acciones') iniciarAcciones();
     if (target === 'apoyo-escolar') iniciarApoyoEscolar();
     if (target === 'internet') iniciarInternet();
+    if (target === 'edilicias') iniciarEdilicias();
   });
 });
 
@@ -1194,6 +1217,120 @@ async function cargarInternet() {
       <div class="ae-bars-title">Acceso a internet</div>
       ${barrasAcceso}
       ${motivosHtml}`;
+  } catch(e) {
+    contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+  }
+}
+
+// ── Tab Edilicias ──
+let edIniciado = false;
+
+async function iniciarEdilicias() {
+  if (!edIniciado) {
+    edIniciado = true;
+    await cargarFiltrosEd();
+    ['ed-anio','ed-semestre'].forEach(id =>
+      document.getElementById(id).addEventListener('change', () => { limpiarFiltrosCascada('ed'); cargarFiltrosEd(); }));
+    document.getElementById('ed-region').addEventListener('change', () => { limpiarFiltrosCascada('ed','region'); cargarFiltrosEd(); });
+    document.getElementById('ed-provincia').addEventListener('change', () => { limpiarFiltrosCascada('ed','provincia'); cargarFiltrosEd(); });
+    document.getElementById('ed-emaus').addEventListener('change', () => { limpiarFiltrosCascada('ed','emaus'); cargarFiltrosEd(); });
+    document.getElementById('btn-ed-filtrar').addEventListener('click', cargarEdilicias);
+  }
+  cargarEdilicias();
+}
+
+async function cargarFiltrosEd() {
+  const params = new URLSearchParams({ anio: document.getElementById('ed-anio').value, semestre: document.getElementById('ed-semestre').value });
+  const region = document.getElementById('ed-region').value;
+  const prov   = document.getElementById('ed-provincia').value;
+  const emausId= document.getElementById('ed-emaus').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('ed-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('ed-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('ed-emaus',    f.emaus);
+    poblarSelectFiltro('ed-ee',       f.ee);
+  } catch(e) { console.warn('filtros ed', e); }
+}
+
+function edBarras(items, labelKey, pctKey, cantKey, color, labelWidth) {
+  if (!items || !items.length) return '<p class="text-muted" style="font-size:13px">Sin datos</p>';
+  return items.map(item => `
+    <div class="ae-bar-row">
+      <div class="ae-bar-label" style="width:${labelWidth || 200}px">${item[labelKey]}</div>
+      <div class="ae-bar-track">
+        <div class="ae-bar-fill" style="width:${item[pctKey]}%;background:${color}"></div>
+      </div>
+      <div style="width:80px;flex-shrink:0;font-size:13px;color:#374151">
+        <strong>${item[pctKey]}%</strong> <span style="color:#6b7280">(${item[cantKey]})</span>
+      </div>
+    </div>`).join('');
+}
+
+async function cargarEdilicias() {
+  const contenido = document.getElementById('ed-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({ anio: document.getElementById('ed-anio').value, semestre: document.getElementById('ed-semestre').value });
+  const region = document.getElementById('ed-region').value;
+  const prov   = document.getElementById('ed-provincia').value;
+  const emausId= document.getElementById('ed-emaus').value;
+  const eeId   = document.getElementById('ed-ee').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  if (eeId)    params.set('ee_id', eeId);
+  try {
+    const d = await api.get('/tablero/edilicias?' + params.toString());
+    if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
+
+    const N = d.total_ee;
+
+    contenido.innerHTML = `
+      <p class="ae-info">${N} EEs relevados</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px">
+        <div>
+          <div class="ae-bars-title">Tipo de zona</div>
+          ${edBarras(d.zonas, 'label', 'pct', 'cantidad', '#6366f1', 220)}
+        </div>
+        <div>
+          <div class="ae-bars-title">Tipo de construcción</div>
+          ${edBarras(d.construccion, 'label', 'pct', 'cantidad', '#0ea5e9', 220)}
+        </div>
+      </div>
+
+      <div style="margin-bottom:32px">
+        <div class="ae-bars-title">Ambientes <span style="font-weight:400;color:#6b7280;font-size:13px">(% EEs que tienen)</span></div>
+        ${edBarras(d.ambientes, 'label', 'pct', 'cantidad', '#10b981', 240)}
+      </div>
+
+      <div style="margin-bottom:32px">
+        <div class="ae-bars-title">Servicios <span style="font-weight:400;color:#6b7280;font-size:13px">(% EEs que tienen)</span></div>
+        ${edBarras(d.servicios, 'label', 'pct', 'cantidad', '#f59e0b', 240)}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+        <div>
+          <div class="ae-bars-title">Equipamiento cocina <span style="font-weight:400;color:#6b7280;font-size:13px">(% EEs)</span></div>
+          ${edBarras(d.equipos_cocina, 'label', 'pct', 'cantidad', '#ef4444', 200)}
+        </div>
+        <div>
+          <div class="ae-bars-title">Equipamiento informático <span style="font-weight:400;color:#6b7280;font-size:13px">(% EEs)</span></div>
+          ${d.equipos_informatico && d.equipos_informatico.length ? d.equipos_informatico.map(item => `
+            <div class="ae-bar-row">
+              <div class="ae-bar-label" style="width:180px">${item.label}</div>
+              <div class="ae-bar-track">
+                <div class="ae-bar-fill" style="width:${item.pct}%;background:#8b5cf6"></div>
+              </div>
+              <div style="width:110px;flex-shrink:0;font-size:13px;color:#374151">
+                <strong>${item.pct}%</strong> <span style="color:#6b7280">(${item.ee_count} EEs, ${item.unidades} u.)</span>
+              </div>
+            </div>`).join('') : '<p class="text-muted" style="font-size:13px">Sin datos</p>'}
+        </div>
+      </div>`;
   } catch(e) {
     contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
   }

@@ -12,6 +12,7 @@ from app.models.espacio_educativo import (
     EspacioEducativo, RelevamientoEE, RelevamientoEEItineranciaRol,
     RelevamientoEEAccion, RelevamientoEEApoyoPrimarioContenido,
     RelevamientoEEApoyoSecundarioContenido,
+    EEAmbiente, EEServicio, EEEquipoCocina, EEEquipoInformatico, EEZona,
 )
 from app.routers.auth import get_current_user, require_rol
 from app.routers.control import ANIO_ACTIVO, SEMESTRE_ACTIVO, emaus_ids_for_user
@@ -358,6 +359,114 @@ def acciones(
 
 def _sum(val):
     return val or 0
+
+
+@router.get("/edilicias")
+def edilicias(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    ee_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+):
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    # EEs que participaron en el período con filtros
+    ee_query = (
+        db.query(EspacioEducativo.id, EspacioEducativo.construccion_material)
+        .join(RelevamientoEE, RelevamientoEE.espacio_educativo_id == EspacioEducativo.id)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .distinct()
+    )
+    if allowed_ids is not None:
+        ee_query = ee_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ee_query = ee_query.filter(Diocesis.region == region)
+    if provincia:
+        ee_query = ee_query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        ee_query = ee_query.filter(Relevamiento.emaus_id == emaus_id)
+    if ee_id:
+        ee_query = ee_query.filter(EspacioEducativo.id == ee_id)
+
+    ee_rows = ee_query.all()
+    ee_ids = [r[0] for r in ee_rows]
+    total = len(ee_ids)
+    if not total:
+        return {"total_ee": 0}
+
+    def pct(n): return round(n / total * 100, 1) if total else 0
+    def bars(counts, base=None):
+        b = base or total
+        return sorted(
+            [{"label": k, "cantidad": v, "pct": round(v / b * 100, 1) if b else 0}
+             for k, v in counts.items()],
+            key=lambda x: -x["cantidad"]
+        )
+
+    # Construcción material
+    const_counts = {}
+    for r in ee_rows:
+        k = r[1] or "Sin dato"
+        const_counts[k] = const_counts.get(k, 0) + 1
+
+    # Zonas (multi-valor)
+    zona_counts = {}
+    for r in db.query(EEZona.zona, func.count(EEZona.id)).filter(
+        EEZona.espacio_educativo_id.in_(ee_ids)
+    ).group_by(EEZona.zona).all():
+        zona_counts[r[0]] = r[1]
+
+    # Ambientes
+    amb_rows = db.query(EEAmbiente.ambiente, func.sum(EEAmbiente.tiene.cast('int'))).filter(
+        EEAmbiente.espacio_educativo_id.in_(ee_ids)
+    ).group_by(EEAmbiente.ambiente).all()
+    amb_counts = {r[0]: int(r[1] or 0) for r in amb_rows}
+
+    # Servicios (presencia = tener registro)
+    serv_rows = db.query(EEServicio.servicio, func.count(EEServicio.id)).filter(
+        EEServicio.espacio_educativo_id.in_(ee_ids)
+    ).group_by(EEServicio.servicio).all()
+    serv_counts = {r[0]: r[1] for r in serv_rows}
+
+    # Equipos cocina
+    cocina_rows = db.query(EEEquipoCocina.equipo, func.sum(EEEquipoCocina.tiene.cast('int'))).filter(
+        EEEquipoCocina.espacio_educativo_id.in_(ee_ids)
+    ).group_by(EEEquipoCocina.equipo).all()
+    cocina_counts = {r[0]: int(r[1] or 0) for r in cocina_rows}
+
+    # Equipos informáticos
+    info_rows = db.query(
+        EEEquipoInformatico.equipo,
+        func.count(EEEquipoInformatico.espacio_educativo_id.distinct()),
+        func.sum(EEEquipoInformatico.cantidad),
+    ).filter(
+        EEEquipoInformatico.espacio_educativo_id.in_(ee_ids)
+    ).group_by(EEEquipoInformatico.equipo).all()
+    informatico = sorted(
+        [{"label": r[0], "ee_count": r[1], "unidades": int(r[2] or 0),
+          "pct": pct(r[1])} for r in info_rows],
+        key=lambda x: -x["ee_count"]
+    )
+
+    return {
+        "total_ee": total,
+        "construccion": bars(const_counts),
+        "zonas": bars(zona_counts),
+        "ambientes": bars(amb_counts),
+        "servicios": bars(serv_counts),
+        "equipos_cocina": bars(cocina_counts),
+        "equipos_informatico": informatico,
+    }
 
 
 @router.get("/internet")

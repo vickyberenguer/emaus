@@ -686,6 +686,60 @@ _ACCION_MAP = {
     "Accion_SI_Huertas":         ("Salud integral",                      "Huertas comunitarias"),
 }
 
+# Zonas: columna planilla → nombre en ee_zona.zona
+_ZONAS = [
+    ("EE_Zona_Urbana",        "Urbana"),
+    ("EE_Zona_Periferica",    "Periférica"),
+    ("EE_Zona_Rural",         "Rural"),
+    ("EE_Zona_Inundable",     "Inundable"),
+    ("EE_Zona_DifTransporte", "Dificultad de transporte"),
+]
+
+# Ambientes: columna planilla → nombre en ee_ambiente.ambiente
+_AMBIENTES = [
+    ("EE_Comedor",           "Comedor"),
+    ("EE_Despensa",          "Despensa"),
+    ("EE_EspacioRecreacion", "Espacio de recreación"),
+    ("EE_Banio",             "Baño"),
+]
+
+# Ambientes con cantidad: columna tiene → columna cantidad → nombre
+_AMBIENTES_CON_CANTIDAD = [
+    ("EE_Banio", "EE_Banio_Nro", "Baño"),
+]
+
+# Servicios: columna planilla → nombre en ee_servicio.servicio
+_SERVICIOS = [
+    ("EE_Agua_Corriente",       "Agua corriente"),
+    ("EE_Agua_AljibeReservorio","Aljibe/Reservorio"),
+    ("EE_Agua_FueraDelTerreno", "Agua fuera del terreno"),
+    ("EE_Luz_Red",              "Luz de red"),
+    ("EE_Cloacas",              "Cloacas"),
+    ("EE_Residuos",             "Recolección de residuos"),
+    ("EE_SenalMovil",           "Señal móvil"),
+    ("EE_Internet_Prov",        "Internet provisto"),
+]
+
+# Equipos cocina: columna planilla → nombre en ee_equipo_cocina.equipo
+_EQUIPOS_COCINA = [
+    ("EE_Cocina_Industrial",  "Cocina industrial"),
+    ("EE_Cocina_Familiar",    "Cocina familiar"),
+    ("EE_Cocina_Mechero",     "Mechero"),
+    ("EE_Cocina_HeladeraInd", "Heladera industrial"),
+    ("EE_Cocina_HeladeraFam", "Heladera familiar"),
+    ("EE_Cocina_FreezerInd",  "Freezer industrial"),
+    ("EE_Cocina_FreezerFam",  "Freezer familiar"),
+]
+
+# Equipos informáticos: columna planilla → nombre en ee_equipo_informatico.equipo
+_EQUIPOS_INFORMATICO_COLS = [
+    ("EquipInformatico_PCAllinOne",  "PC All-in-One"),
+    ("EquipInformatico_PCEscritorio","PC escritorio"),
+    ("EquipInformatico_Notebook",    "Notebook"),
+    ("EquipInformatico_Tablet",      "Tablet"),
+    ("EquipInformatico_Impresora",   "Impresora"),
+]
+
 _EE_FIELD_MAP = {
     "Asistentes_0_6":               "asistentes_0_6",
     "Asistentes_7_14":              "asistentes_7_14",
@@ -719,6 +773,8 @@ _EE_FIELD_MAP = {
     "BF_Nro_ApEscolar":            "bf_apoyo_escolar",
     "ApEscolar_Freq_Primaria":     "apoyo_primario_frecuencia",
     "ApEscolar_Freq_Secundaria":   "apoyo_secundario_frecuencia",
+    "AlfabDig_NT_AccesoInternet":       "internet_acceso",
+    "AlfabDig_NT_AccesoInternet_Falta": "internet_falta_motivo",
 }
 
 _ITINERANCIA_ROLES = [
@@ -804,7 +860,9 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
                 if col == "itinerancia_realizo":
                     row[col] = _to_bool(raw)
                 elif col in ("grupo_motor_frecuencia", "adolescentes_frecuencia",
-                             "itinerancia_frecuencia", "alfa_frecuencia", "dale_frecuencia_dias"):
+                             "itinerancia_frecuencia", "alfa_frecuencia", "dale_frecuencia_dias",
+                             "apoyo_primario_frecuencia", "apoyo_secundario_frecuencia",
+                             "internet_acceso", "internet_falta_motivo"):
                     row[col] = str(raw).strip()[:50] if raw not in (None, "") else None
                 else:
                     row[col] = _to_int(raw)
@@ -898,6 +956,88 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
                             (relevamiento_ee_id, contenido)
                         VALUES (:ree_id, :contenido)
                     """), {"ree_id": ree_id, "contenido": contenido})
+
+            # ── Características edilicias (tablas del EE, se actualizan en cada sync) ──
+
+            # construccion_material en espacio_educativo
+            construccion = str(fv.get("EE_Edil_Construccion") or "").strip() or None
+            conn.execute(
+                text("UPDATE espacio_educativo SET construccion_material = :v WHERE id = :id"),
+                {"v": construccion, "id": ee_id},
+            )
+
+            # ee_zona (multi-valor)
+            conn.execute(text("DELETE FROM ee_zona WHERE espacio_educativo_id = :id"), {"id": ee_id})
+            zonas_insert = [
+                {"id": ee_id, "zona": nombre}
+                for col, nombre in _ZONAS
+                if _to_bool(fv.get(col))
+            ]
+            if zonas_insert:
+                conn.execute(
+                    text("INSERT INTO ee_zona (espacio_educativo_id, zona) VALUES (:id, :zona)"),
+                    zonas_insert,
+                )
+
+            # ee_ambiente
+            conn.execute(text("DELETE FROM ee_ambiente WHERE espacio_educativo_id = :id"), {"id": ee_id})
+            amb_insert = []
+            seen_amb = set()
+            for col, nombre in _AMBIENTES:
+                if nombre in seen_amb:
+                    continue
+                seen_amb.add(nombre)
+                tiene = _to_bool(fv.get(col))
+                # buscar cantidad si existe
+                cantidad = None
+                for c_col, c_cant_col, c_nombre in _AMBIENTES_CON_CANTIDAD:
+                    if c_nombre == nombre:
+                        cantidad = _to_int(fv.get(c_cant_col))
+                        break
+                amb_insert.append({"id": ee_id, "ambiente": nombre, "tiene": tiene, "cantidad": cantidad})
+            if amb_insert:
+                conn.execute(
+                    text("INSERT INTO ee_ambiente (espacio_educativo_id, ambiente, tiene, cantidad) VALUES (:id, :ambiente, :tiene, :cantidad)"),
+                    amb_insert,
+                )
+
+            # ee_servicio
+            conn.execute(text("DELETE FROM ee_servicio WHERE espacio_educativo_id = :id"), {"id": ee_id})
+            serv_insert = [
+                {"id": ee_id, "servicio": nombre, "valor": str(fv.get(col) or "").strip() or None}
+                for col, nombre in _SERVICIOS
+                if fv.get(col) not in (None, "")
+            ]
+            if serv_insert:
+                conn.execute(
+                    text("INSERT INTO ee_servicio (espacio_educativo_id, servicio, valor) VALUES (:id, :servicio, :valor)"),
+                    serv_insert,
+                )
+
+            # ee_equipo_cocina
+            conn.execute(text("DELETE FROM ee_equipo_cocina WHERE espacio_educativo_id = :id"), {"id": ee_id})
+            cocina_insert = [
+                {"id": ee_id, "equipo": nombre, "tiene": _to_bool(fv.get(col))}
+                for col, nombre in _EQUIPOS_COCINA
+            ]
+            if cocina_insert:
+                conn.execute(
+                    text("INSERT INTO ee_equipo_cocina (espacio_educativo_id, equipo, tiene) VALUES (:id, :equipo, :tiene)"),
+                    cocina_insert,
+                )
+
+            # ee_equipo_informatico
+            conn.execute(text("DELETE FROM ee_equipo_informatico WHERE espacio_educativo_id = :id"), {"id": ee_id})
+            info_insert = [
+                {"id": ee_id, "equipo": nombre, "cantidad": _to_int(fv.get(col))}
+                for col, nombre in _EQUIPOS_INFORMATICO_COLS
+                if _to_int(fv.get(col))
+            ]
+            if info_insert:
+                conn.execute(
+                    text("INSERT INTO ee_equipo_informatico (espacio_educativo_id, equipo, cantidad) VALUES (:id, :equipo, :cantidad)"),
+                    info_insert,
+                )
 
 
 # ---------------------------------------------------------------------------

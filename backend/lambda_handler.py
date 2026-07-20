@@ -6,10 +6,15 @@ _mangum = Mangum(app, lifespan="off")
 
 
 def handler(event, context):
-    # Detectar evento HTTP (API Gateway REST = httpMethod, HTTP API v2 = requestContext.http)
-    is_http = "httpMethod" in event or (
-        "requestContext" in event and isinstance(event.get("requestContext"), dict)
-        and "http" in event["requestContext"]
+    # Detectar evento HTTP (API Gateway REST = httpMethod, HTTP API v2 = requestContext.http.method)
+    is_http = (
+        "httpMethod" in event
+        or (
+            "requestContext" in event
+            and isinstance(event.get("requestContext"), dict)
+            and isinstance(event["requestContext"].get("http"), dict)
+            and "method" in event["requestContext"]["http"]
+        )
     )
     print(f"[handler] source={event.get('source','?')} is_http={is_http} keys={list(event.keys())[:8]}")
     if not is_http:
