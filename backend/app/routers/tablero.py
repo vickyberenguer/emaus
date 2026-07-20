@@ -277,14 +277,18 @@ def acciones(
     from collections import defaultdict
     from sqlalchemy import case
 
-    # Conteos por eje+accion
+    # Conteos por eje+accion — distinct por EE para evitar duplicados del scraper
     accion_rows = (
         db.query(
             RelevamientoEEAccion.eje,
             RelevamientoEEAccion.accion,
-            func.count(RelevamientoEEAccion.id).label("total_reg"),
-            func.sum(case((RelevamientoEEAccion.tiene == True, 1), else_=0)).label("si"),
-            func.sum(case((RelevamientoEEAccion.tiene == False, 1), else_=0)).label("no"),
+            func.count(func.distinct(RelevamientoEEAccion.relevamiento_ee_id)).label("total_reg"),
+            func.count(func.distinct(
+                case((RelevamientoEEAccion.tiene == True, RelevamientoEEAccion.relevamiento_ee_id), else_=None)
+            )).label("si"),
+            func.count(func.distinct(
+                case((RelevamientoEEAccion.tiene == False, RelevamientoEEAccion.relevamiento_ee_id), else_=None)
+            )).label("no"),
         )
         .filter(RelevamientoEEAccion.relevamiento_ee_id.in_(ree_ids))
         .group_by(RelevamientoEEAccion.eje, RelevamientoEEAccion.accion)
