@@ -717,6 +717,8 @@ _EE_FIELD_MAP = {
     "DALE_Freq":                    "dale_frecuencia_dias",
     "BTU_regulares":                "btu_regulares",
     "BF_Nro_ApEscolar":            "bf_apoyo_escolar",
+    "ApEscolar_Freq_Primaria":     "apoyo_primario_frecuencia",
+    "ApEscolar_Freq_Secundaria":   "apoyo_secundario_frecuencia",
 }
 
 _ITINERANCIA_ROLES = [
@@ -850,6 +852,52 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
                     VALUES (:ree_id, :eje, :accion, :tiene)
                     ON DUPLICATE KEY UPDATE tiene = VALUES(tiene)
                 """), {"ree_id": ree_id, "eje": eje, "accion": accion, "tiene": tiene})
+
+            # Upsert contenidos apoyo escolar primaria
+            _CONTENIDOS_PRIMARIA = [
+                ("ApEscolar_Lengua",         "Lengua"),
+                ("ApEscolar_Matematicas",    "Matemáticas"),
+                ("ApEscolar_CciasNaturales", "Ciencias Naturales"),
+                ("ApEscolar_CciasSociales",  "Ciencias Sociales"),
+                ("ApEscolar_Ingles",         "Inglés"),
+                ("ApEscolar_Otro",           "Otro"),
+            ]
+            conn.execute(text(
+                "DELETE FROM relevamiento_ee_apoyo_primario_contenido WHERE relevamiento_ee_id = :ree_id"
+            ), {"ree_id": ree_id})
+            for yaml_name, contenido in _CONTENIDOS_PRIMARIA:
+                raw = fv.get(yaml_name)
+                if raw is None:
+                    continue
+                if _to_bool(raw):
+                    conn.execute(text("""
+                        INSERT INTO relevamiento_ee_apoyo_primario_contenido
+                            (relevamiento_ee_id, contenido)
+                        VALUES (:ree_id, :contenido)
+                    """), {"ree_id": ree_id, "contenido": contenido})
+
+            # Upsert contenidos apoyo escolar secundaria
+            _CONTENIDOS_SECUNDARIA = [
+                ("ApEscolar_Sec_Lengua",         "Lengua"),
+                ("ApEscolar_Sec_Matematicas",    "Matemáticas"),
+                ("ApEscolar_Sec_CciasNaturales", "Ciencias Naturales"),
+                ("ApEscolar_Sec_CciasSociales",  "Ciencias Sociales"),
+                ("ApEscolar_Sec_Ingles",         "Inglés"),
+                ("ApEscolar_Sec_Otro",           "Otro"),
+            ]
+            conn.execute(text(
+                "DELETE FROM relevamiento_ee_apoyo_secundario_contenido WHERE relevamiento_ee_id = :ree_id"
+            ), {"ree_id": ree_id})
+            for yaml_name, contenido in _CONTENIDOS_SECUNDARIA:
+                raw = fv.get(yaml_name)
+                if raw is None:
+                    continue
+                if _to_bool(raw):
+                    conn.execute(text("""
+                        INSERT INTO relevamiento_ee_apoyo_secundario_contenido
+                            (relevamiento_ee_id, contenido)
+                        VALUES (:ree_id, :contenido)
+                    """), {"ree_id": ree_id, "contenido": contenido})
 
 
 # ---------------------------------------------------------------------------

@@ -294,6 +294,7 @@
   <a href="#" class="tablero-tab active" data-tab="estado-carga">Estado de carga</a>
   <a href="#" class="tablero-tab" data-tab="participantes">Participantes</a>
   <a href="#" class="tablero-tab" data-tab="acciones">EE - Acciones</a>
+  <a href="#" class="tablero-tab" data-tab="apoyo-escolar">EE - Apoyo Escolar</a>
 </div>
 
 <!-- Filtro por responsable (solo admin) -->
@@ -530,6 +531,65 @@
   </div>
 </div>
 
+<!-- Tab EE - Apoyo Escolar -->
+<div id="tab-apoyo-escolar" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label>Período</label>
+    <select id="ae-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
+    <select id="ae-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
+    <label>Región</label>
+    <select id="ae-region" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Provincia</label>
+    <select id="ae-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Emaús</label>
+    <select id="ae-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <label>EE</label>
+    <select id="ae-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <button class="btn btn-sm btn-primary" id="btn-ae-filtrar">Filtrar</button>
+  </div>
+
+  <!-- Sub-tabs Primaria / Secundaria -->
+  <div style="display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin:16px 24px 0">
+    <button class="ae-subtab active" data-nivel="primaria">Primaria</button>
+    <button class="ae-subtab" data-nivel="secundaria">Secundaria</button>
+  </div>
+
+  <div id="ae-contenido" style="padding:16px 24px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
+  </div>
+</div>
+
+<style>
+.ae-subtab {
+  padding: 8px 24px;
+  border: none;
+  background: none;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s;
+}
+.ae-subtab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+.ae-donut-wrap { display:flex; justify-content:center; margin:24px 0 8px; }
+.ae-donut-svg { max-width:320px; width:100%; }
+.ae-legend { display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:center; margin-bottom:24px; font-size:13px; }
+.ae-legend-item { display:flex; align-items:center; gap:6px; }
+.ae-legend-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+.ae-bars-title { font-weight:600; font-size:14px; color:#374151; margin:16px 0 12px; }
+.ae-bar-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.ae-bar-label { width:160px; flex-shrink:0; font-size:13px; color:#374151; text-align:right; }
+.ae-bar-track { flex:1; height:24px; background:#f3f4f6; border-radius:4px; overflow:hidden; position:relative; }
+.ae-bar-fill { height:100%; border-radius:4px; transition:width .4s; }
+.ae-bar-pct { width:44px; flex-shrink:0; font-size:13px; font-weight:600; color:#2563eb; }
+.ae-info { font-size:12px; color:#6b7280; margin-bottom:16px; }
+</style>
+
 <script src="/js/env.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/session.js"></script>
@@ -741,6 +801,7 @@ document.querySelectorAll('.tablero-tab').forEach(tab => {
     document.getElementById('tab-' + target).style.display = 'block';
     if (target === 'participantes' && !partDatos) cargarParticipantes();
     if (target === 'acciones') iniciarAcciones();
+    if (target === 'apoyo-escolar') iniciarApoyoEscolar();
   });
 });
 
@@ -1018,6 +1079,167 @@ function renderAcciones(d) {
   }
 
   document.getElementById('acc-contenido').innerHTML = html;
+}
+
+// ── Tab Apoyo Escolar ──
+let aeIniciado = false;
+let aeDatos = null;
+let aeNivel = 'primaria';
+
+const AE_FREQ_COLORS = {
+  'Una vez a la semana':          '#3b82f6',
+  'Dos veces a la semana':        '#22c55e',
+  'Más de dos veces a la semana': '#a855f7',
+  'Sin respuesta':                '#d1d5db',
+};
+
+async function iniciarApoyoEscolar() {
+  if (!aeIniciado) {
+    aeIniciado = true;
+    await cargarFiltrosAe();
+
+    ['ae-anio','ae-semestre'].forEach(id => {
+      document.getElementById(id).addEventListener('change', () => {
+        limpiarFiltrosCascada('ae');
+        cargarFiltrosAe();
+      });
+    });
+    document.getElementById('ae-region').addEventListener('change', () => {
+      limpiarFiltrosCascada('ae', 'region');
+      cargarFiltrosAe();
+    });
+    document.getElementById('ae-provincia').addEventListener('change', () => {
+      limpiarFiltrosCascada('ae', 'provincia');
+      cargarFiltrosAe();
+    });
+    document.getElementById('ae-emaus').addEventListener('change', () => {
+      limpiarFiltrosCascada('ae', 'emaus');
+      cargarFiltrosAe();
+    });
+    document.getElementById('btn-ae-filtrar').addEventListener('click', () => {
+      aeDatos = null;
+      cargarApoyoEscolar();
+    });
+
+    document.querySelectorAll('.ae-subtab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.ae-subtab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        aeNivel = btn.dataset.nivel;
+        if (aeDatos) renderApoyoEscolar();
+      });
+    });
+  }
+  if (!aeDatos) cargarApoyoEscolar();
+}
+
+async function cargarFiltrosAe() {
+  const params = new URLSearchParams({
+    anio: document.getElementById('ae-anio').value,
+    semestre: document.getElementById('ae-semestre').value,
+  });
+  const region  = document.getElementById('ae-region').value;
+  const prov    = document.getElementById('ae-provincia').value;
+  const emausId = document.getElementById('ae-emaus').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('ae-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('ae-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('ae-emaus',    f.emaus);
+    poblarSelectFiltro('ae-ee',       f.ee);
+  } catch(e) { console.warn('filtros ae', e); }
+}
+
+async function cargarApoyoEscolar() {
+  const contenido = document.getElementById('ae-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({
+    anio:     document.getElementById('ae-anio').value,
+    semestre: document.getElementById('ae-semestre').value,
+  });
+  const region  = document.getElementById('ae-region').value;
+  const prov    = document.getElementById('ae-provincia').value;
+  const emausId = document.getElementById('ae-emaus').value;
+  const eeId    = document.getElementById('ae-ee').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  if (eeId)    params.set('ee_id', eeId);
+  try {
+    aeDatos = await api.get('/tablero/apoyo-escolar?' + params.toString());
+    renderApoyoEscolar();
+  } catch(e) {
+    contenido.innerHTML = `<p class="text-danger">Error cargando datos: ${e.message}</p>`;
+  }
+}
+
+function renderApoyoEscolar() {
+  const d = aeDatos[aeNivel];
+  const contenido = document.getElementById('ae-contenido');
+  if (!d || d.total_con_apoyo === 0) {
+    contenido.innerHTML = `<p class="text-muted text-center py-4">Sin datos de apoyo escolar ${aeNivel} para el período seleccionado.</p>`;
+    return;
+  }
+
+  // Donut SVG de frecuencia
+  const cx = 100, cy = 100, r = 70, stroke = 28;
+  const total = d.frecuencia.reduce((s, f) => s + f.cantidad, 0);
+  let startAngle = -Math.PI / 2;
+  let paths = '';
+  d.frecuencia.forEach(f => {
+    if (!f.cantidad) return;
+    const angle = (f.cantidad / total) * 2 * Math.PI;
+    const x1 = cx + r * Math.cos(startAngle);
+    const y1 = cy + r * Math.sin(startAngle);
+    const x2 = cx + r * Math.cos(startAngle + angle);
+    const y2 = cy + r * Math.sin(startAngle + angle);
+    const large = angle > Math.PI ? 1 : 0;
+    const color = AE_FREQ_COLORS[f.valor] || '#9ca3af';
+    const pct = (f.cantidad / total * 100).toFixed(1);
+    paths += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z"
+      fill="${color}" opacity="0.9">
+      <title>${f.valor}: ${f.cantidad} (${pct}%)</title>
+    </path>`;
+    startAngle += angle;
+  });
+  // Hueco central
+  const donutSvg = `<svg viewBox="0 0 200 200" class="ae-donut-svg">
+    ${paths}
+    <circle cx="${cx}" cy="${cy}" r="${r - stroke}" fill="white"/>
+    <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="13" fill="#374151" font-weight="600">${d.total_con_apoyo}</text>
+    <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="10" fill="#6b7280">EEs con apoyo</text>
+  </svg>`;
+
+  const legend = d.frecuencia.filter(f => f.cantidad > 0).map(f => {
+    const color = AE_FREQ_COLORS[f.valor] || '#9ca3af';
+    const pct = (f.cantidad / total * 100).toFixed(1);
+    return `<div class="ae-legend-item">
+      <div class="ae-legend-dot" style="background:${color}"></div>
+      <span>${f.valor} — ${pct}%</span>
+    </div>`;
+  }).join('');
+
+  // Barras de contenidos (ordenadas por %, desc)
+  const maxPct = d.contenidos.length ? d.contenidos[0].pct : 1;
+  const bars = d.contenidos.map(c => `
+    <div class="ae-bar-row">
+      <div class="ae-bar-label">${c.contenido}</div>
+      <div class="ae-bar-track">
+        <div class="ae-bar-fill" style="width:${c.pct}%;background:#3b82f6"></div>
+      </div>
+      <div class="ae-bar-pct">${c.pct}%</div>
+    </div>`).join('');
+
+  contenido.innerHTML = `
+    <p class="ae-info text-center">${aeDatos.total_ee} EEs relevados · ${d.total_con_apoyo} con apoyo escolar ${aeNivel}</p>
+    <div class="ae-donut-wrap">${donutSvg}</div>
+    <div class="ae-legend">${legend}</div>
+    <div class="ae-bars-title">Contenidos trabajados</div>
+    ${bars || '<p class="text-muted">Sin datos de contenidos.</p>'}
+  `;
 }
 </script>
 

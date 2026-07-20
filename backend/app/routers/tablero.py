@@ -8,7 +8,11 @@ from app.models.usuario import Usuario
 from app.models.emaus import Emaus, Diocesis, ResponsableEmaus
 from app.models.control import ControlRelevamiento, ControlAprobacion
 from app.models.relevamiento import Relevamiento
-from app.models.espacio_educativo import EspacioEducativo, RelevamientoEE, RelevamientoEEItineranciaRol, RelevamientoEEAccion
+from app.models.espacio_educativo import (
+    EspacioEducativo, RelevamientoEE, RelevamientoEEItineranciaRol,
+    RelevamientoEEAccion, RelevamientoEEApoyoPrimarioContenido,
+    RelevamientoEEApoyoSecundarioContenido,
+)
 from app.routers.auth import get_current_user, require_rol
 from app.routers.control import ANIO_ACTIVO, SEMESTRE_ACTIVO, emaus_ids_for_user
 
@@ -354,6 +358,107 @@ def acciones(
 
 def _sum(val):
     return val or 0
+
+
+@router.get("/apoyo-escolar")
+def apoyo_escolar(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    ee_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+):
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    # Base query: relevamiento_ee del período con filtros
+    ree_query = (
+        db.query(RelevamientoEE.id,
+                 RelevamientoEE.apoyo_primario_frecuencia,
+                 RelevamientoEE.apoyo_secundario_frecuencia)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region == region)
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+
+    ree_rows = ree_query.all()
+    ree_ids = [r[0] for r in ree_rows]
+    total_ee = len(ree_ids)
+
+    if not ree_ids:
+        return {"total_ee": 0, "primaria": None, "secundaria": None}
+
+    FREQ_ORDER = ["Una vez a la semana", "Dos veces a la semana", "Más de dos veces a la semana"]
+
+    def build_nivel(freq_field_idx, contenido_model):
+        # Frecuencia — solo EEs con frecuencia != NULL
+        freq_counts = {}
+        sin_respuesta = 0
+        total_con_apoyo = 0
+        for row in ree_rows:
+            freq = row[freq_field_idx]
+            if freq is None:
+                sin_respuesta += 1
+            else:
+                total_con_apoyo += 1
+                freq_counts[freq] = freq_counts.get(freq, 0) + 1
+
+        frecuencia = [{"valor": f, "cantidad": freq_counts.get(f, 0)} for f in FREQ_ORDER]
+        frecuencia.append({"valor": "Sin respuesta", "cantidad": sin_respuesta})
+
+        # Contenidos — sobre EEs con apoyo en este nivel
+        ree_con_apoyo_ids = [
+            ree_rows[i][0] for i in range(len(ree_rows))
+            if ree_rows[i][freq_field_idx] is not None
+        ]
+
+        contenido_rows = (
+            db.query(contenido_model.contenido, func.count(contenido_model.relevamiento_ee_id).label("n"))
+            .filter(contenido_model.relevamiento_ee_id.in_(ree_con_apoyo_ids))
+            .group_by(contenido_model.contenido)
+            .order_by(func.count(contenido_model.relevamiento_ee_id).desc())
+            .all()
+        ) if ree_con_apoyo_ids else []
+
+        contenidos = [
+            {
+                "contenido": r.contenido,
+                "si": r.n,
+                "no": total_con_apoyo - r.n,
+                "pct": round(r.n / total_con_apoyo * 100, 1) if total_con_apoyo else 0,
+            }
+            for r in contenido_rows
+        ]
+
+        return {
+            "total_ee": total_ee,
+            "total_con_apoyo": total_con_apoyo,
+            "frecuencia": frecuencia,
+            "contenidos": contenidos,
+        }
+
+    return {
+        "total_ee": total_ee,
+        "primaria":   build_nivel(1, RelevamientoEEApoyoPrimarioContenido),
+        "secundaria": build_nivel(2, RelevamientoEEApoyoSecundarioContenido),
+    }
 
 
 @router.get("/participantes")
