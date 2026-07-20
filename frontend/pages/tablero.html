@@ -295,6 +295,7 @@
   <a href="#" class="tablero-tab" data-tab="participantes">Participantes</a>
   <a href="#" class="tablero-tab" data-tab="acciones">EE - Acciones</a>
   <a href="#" class="tablero-tab" data-tab="apoyo-escolar">EE - Apoyo Escolar</a>
+  <a href="#" class="tablero-tab" data-tab="internet">EE - Internet</a>
 </div>
 
 <!-- Filtro por responsable (solo admin) -->
@@ -527,6 +528,27 @@
   </div>
 
   <div id="acc-contenido" style="padding:16px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
+  </div>
+</div>
+
+<!-- Tab EE - Internet -->
+<div id="tab-internet" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label>Período</label>
+    <select id="int-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
+    <select id="int-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
+    <label>Región</label>
+    <select id="int-region" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Provincia</label>
+    <select id="int-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Emaús</label>
+    <select id="int-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <label>EE</label>
+    <select id="int-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <button class="btn btn-sm btn-primary" id="btn-int-filtrar">Filtrar</button>
+  </div>
+  <div id="int-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
   </div>
 </div>
@@ -802,6 +824,7 @@ document.querySelectorAll('.tablero-tab').forEach(tab => {
     if (target === 'participantes' && !partDatos) cargarParticipantes();
     if (target === 'acciones') iniciarAcciones();
     if (target === 'apoyo-escolar') iniciarApoyoEscolar();
+    if (target === 'internet') iniciarInternet();
   });
 });
 
@@ -1079,6 +1102,101 @@ function renderAcciones(d) {
   }
 
   document.getElementById('acc-contenido').innerHTML = html;
+}
+
+// ── Tab Internet ──
+const INT_COLORS = { 'Sí': '#22c55e', 'No': '#f43f5e', 'Sin respuesta': '#d1d5db' };
+const INT_MOTIVO_COLOR = '#3b82f6';
+let intIniciado = false;
+
+async function iniciarInternet() {
+  if (!intIniciado) {
+    intIniciado = true;
+    await cargarFiltrosInt();
+    ['int-anio','int-semestre'].forEach(id =>
+      document.getElementById(id).addEventListener('change', () => { limpiarFiltrosCascada('int'); cargarFiltrosInt(); }));
+    document.getElementById('int-region').addEventListener('change', () => { limpiarFiltrosCascada('int','region'); cargarFiltrosInt(); });
+    document.getElementById('int-provincia').addEventListener('change', () => { limpiarFiltrosCascada('int','provincia'); cargarFiltrosInt(); });
+    document.getElementById('int-emaus').addEventListener('change', () => { limpiarFiltrosCascada('int','emaus'); cargarFiltrosInt(); });
+    document.getElementById('btn-int-filtrar').addEventListener('click', cargarInternet);
+  }
+  cargarInternet();
+}
+
+async function cargarFiltrosInt() {
+  const params = new URLSearchParams({ anio: document.getElementById('int-anio').value, semestre: document.getElementById('int-semestre').value });
+  const region = document.getElementById('int-region').value;
+  const prov   = document.getElementById('int-provincia').value;
+  const emausId= document.getElementById('int-emaus').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('int-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('int-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('int-emaus',    f.emaus);
+    poblarSelectFiltro('int-ee',       f.ee);
+  } catch(e) { console.warn('filtros int', e); }
+}
+
+async function cargarInternet() {
+  const contenido = document.getElementById('int-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({ anio: document.getElementById('int-anio').value, semestre: document.getElementById('int-semestre').value });
+  const region = document.getElementById('int-region').value;
+  const prov   = document.getElementById('int-provincia').value;
+  const emausId= document.getElementById('int-emaus').value;
+  const eeId   = document.getElementById('int-ee').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  if (eeId)    params.set('ee_id', eeId);
+  try {
+    const d = await api.get('/tablero/internet?' + params.toString());
+    if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
+
+    // Barra apilada acceso
+    const barrasAcceso = d.acceso.map(a => {
+      const color = INT_COLORS[a.valor] || '#9ca3af';
+      return `<div class="ae-bar-row">
+        <div class="ae-bar-label" style="color:${color};font-weight:600">${a.valor}</div>
+        <div class="ae-bar-track">
+          <div class="ae-bar-fill" style="width:${a.pct}%;background:${color}"></div>
+        </div>
+        <div style="width:80px;flex-shrink:0;font-size:13px;color:#374151">
+          <strong>${a.pct}%</strong> <span style="color:#6b7280">(${a.cantidad})</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Barras motivos
+    let motivosHtml = '';
+    if (d.motivos.length) {
+      const barrasMotivos = d.motivos.map(m => `
+        <div class="ae-bar-row">
+          <div class="ae-bar-label" style="width:280px">${m.motivo}</div>
+          <div class="ae-bar-track">
+            <div class="ae-bar-fill" style="width:${m.pct}%;background:${INT_MOTIVO_COLOR}"></div>
+          </div>
+          <div style="width:80px;flex-shrink:0;font-size:13px;color:#374151">
+            <strong>${m.pct}%</strong> <span style="color:#6b7280">(${m.cantidad})</span>
+          </div>
+        </div>`).join('');
+      const noCount = d.acceso.find(a => a.valor === 'No')?.cantidad || 0;
+      motivosHtml = `
+        <div class="ae-bars-title" style="margin-top:32px">Motivo por el cual no tienen internet <span style="font-weight:400;color:#6b7280;font-size:13px">(sobre ${noCount} EEs sin acceso)</span></div>
+        ${barrasMotivos}`;
+    }
+
+    contenido.innerHTML = `
+      <p class="ae-info">${d.total_ee} EEs relevados</p>
+      <div class="ae-bars-title">Acceso a internet</div>
+      ${barrasAcceso}
+      ${motivosHtml}`;
+  } catch(e) {
+    contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+  }
 }
 
 // ── Tab Apoyo Escolar ──

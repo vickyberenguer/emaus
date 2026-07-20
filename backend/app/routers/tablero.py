@@ -360,6 +360,73 @@ def _sum(val):
     return val or 0
 
 
+@router.get("/internet")
+def internet(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    ee_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+):
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    q = (
+        db.query(RelevamientoEE.internet_acceso, RelevamientoEE.internet_falta_motivo)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+    )
+    if allowed_ids is not None:
+        q = q.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        q = q.filter(Diocesis.region == region)
+    if provincia:
+        q = q.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        q = q.filter(Relevamiento.emaus_id == emaus_id)
+    if ee_id:
+        q = q.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+
+    rows = q.all()
+    total = len(rows)
+    if not total:
+        return {"total_ee": 0, "acceso": [], "motivos": []}
+
+    si = sum(1 for r in rows if r[0] is True)
+    no = sum(1 for r in rows if r[0] is False)
+    sin_respuesta = total - si - no
+
+    motivo_counts = {}
+    for r in rows:
+        if r[1]:
+            motivo_counts[r[1]] = motivo_counts.get(r[1], 0) + 1
+    total_sin_internet = no
+    motivos = sorted(
+        [{"motivo": k, "cantidad": v,
+          "pct": round(v / total_sin_internet * 100, 1) if total_sin_internet else 0}
+         for k, v in motivo_counts.items()],
+        key=lambda x: -x["cantidad"]
+    )
+
+    return {
+        "total_ee": total,
+        "acceso": [
+            {"valor": "Sí",           "cantidad": si,           "pct": round(si / total * 100, 1)},
+            {"valor": "No",           "cantidad": no,           "pct": round(no / total * 100, 1)},
+            {"valor": "Sin respuesta","cantidad": sin_respuesta,"pct": round(sin_respuesta / total * 100, 1)},
+        ],
+        "motivos": motivos,
+    }
+
+
 @router.get("/apoyo-escolar")
 def apoyo_escolar(
     anio: int = ANIO_ACTIVO,
