@@ -25,6 +25,7 @@ build/
 # Lambda package
 backend/package/
 backend/lambda_package/
+backend/lambda_layer/
 backend/*.zip
 emaus_setup.tar.gz
 
