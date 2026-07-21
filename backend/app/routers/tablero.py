@@ -427,7 +427,7 @@ def edilicias(
         zona_counts[r[0]] = r[1]
 
     # Ambientes
-    amb_rows = db.query(EEAmbiente.ambiente, func.sum(EEAmbiente.tiene.cast('int'))).filter(
+    amb_rows = db.query(EEAmbiente.ambiente, func.sum(func.if_(EEAmbiente.tiene, 1, 0))).filter(
         EEAmbiente.espacio_educativo_id.in_(ee_ids)
     ).group_by(EEAmbiente.ambiente).all()
     amb_counts = {r[0]: int(r[1] or 0) for r in amb_rows}
@@ -439,7 +439,7 @@ def edilicias(
     serv_counts = {r[0]: r[1] for r in serv_rows}
 
     # Equipos cocina
-    cocina_rows = db.query(EEEquipoCocina.equipo, func.sum(EEEquipoCocina.tiene.cast('int'))).filter(
+    cocina_rows = db.query(EEEquipoCocina.equipo, func.sum(func.if_(EEEquipoCocina.tiene, 1, 0))).filter(
         EEEquipoCocina.espacio_educativo_id.in_(ee_ids)
     ).group_by(EEEquipoCocina.equipo).all()
     cocina_counts = {r[0]: int(r[1] or 0) for r in cocina_rows}

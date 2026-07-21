@@ -594,6 +594,7 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
     # --- PI ---
     pi_completa = False
     pi_con_errores = False
+    pi_field_data = None
 
     if has_pi:
         declared = _parse_completion_from_values(get_values("pi_completion"), diagonal=False)
@@ -609,6 +610,7 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
                     all_validation_errors.append({**e, "hoja_nombre": PI_SHEET_TITLE, "fecha": now})
             else:
                 pi_completa = True
+                pi_field_data = field_values
                 for e in [w for w in errors if w["severity"] == "warning"]:
                     all_validation_errors.append({**e, "hoja_nombre": PI_SHEET_TITLE, "fecha": now})
 
@@ -643,6 +645,7 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
         "ultimo_sync": now,
         "validation_errors": all_validation_errors,
         "ee_field_data": ee_field_data,
+        "pi_field_data": pi_field_data,
     }
 
 
@@ -701,6 +704,7 @@ _AMBIENTES = [
     ("EE_Despensa",          "Despensa"),
     ("EE_EspacioRecreacion", "Espacio de recreación"),
     ("EE_Banio",             "Baño"),
+    ("EE_Cocina",            "Cocina"),
 ]
 
 # Ambientes con cantidad: columna tiene → columna cantidad → nombre
@@ -718,6 +722,7 @@ _SERVICIOS = [
     ("EE_Residuos",             "Recolección de residuos"),
     ("EE_SenalMovil",           "Señal móvil"),
     ("EE_Internet_Prov",        "Internet provisto"),
+    ("EE_Combustible_Cocina",   "Combustible cocina"),
 ]
 
 # Equipos cocina: columna planilla → nombre en ee_equipo_cocina.equipo
@@ -738,6 +743,9 @@ _EQUIPOS_INFORMATICO_COLS = [
     ("EquipInformatico_Notebook",    "Notebook"),
     ("EquipInformatico_Tablet",      "Tablet"),
     ("EquipInformatico_Impresora",   "Impresora"),
+    ("EquipInformatico_Multifuncion","Multifunción"),
+    ("EquipInformatico_MonitorPlano","Monitor plano"),
+    ("EquipInformatico_MonitorTubo", "Monitor de tubo"),
 ]
 
 _EE_FIELD_MAP = {
@@ -771,10 +779,40 @@ _EE_FIELD_MAP = {
     "DALE_Freq":                    "dale_frecuencia_dias",
     "BTU_regulares":                "btu_regulares",
     "BF_Nro_ApEscolar":            "bf_apoyo_escolar",
+    "BF_Nro_Inicial":              "bf_nivel_inicial",
+    "BF_Nro_Primaria":             "bf_primaria",
+    "BF_Nro_Secundaria":           "bf_secundaria",
+    "BF_Nro_Asignaciones":         "bf_asignaciones",
+    "BF_Nro_Discapacidad":         "bf_discapacidad",
+    "BF_Nro_Discapacidad_CUD":     "bf_cud",
+    "BTU_egresados":               "btu_egresados",
+    "BTU_abandono":                "btu_abandonaron",
     "ApEscolar_Freq_Primaria":     "apoyo_primario_frecuencia",
     "ApEscolar_Freq_Secundaria":   "apoyo_secundario_frecuencia",
+    "ApEscolar_Contenido_Prim_May":"apoyo_primario_contenido_principal",
+    "ApEscolar_Contenido_Sec_May": "apoyo_secundario_contenido_principal",
     "AlfabDig_NT_AccesoInternet":       "internet_acceso",
     "AlfabDig_NT_AccesoInternet_Falta": "internet_falta_motivo",
+    "AlfabDig_NT_Internet_Uso":         "internet_uso_social",
+    "AlfabDig_NT_Internet_Estudio":     "internet_uso_estudio",
+    "AlfabDig_NT_Formacion":            "jornadas_formacion_digital",
+    "Articula_InstNivelSuperior":         "articula_nivel_superior",
+    "Articula_InstNivelSuperior_Cuantas": "nivel_superior_cantidad",
+}
+
+# Tipos de columnas de relevamiento_ee (el resto se trata como int)
+_EE_BOOL_COLS = {
+    "itinerancia_realizo", "internet_acceso", "internet_uso_social",
+    "internet_uso_estudio", "jornadas_formacion_digital", "articula_nivel_superior",
+}
+_EE_STR50_COLS = {
+    "grupo_motor_frecuencia", "adolescentes_frecuencia", "itinerancia_frecuencia",
+    "alfa_frecuencia", "dale_frecuencia_dias",
+    "apoyo_primario_frecuencia", "apoyo_secundario_frecuencia",
+}
+_EE_STR200_COLS = {
+    "internet_falta_motivo",
+    "apoyo_primario_contenido_principal", "apoyo_secundario_contenido_principal",
 }
 
 _ITINERANCIA_ROLES = [
@@ -782,6 +820,87 @@ _ITINERANCIA_ROLES = [
     ("Itinerancia_Rol2", "Itinerancia_Rol2_Cant"),
     ("Itinerancia_Rol3", "Itinerancia_Rol3_Cant"),
     ("Itinerancia_Rol4", "Itinerancia_Rol4_Cant"),
+]
+
+# Ranking preocupaciones de adolescentes y jóvenes → relevamiento_ee_preocupacion_joven
+_AYJ_RANKS = [
+    ("AyJ_rank_suicidio",        "Suicidio"),
+    ("AyJ_rank_faltaproyecto",   "Falta de proyecto de vida"),
+    ("AyJ_rank_consumo",         "Consumo problemático"),
+    ("AyJ_rank_apuestas",        "Apuestas online"),
+    ("AyJ_rank_saludmental",     "Salud mental"),
+    ("AyJ_rank_violencia",       "Violencia"),
+    ("AyJ_rank_violenciadigital","Violencia digital"),
+    ("AyJ_rank_desvinculacion",  "Desvinculación educativa"),
+]
+
+# Motivos de abandono BTU (si/no) → relevamiento_ee_btu_abandono_motivo
+_BTU_ABANDONO_MOTIVOS = [
+    ("BTU_abandono_accesoboletoestudiantil", "Acceso al boleto estudiantil"),
+    ("BTU_abandono_accesotranspor",          "Acceso al transporte"),
+    ("BTU_abandono_cambiodomic",             "Cambio de domicilio"),
+    ("BTU_abandono_costotransporte",         "Costo del transporte"),
+    ("BTU_abandono_faltatiempo",             "Falta de tiempo"),
+    ("BTU_abandono_horarios",                "Horarios"),
+]
+
+# Prioridades de infraestructura (si/no) → relevamiento_ee_necesidad_infra
+_PRIORIDADES_INFRA = [
+    ("Prioridad_Agua",            "Agua"),
+    ("Prioridad_Arreglos",        "Arreglos generales"),
+    ("Prioridad_Banio",           "Baño"),
+    ("Prioridad_Climatizacion",   "Climatización"),
+    ("Prioridad_Construccion",    "Construcción"),
+    ("Prioridad_Electricidad",    "Electricidad"),
+    ("Prioridad_Gas",             "Gas"),
+    ("Prioridad_PinturaExterior", "Pintura exterior"),
+    ("Prioridad_PinturaInterior", "Pintura interior"),
+]
+
+# Roles del grupo motor → relevamiento_ee_grupo_motor_rol
+_GM_ROLES = [
+    ("GM_Rol1", "GM_Rol1_Cant"),
+    ("GM_Rol2", "GM_Rol2_Cant"),
+    ("GM_Rol3", "GM_Rol3_Cant"),
+    ("GM_Rol4", "GM_Rol4_Cant"),
+]
+
+# Actividades de itinerancia (si/no) → relevamiento_ee_itinerancia_actividad
+_ITINERANCIA_ACTIVIDADES = [
+    ("Itinerancia_Act_Alfabetizacion", "Alfabetización"),
+    ("Itinerancia_Act_Charlas",        "Charlas"),
+    ("Itinerancia_Act_Estim",          "Estimulación temprana"),
+    ("Itinerancia_Act_Festividades",   "Festividades"),
+    ("Itinerancia_Act_Merienda",       "Merienda"),
+    ("Itinerancia_Act_PI",             "Primera infancia"),
+    ("Itinerancia_Act_Recreacion",     "Recreación"),
+    ("Itinerancia_Act_Reuniones",      "Reuniones"),
+    ("Itinerancia_Act_Talleres",       "Talleres"),
+]
+
+# Espacios de itinerancia (si/no) → relevamiento_ee_itinerancia_espacio
+_ITINERANCIA_ESPACIOS = [
+    ("Itinerancia_Club",    "Club"),
+    ("Itinerancia_Paraje",  "Paraje"),
+    ("Itinerancia_Plaza",   "Plaza"),
+    ("Itinerancia_Terreno", "Terreno"),
+]
+
+# Talleres de alfabetización digital (si/no) → relevamiento_ee_digital_taller
+_DIGITAL_TALLERES = [
+    ("AlfabDig_NT_Digitales",      "Herramientas digitales"),
+    ("AlfabDig_NT_Tall_Redes",     "Redes sociales"),
+    ("AlfabDig_NT_Tall_Seguridad", "Seguridad digital"),
+    ("AlfabDig_NT_Tall_Trabajo",   "Herramientas para el trabajo"),
+]
+
+# Instituciones de nivel superior → relevamiento_ee_nivel_superior
+_ARTICULA_INSTITUCIONES = [
+    ("Articula_Institucion1", "Articula_Institucion1_Acciones"),
+    ("Articula_Institucion2", "Articula_Institucion2_Acciones"),
+    ("Articula_Institucion3", "Articula_Institucion3_Acciones"),
+    ("Articula_Institucion4", "Articula_Institucion4_Acciones"),
+    ("Articula_Institucion5", "Articula_Institucion5_Acciones"),
 ]
 
 
@@ -857,13 +976,12 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
             }
             for yaml_name, col in _EE_FIELD_MAP.items():
                 raw = fv.get(yaml_name)
-                if col == "itinerancia_realizo":
+                if col in _EE_BOOL_COLS:
                     row[col] = _to_bool(raw)
-                elif col in ("grupo_motor_frecuencia", "adolescentes_frecuencia",
-                             "itinerancia_frecuencia", "alfa_frecuencia", "dale_frecuencia_dias",
-                             "apoyo_primario_frecuencia", "apoyo_secundario_frecuencia",
-                             "internet_acceso", "internet_falta_motivo"):
+                elif col in _EE_STR50_COLS:
                     row[col] = str(raw).strip()[:50] if raw not in (None, "") else None
+                elif col in _EE_STR200_COLS:
+                    row[col] = str(raw).strip()[:200] if raw not in (None, "") else None
                 else:
                     row[col] = _to_int(raw)
 
@@ -883,18 +1001,139 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
                 {"rid": relevamiento_id, "eid": ee_id},
             ).fetchone()[0]
 
-            # Upsert roles de itinerancia
-            for rol_key, cant_key in _ITINERANCIA_ROLES:
+            # Roles de itinerancia (DELETE+INSERT para evitar duplicados)
+            conn.execute(text(
+                "DELETE FROM relevamiento_ee_itinerancia_rol WHERE relevamiento_ee_id = :ree_id"
+            ), {"ree_id": ree_id})
+            for i, (rol_key, cant_key) in enumerate(_ITINERANCIA_ROLES):
                 rol_val = fv.get(rol_key)
-                cant_val = _to_int(fv.get(cant_key))
-                if not rol_val or cant_val is None:
+                if not rol_val:
                     continue
+                rol_otro = str(fv.get(f"{rol_key}_Otro") or "").strip() or None
                 conn.execute(text("""
                     INSERT INTO relevamiento_ee_itinerancia_rol
+                        (relevamiento_ee_id, rol, rol_otro, cantidad)
+                    VALUES (:ree_id, :rol, :rol_otro, :cant)
+                """), {"ree_id": ree_id, "rol": str(rol_val).strip()[:200],
+                       "rol_otro": rol_otro, "cant": _to_int(fv.get(cant_key))})
+
+            # Roles del grupo motor
+            conn.execute(text(
+                "DELETE FROM relevamiento_ee_grupo_motor_rol WHERE relevamiento_ee_id = :ree_id"
+            ), {"ree_id": ree_id})
+            for rol_key, cant_key in _GM_ROLES:
+                rol_val = fv.get(rol_key)
+                if not rol_val:
+                    continue
+                conn.execute(text("""
+                    INSERT INTO relevamiento_ee_grupo_motor_rol
                         (relevamiento_ee_id, rol, cantidad)
                     VALUES (:ree_id, :rol, :cant)
-                    ON DUPLICATE KEY UPDATE cantidad = VALUES(cantidad)
-                """), {"ree_id": ree_id, "rol": str(rol_val)[:50], "cant": cant_val})
+                """), {"ree_id": ree_id, "rol": str(rol_val).strip()[:200],
+                       "cant": _to_int(fv.get(cant_key))})
+
+            # Actividades de itinerancia
+            conn.execute(text(
+                "DELETE FROM relevamiento_ee_itinerancia_actividad WHERE relevamiento_ee_id = :ree_id"
+            ), {"ree_id": ree_id})
+            for col, actividad in _ITINERANCIA_ACTIVIDADES:
+                if _to_bool(fv.get(col)):
+                    conn.execute(text("""
+                        INSERT INTO relevamiento_ee_itinerancia_actividad
+                            (relevamiento_ee_id, actividad)
+                        VALUES (:ree_id, :act)
+                    """), {"ree_id": ree_id, "act": actividad})
+
+            # Espacios de itinerancia
+            conn.execute(text(
+                "DELETE FROM relevamiento_ee_itinerancia_espacio WHERE relevamiento_ee_id = :ree_id"
+            ), {"ree_id": ree_id})
+            for col, espacio in _ITINERANCIA_ESPACIOS:
+                if _to_bool(fv.get(col)):
+                    conn.execute(text("""
+                        INSERT INTO relevamiento_ee_itinerancia_espacio
+                            (relevamiento_ee_id, espacio)
+                        VALUES (:ree_id, :esp)
+                    """), {"ree_id": ree_id, "esp": espacio})
+            itin_otro = str(fv.get("Itinerancia_Otro") or "").strip()
+            if itin_otro:
+                conn.execute(text("""
+                    INSERT INTO relevamiento_ee_itinerancia_espacio
+                        (relevamiento_ee_id, espacio, espacio_otro)
+                    VALUES (:ree_id, 'Otro', :otro)
+                """), {"ree_id": ree_id, "otro": itin_otro[:200]})
+
+            # Preocupaciones de adolescentes y jóvenes (ranking)
+            conn.execute(text(
+                "DELETE FROM relevamiento_ee_preocupacion_joven WHERE relevamiento_ee_id = :ree_id"
+            ), {"ree_id": ree_id})
+            for col, preocupacion in _AYJ_RANKS:
+                rank = _to_int(fv.get(col))
+                if rank is not None:
+                    conn.execute(text("""
+                        INSERT INTO relevamiento_ee_preocupacion_joven
+                            (relevamiento_ee_id, preocupacion, ranking)
+                        VALUES (:ree_id, :preo, :rank)
+                    """), {"ree_id": ree_id, "preo": preocupacion, "rank": rank})
+
+            # Motivos de abandono BTU
+            conn.execute(text(
+                "DELETE FROM relevamiento_ee_btu_abandono_motivo WHERE relevamiento_ee_id = :ree_id"
+            ), {"ree_id": ree_id})
+            for col, motivo in _BTU_ABANDONO_MOTIVOS:
+                if _to_bool(fv.get(col)):
+                    conn.execute(text("""
+                        INSERT INTO relevamiento_ee_btu_abandono_motivo
+                            (relevamiento_ee_id, motivo)
+                        VALUES (:ree_id, :motivo)
+                    """), {"ree_id": ree_id, "motivo": motivo})
+            btu_otro = str(fv.get("BTU_abandono_otro") or "").strip()
+            if btu_otro:
+                conn.execute(text("""
+                    INSERT INTO relevamiento_ee_btu_abandono_motivo
+                        (relevamiento_ee_id, motivo)
+                    VALUES (:ree_id, :motivo)
+                """), {"ree_id": ree_id, "motivo": f"Otro: {btu_otro}"[:200]})
+
+            # Necesidades de infraestructura (prioridades)
+            conn.execute(text(
+                "DELETE FROM relevamiento_ee_necesidad_infra WHERE relevamiento_ee_id = :ree_id"
+            ), {"ree_id": ree_id})
+            for col, necesidad in _PRIORIDADES_INFRA:
+                if _to_bool(fv.get(col)):
+                    conn.execute(text("""
+                        INSERT INTO relevamiento_ee_necesidad_infra
+                            (relevamiento_ee_id, necesidad)
+                        VALUES (:ree_id, :nec)
+                    """), {"ree_id": ree_id, "nec": necesidad})
+
+            # Talleres de alfabetización digital
+            conn.execute(text(
+                "DELETE FROM relevamiento_ee_digital_taller WHERE relevamiento_ee_id = :ree_id"
+            ), {"ree_id": ree_id})
+            for col, taller in _DIGITAL_TALLERES:
+                if _to_bool(fv.get(col)):
+                    conn.execute(text("""
+                        INSERT INTO relevamiento_ee_digital_taller
+                            (relevamiento_ee_id, taller)
+                        VALUES (:ree_id, :taller)
+                    """), {"ree_id": ree_id, "taller": taller})
+
+            # Instituciones de nivel superior con las que articula
+            conn.execute(text(
+                "DELETE FROM relevamiento_ee_nivel_superior WHERE relevamiento_ee_id = :ree_id"
+            ), {"ree_id": ree_id})
+            for inst_key, acc_key in _ARTICULA_INSTITUCIONES:
+                inst = str(fv.get(inst_key) or "").strip()
+                if not inst:
+                    continue
+                acciones = str(fv.get(acc_key) or "").strip() or None
+                conn.execute(text("""
+                    INSERT INTO relevamiento_ee_nivel_superior
+                        (relevamiento_ee_id, nombre_institucion, tipo_acciones)
+                    VALUES (:ree_id, :inst, :acc)
+                """), {"ree_id": ree_id, "inst": inst[:200],
+                       "acc": acciones[:500] if acciones else None})
 
             # Upsert acciones (relevamiento_ee_accion)
             for yaml_name, (eje, accion) in _ACCION_MAP.items():
@@ -959,11 +1198,23 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
 
             # ── Características edilicias (tablas del EE, se actualizan en cada sync) ──
 
-            # construccion_material en espacio_educativo
-            construccion = str(fv.get("EE_Edil_Construccion") or "").strip() or None
+            # Datos edilicios en espacio_educativo
             conn.execute(
-                text("UPDATE espacio_educativo SET construccion_material = :v WHERE id = :id"),
-                {"v": construccion, "id": ee_id},
+                text("""UPDATE espacio_educativo SET
+                            construccion_material = :construccion,
+                            titularidad = :titularidad,
+                            nombre_titular = :titular,
+                            rampa_acceso = :rampa,
+                            acceso_principal = :acceso
+                        WHERE id = :id"""),
+                {
+                    "construccion": str(fv.get("EE_Edil_Construccion") or "").strip()[:100] or None,
+                    "titularidad":  str(fv.get("EE_Edil_Titularidad") or "").strip()[:100] or None,
+                    "titular":      str(fv.get("EE_Edil_Titular") or "").strip()[:200] or None,
+                    "rampa":        _to_bool(fv.get("EE_Edil_Rampa")),
+                    "acceso":       str(fv.get("EE_Edil_AccesoPor") or "").strip()[:100] or None,
+                    "id": ee_id,
+                },
             )
 
             # ee_zona (multi-valor)
@@ -1041,12 +1292,187 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
 
 
 # ---------------------------------------------------------------------------
+# Pastoral PI (Primera Infancia)
+# ---------------------------------------------------------------------------
+
+_PI_FIELD_MAP = {
+    "AniosPI":                      "anios_desarrollo",
+    "MetodologiaPresentada":        "presento_metodologia",
+    "MetodologiaPresentada_SinDesarrollo": "comunidades_sin_pastoral",
+    "Capacitadoras":                "capacitadoras",
+    "Lideres":                      "lideres",
+    "MadresEmbarazadas_12_18":      "madres_embarazadas_12_18",
+    "MadresEmbarazadas_19_30":      "madres_embarazadas_19_29",
+    "MadresEmbarazadas_30mas":      "madres_embarazadas_30_mas",
+    "MadresNoEmbarazadas":          "madres_no_embarazadas",
+    "Ninos_0_3":                    "ninos_0_3",
+    "Ninos_4_6":                    "ninos_4_6",
+    "Familias":                     "familias",
+    "LideresSabenLeerEscribir":         "lideres_todas_alfabetizadas",
+    "CantLideresNoSabenLeerEscribir":   "lideres_no_alfabetizadas_cantidad",
+    "AlgunaLiderParticipaDale":         "lideres_en_alfabetizacion",
+    "TodasMadresAlfabetizadas":         "madres_todas_alfabetizadas",
+    "CantMadresNoAlfabetizadas":        "madres_no_alfabetizadas_cantidad",
+    "AlgunaMadreParticipaAlfabetizacion": "madres_en_alfabetizacion",
+}
+_PI_BOOL_COLS = {
+    "presento_metodologia", "lideres_todas_alfabetizadas", "lideres_en_alfabetizacion",
+    "madres_todas_alfabetizadas", "madres_en_alfabetizacion",
+}
+
+_PI_ENFERMEDADES_NINOS = ["Enfermedad1_Ninos", "Enfermedad2_Ninos", "Enfermedad3_Ninos"]
+_PI_ENFERMEDADES_EMBARAZADAS = ["Enfermedad1_Mujeres", "Enfermedad2_Mujeres", "Enfermedad3_Mujeres"]
+
+# (columna si/no/desconozco, columna frecuencia, columna cantidad, valor enum)
+_PI_ACCIONES_LIDER = [
+    ("LideresCelebracionVida",      "LideresCelebracionVida_Frec",      "LideresCelebracionVida_Cant",      "celebracion_vida"),
+    ("LideresVisitaDomiciliaria",   "LideresVisitaDomiciliaria_Frec",   "LideresVisitaDomiciliaria_Cant",   "visita_domiciliaria"),
+    ("LideresReunionEvaluacion",    "LideresReunionEvaluacion_Frec",    "LideresReunionEvaluacion_Cant",    "reunion_evaluacion"),
+]
+
+# (columna si/no/desconozco, columna cantidad comunidades, nombre temática)
+_PI_TEMATICAS = [
+    ("Abordada_Vacunas",                "Abordada_Vacunas_Comunidades",                "Vacunas"),
+    ("Abordada_Higiene",                "Abordada_Higiene_Comunidades",                "Higiene"),
+    ("Abordada_PrimerosaAuxilios",      "Abordada_PrimerosaAuxilios_Comunidades",      "Primeros auxilios"),
+    ("Abordada_EstimulacionAdecuada",   "Abordada_EstimulacionAdecuada_Comunidades",   "Estimulación adecuada"),
+    ("Abordada_Lactancia",              "Abordada_Lactancia_Comunidades",              "Lactancia"),
+    ("Abordada_Ternura",                "Abordada_Ternura_Comunidades",                "Ternura"),
+    ("Abordada_Alimentacion",           "Abordada_Alimentacion_Comunidades",           "Alimentación"),
+    ("Abordada_DerechosInfancias",      "Abordada_DerechosInfancias_Comunidades",      "Derechos de las infancias"),
+    ("Abordada_DiscriminacionViolencia","Abordada_DiscriminacionViolencia_Comunidades","Discriminación y violencia"),
+    ("Abordada_Autoestima",             "Abordada_Autoestima_Comunidades",             "Autoestima"),
+    ("Abordada_Consumoproblematico",    "Abordada_Consumoproblematico_Comunidades",    "Consumo problemático"),
+    ("Abordada_AbusoAcoso",             "Abordada_AbusoAcoso_Comunidades",             "Abuso y acoso"),
+    ("Abordada_AdecuacionPI",           "Abordada_AdecuacionPI_Comunidades",           "Adecuación PI"),
+    ("Abordada_MedioAmbiente",          "Abordada_MedioAmbiente_Comunidades",          "Medio ambiente"),
+]
+
+# (columna si/no/desconozco, nombre organización)
+_PI_ARTICULACIONES = [
+    ("Articula_CentroSalud", "Centro de salud"),
+    ("Articula_Hospital",    "Hospital"),
+    ("Articula_Municipio",   "Municipio"),
+    ("Articula_DeptGenero",  "Departamento de género"),
+]
+
+
+def upsert_pastoral_pi(engine, emaus_id: int, anio: int, semestre: str,
+                        pi_field_data: Optional[Dict]) -> None:
+    """Upserta datos de la hoja Primera Infancia (PastoralPI y tablas relacionadas)."""
+    if not pi_field_data:
+        return
+
+    fv = pi_field_data
+    with engine.begin() as conn:
+        rel = conn.execute(
+            text("SELECT id FROM relevamiento WHERE emaus_id=:eid AND anio=:a AND semestre=:s LIMIT 1"),
+            {"eid": emaus_id, "a": anio, "s": semestre},
+        ).fetchone()
+        if not rel:
+            return
+        relevamiento_id = rel[0]
+
+        row: Dict[str, Any] = {"relevamiento_id": relevamiento_id}
+        for yaml_name, col in _PI_FIELD_MAP.items():
+            raw = fv.get(yaml_name)
+            row[col] = _to_bool(raw) if col in _PI_BOOL_COLS else _to_int(raw)
+
+        cols = list(row.keys())
+        placeholders = ", ".join(f":{c}" for c in cols)
+        updates = ", ".join(f"{c} = VALUES({c})" for c in cols if c != "relevamiento_id")
+        conn.execute(
+            text(f"""
+                INSERT INTO pastoral_pi ({', '.join(cols)})
+                VALUES ({placeholders})
+                ON DUPLICATE KEY UPDATE {updates}
+            """),
+            row,
+        )
+        pi_id = conn.execute(
+            text("SELECT id FROM pastoral_pi WHERE relevamiento_id=:rid LIMIT 1"),
+            {"rid": relevamiento_id},
+        ).fetchone()[0]
+
+        # Enfermedades más frecuentes en niños
+        conn.execute(text(
+            "DELETE FROM pastoral_pi_enfermedad_ninos WHERE pastoral_pi_id = :pid"
+        ), {"pid": pi_id})
+        for i, col in enumerate(_PI_ENFERMEDADES_NINOS, start=1):
+            val = str(fv.get(col) or "").strip()
+            if val:
+                conn.execute(text("""
+                    INSERT INTO pastoral_pi_enfermedad_ninos (pastoral_pi_id, enfermedad, orden)
+                    VALUES (:pid, :enf, :orden)
+                """), {"pid": pi_id, "enf": val[:200], "orden": i})
+
+        # Enfermedades más frecuentes en embarazadas
+        conn.execute(text(
+            "DELETE FROM pastoral_pi_enfermedad_embarazadas WHERE pastoral_pi_id = :pid"
+        ), {"pid": pi_id})
+        for i, col in enumerate(_PI_ENFERMEDADES_EMBARAZADAS, start=1):
+            val = str(fv.get(col) or "").strip()
+            if val:
+                conn.execute(text("""
+                    INSERT INTO pastoral_pi_enfermedad_embarazadas (pastoral_pi_id, enfermedad, orden)
+                    VALUES (:pid, :enf, :orden)
+                """), {"pid": pi_id, "enf": val[:200], "orden": i})
+
+        # Acciones de líderes (celebración de vida, visita domiciliaria, reunión evaluación)
+        conn.execute(text(
+            "DELETE FROM pastoral_pi_accion_lider WHERE pastoral_pi_id = :pid"
+        ), {"pid": pi_id})
+        for si_col, frec_col, cant_col, accion in _PI_ACCIONES_LIDER:
+            realiza = _to_bool(fv.get(si_col))
+            if realiza is None:
+                continue
+            conn.execute(text("""
+                INSERT INTO pastoral_pi_accion_lider
+                    (pastoral_pi_id, accion, realiza, frecuencia, cantidad_semestre)
+                VALUES (:pid, :accion, :realiza, :frecuencia, :cantidad)
+            """), {
+                "pid": pi_id, "accion": accion, "realiza": realiza,
+                "frecuencia": str(fv.get(frec_col) or "").strip()[:100] or None,
+                "cantidad": _to_int(fv.get(cant_col)),
+            })
+
+        # Temáticas abordadas
+        conn.execute(text(
+            "DELETE FROM pastoral_pi_tematica WHERE pastoral_pi_id = :pid"
+        ), {"pid": pi_id})
+        for si_col, cant_col, tematica in _PI_TEMATICAS:
+            if _to_bool(fv.get(si_col)):
+                conn.execute(text("""
+                    INSERT INTO pastoral_pi_tematica (pastoral_pi_id, tematica, comunidades_cantidad)
+                    VALUES (:pid, :tematica, :cant)
+                """), {"pid": pi_id, "tematica": tematica, "cant": _to_int(fv.get(cant_col))})
+        otras = str(fv.get("Abordada_Otras") or "").strip()
+        if otras:
+            conn.execute(text("""
+                INSERT INTO pastoral_pi_tematica (pastoral_pi_id, tematica, tematica_otra, comunidades_cantidad)
+                VALUES (:pid, 'Otras', :otra, :cant)
+            """), {"pid": pi_id, "otra": otras[:200], "cant": _to_int(fv.get("Abordada_Otras_Comunidades"))})
+
+        # Articulación institucional
+        conn.execute(text(
+            "DELETE FROM pastoral_pi_articulacion WHERE pastoral_pi_id = :pid"
+        ), {"pid": pi_id})
+        for col, organizacion in _PI_ARTICULACIONES:
+            if _to_bool(fv.get(col)):
+                conn.execute(text("""
+                    INSERT INTO pastoral_pi_articulacion (pastoral_pi_id, organizacion)
+                    VALUES (:pid, :org)
+                """), {"pid": pi_id, "org": organizacion})
+
+
+# ---------------------------------------------------------------------------
 # Persistencia en TiDB
 # ---------------------------------------------------------------------------
 
 def upsert_control(engine, emaus_id: int, anio: int, semestre: str, metrics: Dict):
     errors = metrics.pop("validation_errors", [])
     ee_field_data = metrics.pop("ee_field_data", {})
+    pi_field_data = metrics.pop("pi_field_data", None)
     metrics.setdefault("btu_actual", None)
     metrics.setdefault("bf_actual", None)
 
@@ -1119,6 +1545,8 @@ def upsert_control(engine, emaus_id: int, anio: int, semestre: str, metrics: Dic
     # Upsert datos detallados por EE (fuera de la transacción principal para no mezclar errores)
     if ee_field_data:
         upsert_relevamiento_ee(engine, emaus_id, anio, semestre, ee_field_data)
+    if pi_field_data:
+        upsert_pastoral_pi(engine, emaus_id, anio, semestre, pi_field_data)
 
 
 _EMAUS_NAME_FIXES = {
