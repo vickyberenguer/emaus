@@ -716,8 +716,9 @@
 .ae-bars-title { font-weight:600; font-size:14px; color:#374151; margin:16px 0 12px; }
 .ae-bar-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
 .ae-bar-label { width:160px; flex-shrink:0; font-size:13px; color:#374151; text-align:right; }
-.ae-bar-track { flex:1; height:24px; background:#f3f4f6; border-radius:4px; overflow:hidden; position:relative; }
-.ae-bar-fill { height:100%; border-radius:4px; transition:width .4s; }
+.ae-bar-track { flex:1; height:24px; background:#f3f4f6; border-radius:4px; position:relative; }
+.ae-bar-fill { height:100%; border-radius:4px; transition:width .4s; position:relative; }
+.ae-bar-value { position:absolute; left:100%; top:50%; transform:translateY(-50%); margin-left:8px; white-space:nowrap; font-size:13px; color:#374151; }
 .ae-bar-pct { width:44px; flex-shrink:0; font-size:13px; font-weight:600; color:#2563eb; }
 .ae-info { font-size:12px; color:#6b7280; margin-bottom:16px; }
 </style>
@@ -1277,10 +1278,9 @@ async function cargarInternet() {
       return `<div class="ae-bar-row">
         <div class="ae-bar-label" style="color:${color};font-weight:600">${a.valor}</div>
         <div class="ae-bar-track">
-          <div class="ae-bar-fill" style="width:${a.pct}%;background:${color}"></div>
-        </div>
-        <div style="width:80px;flex-shrink:0;font-size:13px;color:#374151">
-          <strong>${a.pct}%</strong> <span style="color:#6b7280">(${a.cantidad})</span>
+          <div class="ae-bar-fill" style="width:${Math.min(a.pct,75)}%;background:${color}">
+            <span class="ae-bar-value"><strong>${a.pct}%</strong> <span style="color:#6b7280">(${a.cantidad})</span></span>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -1292,10 +1292,9 @@ async function cargarInternet() {
         <div class="ae-bar-row">
           <div class="ae-bar-label" style="width:280px">${m.motivo}</div>
           <div class="ae-bar-track">
-            <div class="ae-bar-fill" style="width:${m.pct}%;background:${INT_MOTIVO_COLOR}"></div>
-          </div>
-          <div style="width:80px;flex-shrink:0;font-size:13px;color:#374151">
-            <strong>${m.pct}%</strong> <span style="color:#6b7280">(${m.cantidad})</span>
+            <div class="ae-bar-fill" style="width:${Math.min(m.pct,75)}%;background:${INT_MOTIVO_COLOR}">
+              <span class="ae-bar-value"><strong>${m.pct}%</strong> <span style="color:#6b7280">(${m.cantidad})</span></span>
+            </div>
           </div>
         </div>`).join('');
       const noCount = d.acceso.find(a => a.valor === 'No')?.cantidad || 0;
@@ -1354,10 +1353,9 @@ function edBarras(items, labelKey, pctKey, cantKey, color, labelWidth) {
     <div class="ae-bar-row">
       <div class="ae-bar-label" style="width:${labelWidth || 200}px">${item[labelKey]}</div>
       <div class="ae-bar-track">
-        <div class="ae-bar-fill" style="width:${item[pctKey]}%;background:${color}"></div>
-      </div>
-      <div style="width:80px;flex-shrink:0;font-size:13px;color:#374151">
-        <strong>${item[pctKey]}%</strong> <span style="color:#6b7280">(${item[cantKey]})</span>
+        <div class="ae-bar-fill" style="width:${Math.min(item[pctKey],75)}%;background:${color}">
+          <span class="ae-bar-value"><strong>${item[pctKey]}%</strong> <span style="color:#6b7280">(${item[cantKey]})</span></span>
+        </div>
       </div>
     </div>`).join('');
 }
@@ -1415,10 +1413,9 @@ async function cargarEdilicias() {
             <div class="ae-bar-row">
               <div class="ae-bar-label" style="width:180px">${item.label}</div>
               <div class="ae-bar-track">
-                <div class="ae-bar-fill" style="width:${item.pct}%;background:#8b5cf6"></div>
-              </div>
-              <div style="width:110px;flex-shrink:0;font-size:13px;color:#374151">
-                <strong>${item.pct}%</strong> <span style="color:#6b7280">(${item.ee_count} EEs, ${item.unidades} u.)</span>
+                <div class="ae-bar-fill" style="width:${Math.min(item.pct,75)}%;background:#8b5cf6">
+                  <span class="ae-bar-value"><strong>${item.pct}%</strong> <span style="color:#6b7280">(${item.ee_count} EEs, ${item.unidades} u.)</span></span>
+                </div>
               </div>
             </div>`).join('') : '<p class="text-muted" style="font-size:13px">Sin datos</p>'}
         </div>
@@ -1526,10 +1523,9 @@ async function cargarGrupoMotor() {
       <div class="ae-bar-row">
         <div class="ae-bar-label" style="width:90px">${rg.rango}</div>
         <div class="ae-bar-track">
-          <div class="ae-bar-fill" style="width:${rg.pct}%;background:#6366f1"></div>
-        </div>
-        <div style="width:80px;flex-shrink:0;font-size:13px;color:#374151">
-          <strong>${rg.pct}%</strong> <span style="color:#6b7280">(${rg.cantidad})</span>
+          <div class="ae-bar-fill" style="width:${Math.min(rg.pct,75)}%;background:#6366f1">
+            <span class="ae-bar-value"><strong>${rg.pct}%</strong> <span style="color:#6b7280">(${rg.cantidad})</span></span>
+          </div>
         </div>
       </div>`).join('');
 
@@ -1538,10 +1534,9 @@ async function cargarGrupoMotor() {
       <div class="ae-bar-row">
         <div class="ae-bar-label" style="width:260px">${r.rol}</div>
         <div class="ae-bar-track">
-          <div class="ae-bar-fill" style="width:${r.pct}%;background:#0ea5e9"></div>
-        </div>
-        <div style="width:80px;flex-shrink:0;font-size:13px;color:#374151">
-          <strong>${r.pct}%</strong> <span style="color:#6b7280">(${r.cantidad})</span>
+          <div class="ae-bar-fill" style="width:${Math.min(r.pct,75)}%;background:#0ea5e9">
+            <span class="ae-bar-value"><strong>${r.pct}%</strong> <span style="color:#6b7280">(${r.cantidad})</span></span>
+          </div>
         </div>
       </div>`).join('');
 
@@ -1621,10 +1616,9 @@ function itBarras(items, labelKey, color, labelWidth) {
     <div class="ae-bar-row">
       <div class="ae-bar-label" style="width:${labelWidth || 240}px">${item[labelKey]}</div>
       <div class="ae-bar-track">
-        <div class="ae-bar-fill" style="width:${item.pct}%;background:${color}"></div>
-      </div>
-      <div style="width:80px;flex-shrink:0;font-size:13px;color:#374151">
-        <strong>${item.pct}%</strong> <span style="color:#6b7280">(${item.cantidad})</span>
+        <div class="ae-bar-fill" style="width:${Math.min(item.pct,75)}%;background:${color}">
+          <span class="ae-bar-value"><strong>${item.pct}%</strong> <span style="color:#6b7280">(${item.cantidad})</span></span>
+        </div>
       </div>
     </div>`).join('');
 }
@@ -2042,9 +2036,10 @@ function renderApoyoEscolar() {
     <div class="ae-bar-row">
       <div class="ae-bar-label">${c.contenido}</div>
       <div class="ae-bar-track">
-        <div class="ae-bar-fill" style="width:${c.pct}%;background:#3b82f6"></div>
+        <div class="ae-bar-fill" style="width:${Math.min(c.pct,75)}%;background:#3b82f6">
+          <span class="ae-bar-value">${c.pct}%</span>
+        </div>
       </div>
-      <div class="ae-bar-pct">${c.pct}%</div>
     </div>`).join('');
 
   contenido.innerHTML = `
