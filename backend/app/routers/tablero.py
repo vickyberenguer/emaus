@@ -15,6 +15,7 @@ from app.models.espacio_educativo import (
     EEAmbiente, EEServicio, EEEquipoCocina, EEEquipoInformatico, EEZona,
     RelevamientoEEGrupoMotorRol, RelevamientoEEItineranciaActividad,
     RelevamientoEEItineranciaEspacio, RelevamientoEEBTUAbandonoMotivo,
+    RelevamientoEEPreocupacionJoven,
 )
 from app.routers.auth import get_current_user, require_rol
 from app.routers.control import ANIO_ACTIVO, SEMESTRE_ACTIVO, emaus_ids_for_user
@@ -788,6 +789,92 @@ def btu(
         "egresados": egresados,
         "total_con_motivo": total_con_motivo,
         "motivos": motivos,
+    }
+
+
+@router.get("/ayj-preocupaciones")
+def ayj_preocupaciones(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    ee_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+):
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE.id)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region == region)
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+
+    ree_ids = [r[0] for r in ree_query.all()]
+    total = len(ree_ids)
+    if not total:
+        return {"total_ee": 0}
+
+    rows = (
+        db.query(
+            RelevamientoEEPreocupacionJoven.relevamiento_ee_id,
+            RelevamientoEEPreocupacionJoven.preocupacion,
+            RelevamientoEEPreocupacionJoven.ranking,
+        )
+        .filter(RelevamientoEEPreocupacionJoven.relevamiento_ee_id.in_(ree_ids))
+        .all()
+    )
+
+    from collections import defaultdict
+    stats = defaultdict(lambda: {"suma": 0, "cantidad": 0, "top1": 0})
+    ee_con_dato = set()
+    for ree_id, preo, rank in rows:
+        if rank is None:
+            continue
+        ee_con_dato.add(ree_id)
+        s = stats[preo]
+        s["suma"] += rank
+        s["cantidad"] += 1
+        if rank == 1:
+            s["top1"] += 1
+
+    total_con_ranking = len(ee_con_dato)
+    if not total_con_ranking:
+        return {"total_ee": total, "total_con_ranking": 0, "situaciones": []}
+
+    situaciones = [
+        {
+            "situacion": preo,
+            "promedio": round(s["suma"] / s["cantidad"], 2),
+            "cantidad": s["cantidad"],
+            "veces_top1": s["top1"],
+            "pct_top1": round(s["top1"] / total_con_ranking * 100, 1),
+        }
+        for preo, s in stats.items()
+    ]
+    situaciones.sort(key=lambda x: x["promedio"])
+
+    return {
+        "total_ee": total,
+        "total_con_ranking": total_con_ranking,
+        "situaciones": situaciones,
     }
 
 
