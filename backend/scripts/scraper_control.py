@@ -154,7 +154,7 @@ def list_spreadsheets(drive, folder_id: str, name_contains: str) -> List[Dict]:
         while True:
             resp = drive.files().list(
                 q=f"'{current}' in parents and trashed = false",
-                fields="nextPageToken, files(id, name, mimeType)",
+                fields="nextPageToken, files(id, name, mimeType, modifiedTime)",
                 includeItemsFromAllDrives=True,
                 supportsAllDrives=True,
                 pageToken=page_token,
@@ -1001,141 +1001,167 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
                 {"rid": relevamiento_id, "eid": ee_id},
             ).fetchone()[0]
 
-            # Roles de itinerancia (DELETE+INSERT para evitar duplicados)
+            # Roles de itinerancia (DELETE+INSERT batch para evitar duplicados)
             conn.execute(text(
                 "DELETE FROM relevamiento_ee_itinerancia_rol WHERE relevamiento_ee_id = :ree_id"
             ), {"ree_id": ree_id})
-            for i, (rol_key, cant_key) in enumerate(_ITINERANCIA_ROLES):
+            rol_itin_insert = []
+            for rol_key, cant_key in _ITINERANCIA_ROLES:
                 rol_val = fv.get(rol_key)
                 if not rol_val:
                     continue
-                rol_otro = str(fv.get(f"{rol_key}_Otro") or "").strip() or None
+                rol_itin_insert.append({
+                    "ree_id": ree_id, "rol": str(rol_val).strip()[:200],
+                    "rol_otro": str(fv.get(f"{rol_key}_Otro") or "").strip() or None,
+                    "cant": _to_int(fv.get(cant_key)),
+                })
+            if rol_itin_insert:
                 conn.execute(text("""
                     INSERT INTO relevamiento_ee_itinerancia_rol
                         (relevamiento_ee_id, rol, rol_otro, cantidad)
                     VALUES (:ree_id, :rol, :rol_otro, :cant)
-                """), {"ree_id": ree_id, "rol": str(rol_val).strip()[:200],
-                       "rol_otro": rol_otro, "cant": _to_int(fv.get(cant_key))})
+                """), rol_itin_insert)
 
             # Roles del grupo motor
             conn.execute(text(
                 "DELETE FROM relevamiento_ee_grupo_motor_rol WHERE relevamiento_ee_id = :ree_id"
             ), {"ree_id": ree_id})
-            for rol_key, cant_key in _GM_ROLES:
-                rol_val = fv.get(rol_key)
-                if not rol_val:
-                    continue
+            gm_insert = [
+                {"ree_id": ree_id, "rol": str(fv.get(rol_key)).strip()[:200],
+                 "cant": _to_int(fv.get(cant_key))}
+                for rol_key, cant_key in _GM_ROLES if fv.get(rol_key)
+            ]
+            if gm_insert:
                 conn.execute(text("""
                     INSERT INTO relevamiento_ee_grupo_motor_rol
                         (relevamiento_ee_id, rol, cantidad)
                     VALUES (:ree_id, :rol, :cant)
-                """), {"ree_id": ree_id, "rol": str(rol_val).strip()[:200],
-                       "cant": _to_int(fv.get(cant_key))})
+                """), gm_insert)
 
             # Actividades de itinerancia
             conn.execute(text(
                 "DELETE FROM relevamiento_ee_itinerancia_actividad WHERE relevamiento_ee_id = :ree_id"
             ), {"ree_id": ree_id})
-            for col, actividad in _ITINERANCIA_ACTIVIDADES:
-                if _to_bool(fv.get(col)):
-                    conn.execute(text("""
-                        INSERT INTO relevamiento_ee_itinerancia_actividad
-                            (relevamiento_ee_id, actividad)
-                        VALUES (:ree_id, :act)
-                    """), {"ree_id": ree_id, "act": actividad})
+            act_itin_insert = [
+                {"ree_id": ree_id, "act": actividad}
+                for col, actividad in _ITINERANCIA_ACTIVIDADES if _to_bool(fv.get(col))
+            ]
+            if act_itin_insert:
+                conn.execute(text("""
+                    INSERT INTO relevamiento_ee_itinerancia_actividad
+                        (relevamiento_ee_id, actividad)
+                    VALUES (:ree_id, :act)
+                """), act_itin_insert)
 
             # Espacios de itinerancia
             conn.execute(text(
                 "DELETE FROM relevamiento_ee_itinerancia_espacio WHERE relevamiento_ee_id = :ree_id"
             ), {"ree_id": ree_id})
-            for col, espacio in _ITINERANCIA_ESPACIOS:
-                if _to_bool(fv.get(col)):
-                    conn.execute(text("""
-                        INSERT INTO relevamiento_ee_itinerancia_espacio
-                            (relevamiento_ee_id, espacio)
-                        VALUES (:ree_id, :esp)
-                    """), {"ree_id": ree_id, "esp": espacio})
+            esp_itin_insert = [
+                {"ree_id": ree_id, "esp": espacio, "otro": None}
+                for col, espacio in _ITINERANCIA_ESPACIOS if _to_bool(fv.get(col))
+            ]
             itin_otro = str(fv.get("Itinerancia_Otro") or "").strip()
             if itin_otro:
+                esp_itin_insert.append({"ree_id": ree_id, "esp": "Otro", "otro": itin_otro[:200]})
+            if esp_itin_insert:
                 conn.execute(text("""
                     INSERT INTO relevamiento_ee_itinerancia_espacio
                         (relevamiento_ee_id, espacio, espacio_otro)
-                    VALUES (:ree_id, 'Otro', :otro)
-                """), {"ree_id": ree_id, "otro": itin_otro[:200]})
+                    VALUES (:ree_id, :esp, :otro)
+                """), esp_itin_insert)
 
             # Preocupaciones de adolescentes y jóvenes (ranking)
             conn.execute(text(
                 "DELETE FROM relevamiento_ee_preocupacion_joven WHERE relevamiento_ee_id = :ree_id"
             ), {"ree_id": ree_id})
-            for col, preocupacion in _AYJ_RANKS:
-                rank = _to_int(fv.get(col))
-                if rank is not None:
-                    conn.execute(text("""
-                        INSERT INTO relevamiento_ee_preocupacion_joven
-                            (relevamiento_ee_id, preocupacion, ranking)
-                        VALUES (:ree_id, :preo, :rank)
-                    """), {"ree_id": ree_id, "preo": preocupacion, "rank": rank})
+            ayj_insert = [
+                {"ree_id": ree_id, "preo": preocupacion, "rank": rank}
+                for col, preocupacion in _AYJ_RANKS
+                if (rank := _to_int(fv.get(col))) is not None
+            ]
+            if ayj_insert:
+                conn.execute(text("""
+                    INSERT INTO relevamiento_ee_preocupacion_joven
+                        (relevamiento_ee_id, preocupacion, ranking)
+                    VALUES (:ree_id, :preo, :rank)
+                """), ayj_insert)
 
             # Motivos de abandono BTU
             conn.execute(text(
                 "DELETE FROM relevamiento_ee_btu_abandono_motivo WHERE relevamiento_ee_id = :ree_id"
             ), {"ree_id": ree_id})
-            for col, motivo in _BTU_ABANDONO_MOTIVOS:
-                if _to_bool(fv.get(col)):
-                    conn.execute(text("""
-                        INSERT INTO relevamiento_ee_btu_abandono_motivo
-                            (relevamiento_ee_id, motivo)
-                        VALUES (:ree_id, :motivo)
-                    """), {"ree_id": ree_id, "motivo": motivo})
+            btu_motivo_insert = [
+                {"ree_id": ree_id, "motivo": motivo}
+                for col, motivo in _BTU_ABANDONO_MOTIVOS if _to_bool(fv.get(col))
+            ]
             btu_otro = str(fv.get("BTU_abandono_otro") or "").strip()
             if btu_otro:
+                btu_motivo_insert.append({"ree_id": ree_id, "motivo": f"Otro: {btu_otro}"[:200]})
+            if btu_motivo_insert:
                 conn.execute(text("""
                     INSERT INTO relevamiento_ee_btu_abandono_motivo
                         (relevamiento_ee_id, motivo)
                     VALUES (:ree_id, :motivo)
-                """), {"ree_id": ree_id, "motivo": f"Otro: {btu_otro}"[:200]})
+                """), btu_motivo_insert)
 
             # Necesidades de infraestructura (prioridades)
             conn.execute(text(
                 "DELETE FROM relevamiento_ee_necesidad_infra WHERE relevamiento_ee_id = :ree_id"
             ), {"ree_id": ree_id})
-            for col, necesidad in _PRIORIDADES_INFRA:
-                if _to_bool(fv.get(col)):
-                    conn.execute(text("""
-                        INSERT INTO relevamiento_ee_necesidad_infra
-                            (relevamiento_ee_id, necesidad)
-                        VALUES (:ree_id, :nec)
-                    """), {"ree_id": ree_id, "nec": necesidad})
+            infra_insert = [
+                {"ree_id": ree_id, "nec": necesidad}
+                for col, necesidad in _PRIORIDADES_INFRA if _to_bool(fv.get(col))
+            ]
+            if infra_insert:
+                conn.execute(text("""
+                    INSERT INTO relevamiento_ee_necesidad_infra
+                        (relevamiento_ee_id, necesidad)
+                    VALUES (:ree_id, :nec)
+                """), infra_insert)
 
             # Talleres de alfabetización digital
             conn.execute(text(
                 "DELETE FROM relevamiento_ee_digital_taller WHERE relevamiento_ee_id = :ree_id"
             ), {"ree_id": ree_id})
-            for col, taller in _DIGITAL_TALLERES:
-                if _to_bool(fv.get(col)):
-                    conn.execute(text("""
-                        INSERT INTO relevamiento_ee_digital_taller
-                            (relevamiento_ee_id, taller)
-                        VALUES (:ree_id, :taller)
-                    """), {"ree_id": ree_id, "taller": taller})
+            digital_insert = [
+                {"ree_id": ree_id, "taller": taller}
+                for col, taller in _DIGITAL_TALLERES if _to_bool(fv.get(col))
+            ]
+            if digital_insert:
+                conn.execute(text("""
+                    INSERT INTO relevamiento_ee_digital_taller
+                        (relevamiento_ee_id, taller)
+                    VALUES (:ree_id, :taller)
+                """), digital_insert)
 
             # Instituciones de nivel superior con las que articula
             conn.execute(text(
                 "DELETE FROM relevamiento_ee_nivel_superior WHERE relevamiento_ee_id = :ree_id"
             ), {"ree_id": ree_id})
+            nivel_sup_insert = []
             for inst_key, acc_key in _ARTICULA_INSTITUCIONES:
                 inst = str(fv.get(inst_key) or "").strip()
                 if not inst:
                     continue
                 acciones = str(fv.get(acc_key) or "").strip() or None
+                nivel_sup_insert.append({
+                    "ree_id": ree_id, "inst": inst[:200],
+                    "acc": acciones[:500] if acciones else None,
+                })
+            if nivel_sup_insert:
                 conn.execute(text("""
                     INSERT INTO relevamiento_ee_nivel_superior
                         (relevamiento_ee_id, nombre_institucion, tipo_acciones)
                     VALUES (:ree_id, :inst, :acc)
-                """), {"ree_id": ree_id, "inst": inst[:200],
-                       "acc": acciones[:500] if acciones else None})
+                """), nivel_sup_insert)
 
-            # Upsert acciones (relevamiento_ee_accion)
+            # Acciones (relevamiento_ee_accion) — DELETE+INSERT batch en vez de
+            # ON DUPLICATE KEY UPDATE por ítem (32 acciones posibles)
+            conn.execute(text(
+                "DELETE FROM relevamiento_ee_accion WHERE relevamiento_ee_id = :ree_id"
+            ), {"ree_id": ree_id})
+            accion_insert = []
             for yaml_name, (eje, accion) in _ACCION_MAP.items():
                 raw = fv.get(yaml_name)
                 if raw is None:
@@ -1143,12 +1169,13 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
                 tiene = _to_bool(raw)
                 if tiene is None:
                     continue
+                accion_insert.append({"ree_id": ree_id, "eje": eje, "accion": accion, "tiene": tiene})
+            if accion_insert:
                 conn.execute(text("""
                     INSERT INTO relevamiento_ee_accion
                         (relevamiento_ee_id, eje, accion, tiene)
                     VALUES (:ree_id, :eje, :accion, :tiene)
-                    ON DUPLICATE KEY UPDATE tiene = VALUES(tiene)
-                """), {"ree_id": ree_id, "eje": eje, "accion": accion, "tiene": tiene})
+                """), accion_insert)
 
             # Upsert contenidos apoyo escolar primaria
             _CONTENIDOS_PRIMARIA = [
@@ -1162,16 +1189,17 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
             conn.execute(text(
                 "DELETE FROM relevamiento_ee_apoyo_primario_contenido WHERE relevamiento_ee_id = :ree_id"
             ), {"ree_id": ree_id})
-            for yaml_name, contenido in _CONTENIDOS_PRIMARIA:
-                raw = fv.get(yaml_name)
-                if raw is None:
-                    continue
-                if _to_bool(raw):
-                    conn.execute(text("""
-                        INSERT INTO relevamiento_ee_apoyo_primario_contenido
-                            (relevamiento_ee_id, contenido)
-                        VALUES (:ree_id, :contenido)
-                    """), {"ree_id": ree_id, "contenido": contenido})
+            cont_prim_insert = [
+                {"ree_id": ree_id, "contenido": contenido}
+                for yaml_name, contenido in _CONTENIDOS_PRIMARIA
+                if fv.get(yaml_name) is not None and _to_bool(fv.get(yaml_name))
+            ]
+            if cont_prim_insert:
+                conn.execute(text("""
+                    INSERT INTO relevamiento_ee_apoyo_primario_contenido
+                        (relevamiento_ee_id, contenido)
+                    VALUES (:ree_id, :contenido)
+                """), cont_prim_insert)
 
             # Upsert contenidos apoyo escolar secundaria
             _CONTENIDOS_SECUNDARIA = [
@@ -1185,16 +1213,17 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
             conn.execute(text(
                 "DELETE FROM relevamiento_ee_apoyo_secundario_contenido WHERE relevamiento_ee_id = :ree_id"
             ), {"ree_id": ree_id})
-            for yaml_name, contenido in _CONTENIDOS_SECUNDARIA:
-                raw = fv.get(yaml_name)
-                if raw is None:
-                    continue
-                if _to_bool(raw):
-                    conn.execute(text("""
-                        INSERT INTO relevamiento_ee_apoyo_secundario_contenido
-                            (relevamiento_ee_id, contenido)
-                        VALUES (:ree_id, :contenido)
-                    """), {"ree_id": ree_id, "contenido": contenido})
+            cont_sec_insert = [
+                {"ree_id": ree_id, "contenido": contenido}
+                for yaml_name, contenido in _CONTENIDOS_SECUNDARIA
+                if fv.get(yaml_name) is not None and _to_bool(fv.get(yaml_name))
+            ]
+            if cont_sec_insert:
+                conn.execute(text("""
+                    INSERT INTO relevamiento_ee_apoyo_secundario_contenido
+                        (relevamiento_ee_id, contenido)
+                    VALUES (:ree_id, :contenido)
+                """), cont_sec_insert)
 
             # ── Características edilicias (tablas del EE, se actualizan en cada sync) ──
 
@@ -1398,71 +1427,86 @@ def upsert_pastoral_pi(engine, emaus_id: int, anio: int, semestre: str,
         conn.execute(text(
             "DELETE FROM pastoral_pi_enfermedad_ninos WHERE pastoral_pi_id = :pid"
         ), {"pid": pi_id})
-        for i, col in enumerate(_PI_ENFERMEDADES_NINOS, start=1):
-            val = str(fv.get(col) or "").strip()
-            if val:
-                conn.execute(text("""
-                    INSERT INTO pastoral_pi_enfermedad_ninos (pastoral_pi_id, enfermedad, orden)
-                    VALUES (:pid, :enf, :orden)
-                """), {"pid": pi_id, "enf": val[:200], "orden": i})
+        enf_ninos_insert = [
+            {"pid": pi_id, "enf": str(fv.get(col)).strip()[:200], "orden": i}
+            for i, col in enumerate(_PI_ENFERMEDADES_NINOS, start=1)
+            if str(fv.get(col) or "").strip()
+        ]
+        if enf_ninos_insert:
+            conn.execute(text("""
+                INSERT INTO pastoral_pi_enfermedad_ninos (pastoral_pi_id, enfermedad, orden)
+                VALUES (:pid, :enf, :orden)
+            """), enf_ninos_insert)
 
         # Enfermedades más frecuentes en embarazadas
         conn.execute(text(
             "DELETE FROM pastoral_pi_enfermedad_embarazadas WHERE pastoral_pi_id = :pid"
         ), {"pid": pi_id})
-        for i, col in enumerate(_PI_ENFERMEDADES_EMBARAZADAS, start=1):
-            val = str(fv.get(col) or "").strip()
-            if val:
-                conn.execute(text("""
-                    INSERT INTO pastoral_pi_enfermedad_embarazadas (pastoral_pi_id, enfermedad, orden)
-                    VALUES (:pid, :enf, :orden)
-                """), {"pid": pi_id, "enf": val[:200], "orden": i})
+        enf_emb_insert = [
+            {"pid": pi_id, "enf": str(fv.get(col)).strip()[:200], "orden": i}
+            for i, col in enumerate(_PI_ENFERMEDADES_EMBARAZADAS, start=1)
+            if str(fv.get(col) or "").strip()
+        ]
+        if enf_emb_insert:
+            conn.execute(text("""
+                INSERT INTO pastoral_pi_enfermedad_embarazadas (pastoral_pi_id, enfermedad, orden)
+                VALUES (:pid, :enf, :orden)
+            """), enf_emb_insert)
 
         # Acciones de líderes (celebración de vida, visita domiciliaria, reunión evaluación)
         conn.execute(text(
             "DELETE FROM pastoral_pi_accion_lider WHERE pastoral_pi_id = :pid"
         ), {"pid": pi_id})
+        accion_lider_insert = []
         for si_col, frec_col, cant_col, accion in _PI_ACCIONES_LIDER:
             realiza = _to_bool(fv.get(si_col))
             if realiza is None:
                 continue
-            conn.execute(text("""
-                INSERT INTO pastoral_pi_accion_lider
-                    (pastoral_pi_id, accion, realiza, frecuencia, cantidad_semestre)
-                VALUES (:pid, :accion, :realiza, :frecuencia, :cantidad)
-            """), {
+            accion_lider_insert.append({
                 "pid": pi_id, "accion": accion, "realiza": realiza,
                 "frecuencia": str(fv.get(frec_col) or "").strip()[:100] or None,
                 "cantidad": _to_int(fv.get(cant_col)),
             })
+        if accion_lider_insert:
+            conn.execute(text("""
+                INSERT INTO pastoral_pi_accion_lider
+                    (pastoral_pi_id, accion, realiza, frecuencia, cantidad_semestre)
+                VALUES (:pid, :accion, :realiza, :frecuencia, :cantidad)
+            """), accion_lider_insert)
 
         # Temáticas abordadas
         conn.execute(text(
             "DELETE FROM pastoral_pi_tematica WHERE pastoral_pi_id = :pid"
         ), {"pid": pi_id})
-        for si_col, cant_col, tematica in _PI_TEMATICAS:
-            if _to_bool(fv.get(si_col)):
-                conn.execute(text("""
-                    INSERT INTO pastoral_pi_tematica (pastoral_pi_id, tematica, comunidades_cantidad)
-                    VALUES (:pid, :tematica, :cant)
-                """), {"pid": pi_id, "tematica": tematica, "cant": _to_int(fv.get(cant_col))})
+        tematica_insert = [
+            {"pid": pi_id, "tematica": tematica, "otra": None, "cant": _to_int(fv.get(cant_col))}
+            for si_col, cant_col, tematica in _PI_TEMATICAS if _to_bool(fv.get(si_col))
+        ]
         otras = str(fv.get("Abordada_Otras") or "").strip()
         if otras:
+            tematica_insert.append({
+                "pid": pi_id, "tematica": "Otras", "otra": otras[:200],
+                "cant": _to_int(fv.get("Abordada_Otras_Comunidades")),
+            })
+        if tematica_insert:
             conn.execute(text("""
                 INSERT INTO pastoral_pi_tematica (pastoral_pi_id, tematica, tematica_otra, comunidades_cantidad)
-                VALUES (:pid, 'Otras', :otra, :cant)
-            """), {"pid": pi_id, "otra": otras[:200], "cant": _to_int(fv.get("Abordada_Otras_Comunidades"))})
+                VALUES (:pid, :tematica, :otra, :cant)
+            """), tematica_insert)
 
         # Articulación institucional
         conn.execute(text(
             "DELETE FROM pastoral_pi_articulacion WHERE pastoral_pi_id = :pid"
         ), {"pid": pi_id})
-        for col, organizacion in _PI_ARTICULACIONES:
-            if _to_bool(fv.get(col)):
-                conn.execute(text("""
-                    INSERT INTO pastoral_pi_articulacion (pastoral_pi_id, organizacion)
-                    VALUES (:pid, :org)
-                """), {"pid": pi_id, "org": organizacion})
+        articulacion_insert = [
+            {"pid": pi_id, "org": organizacion}
+            for col, organizacion in _PI_ARTICULACIONES if _to_bool(fv.get(col))
+        ]
+        if articulacion_insert:
+            conn.execute(text("""
+                INSERT INTO pastoral_pi_articulacion (pastoral_pi_id, organizacion)
+                VALUES (:pid, :org)
+            """), articulacion_insert)
 
 
 # ---------------------------------------------------------------------------
@@ -1629,12 +1673,24 @@ def find_emaus_id(engine, nombre: str) -> Optional[int]:
     return row[0] if row else None
 
 
+def _parse_drive_datetime(value: Optional[str]) -> Optional[datetime]:
+    """Parsea el modifiedTime de Drive API (RFC3339, ej '2026-07-20T12:34:56.789Z') a datetime naive UTC."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value.split(".")[0].replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
+    except (ValueError, TypeError):
+        return None
+
+
 def get_all_emaus(engine) -> List[Dict]:
     with engine.connect() as conn:
         rows = conn.execute(
-            text("SELECT id, nombre, spreadsheet_id FROM emaus WHERE activo = TRUE ORDER BY nombre")
+            text("SELECT id, nombre, spreadsheet_id, ultima_modificacion_sheet "
+                 "FROM emaus WHERE activo = TRUE ORDER BY nombre")
         ).fetchall()
-    return [{"id": r[0], "nombre": r[1], "spreadsheet_id": r[2]} for r in rows]
+    return [{"id": r[0], "nombre": r[1], "spreadsheet_id": r[2],
+             "ultima_modificacion_sheet": r[3]} for r in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -1650,6 +1706,8 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="No modificar Sheets ni DB")
     parser.add_argument("--apply-reset", action="store_true",
                         help="Resetear a Pendiente las hojas con errores (por defecto NO resetea)")
+    parser.add_argument("--force", action="store_true",
+                        help="Procesar todos los emaús aunque su planilla no haya cambiado desde el último sync")
     args = parser.parse_args()
 
     spec = load_validations(YAML_PATH)
@@ -1667,11 +1725,15 @@ def main():
     # Construir mapa emaus_nombre → spreadsheet_id
     # emaus_nombre viene del nombre de la carpeta padre de cada planilla
     sheet_map: Dict[str, str] = {}
+    modified_by_id: Dict[str, datetime] = {}
     for item in all_spreadsheets:
         emaus_name = item.get("emaus_nombre", "").strip()
         if emaus_name:
             sheet_map[emaus_name] = item["id"]
             print(f"    Planilla: {emaus_name} → {item['id'][:20]}...")
+        dt = _parse_drive_datetime(item.get("modifiedTime"))
+        if dt is not None:
+            modified_by_id[item["id"]] = dt
 
 
     # Leer BTU y BF una sola vez antes del loop
@@ -1701,6 +1763,14 @@ def main():
             skip += 1
             continue
 
+        modified_time = modified_by_id.get(spreadsheet_id)
+        if (not args.force and args.emaus_id is None and modified_time is not None
+                and emaus.get("ultima_modificacion_sheet") is not None
+                and modified_time <= emaus["ultima_modificacion_sheet"]):
+            print(f"  [SKIP-SINCAMBIOS] {emaus['nombre']} — planilla sin cambios desde el último sync")
+            skip += 1
+            continue
+
         print(f"  [{emaus['id']}] {emaus['nombre']} ...", end=" ", flush=True)
         try:
             metrics = scrape_spreadsheet(
@@ -1716,6 +1786,11 @@ def main():
 
             if not args.dry_run:
                 upsert_control(engine, emaus["id"], args.anio, args.semestre, metrics)
+                if modified_time is not None:
+                    with engine.begin() as conn:
+                        conn.execute(text(
+                            "UPDATE emaus SET ultima_modificacion_sheet = :mt WHERE id = :id"
+                        ), {"mt": modified_time, "id": emaus["id"]})
 
             print(f"OK — EE {metrics['ee_declarados_completos']}/{metrics['ee_count']}, "
                   f"errores={n_err}, warnings={n_warn}")
@@ -1745,7 +1820,8 @@ def _sync_estado_write(engine, sync_id: int, estado: str, ok: int, err: int, ski
 
 
 def run_sync(folder_id: str, anio: int = ANIO_DEFAULT, semestre: str = SEMESTRE_DEFAULT,
-             emaus_id: int = None, dry_run: bool = False, apply_reset: bool = False) -> dict:
+             emaus_id: int = None, dry_run: bool = False, apply_reset: bool = False,
+             force: bool = False) -> dict:
     """
     Entrada callable para Lambda/router — misma lógica que main() pero sin argparse.
     Retorna {"ok": int, "err": int, "skip": int}.
@@ -1770,6 +1846,13 @@ def run_sync(folder_id: str, anio: int = ANIO_DEFAULT, semestre: str = SEMESTRE_
         item.get("emaus_nombre", "").strip(): item["id"]
         for item in all_spreadsheets
         if item.get("emaus_nombre", "").strip()
+    }
+    # modifiedTime viene gratis en la misma llamada de list_spreadsheets — se usa
+    # para saltear emaús cuya planilla no cambió desde el último sync exitoso.
+    modified_by_id: Dict[str, datetime] = {
+        item["id"]: dt
+        for item in all_spreadsheets
+        if (dt := _parse_drive_datetime(item.get("modifiedTime"))) is not None
     }
 
     # Leer datos BTU y BF de planillas externas (una sola vez para todo el sync)
@@ -1800,6 +1883,17 @@ def run_sync(folder_id: str, anio: int = ANIO_DEFAULT, semestre: str = SEMESTRE_
                 skip += 1
                 continue
 
+            modified_time = modified_by_id.get(spreadsheet_id)
+            # En sync completo (sin emaus_id explícito), saltear si la planilla no
+            # cambió desde el último sync exitoso — evita relecturas/reescrituras
+            # innecesarias y es la principal causa de que el sync completo exceda
+            # el timeout de Lambda.
+            if (not force and emaus_id is None and modified_time is not None
+                    and emaus.get("ultima_modificacion_sheet") is not None
+                    and modified_time <= emaus["ultima_modificacion_sheet"]):
+                skip += 1
+                continue
+
             try:
                 metrics = scrape_spreadsheet(
                     sheets_svc, spreadsheet_id, spec,
@@ -1811,6 +1905,11 @@ def run_sync(folder_id: str, anio: int = ANIO_DEFAULT, semestre: str = SEMESTRE_
                 metrics["bf_actual"] = bf_map.get(emaus["nombre"])
                 if not dry_run:
                     upsert_control(engine, emaus["id"], anio, semestre, metrics)
+                    if modified_time is not None:
+                        with engine.begin() as conn:
+                            conn.execute(text(
+                                "UPDATE emaus SET ultima_modificacion_sheet = :mt WHERE id = :id"
+                            ), {"mt": modified_time, "id": emaus["id"]})
                 ok += 1
             except Exception as exc:
                 errores_detalle.append(f"{emaus['nombre']}: {exc}")

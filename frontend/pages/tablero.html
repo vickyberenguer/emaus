@@ -297,6 +297,9 @@
   <a href="#" class="tablero-tab" data-tab="apoyo-escolar">EE - Apoyo Escolar</a>
   <a href="#" class="tablero-tab" data-tab="internet">EE - Internet</a>
   <a href="#" class="tablero-tab" data-tab="edilicias">EE - Características edilicias</a>
+  <a href="#" class="tablero-tab" data-tab="grupo-motor">Grupo Motor</a>
+  <a href="#" class="tablero-tab" data-tab="itinerancia">Itinerancia</a>
+  <a href="#" class="tablero-tab" data-tab="btu">BTU</a>
 </div>
 
 <!-- Filtro por responsable (solo admin) -->
@@ -550,6 +553,69 @@
     <button class="btn btn-sm btn-primary" id="btn-ed-filtrar">Filtrar</button>
   </div>
   <div id="ed-contenido" style="padding:16px 24px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
+  </div>
+</div>
+
+<!-- Tab Grupo Motor -->
+<div id="tab-grupo-motor" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label>Período</label>
+    <select id="gm-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
+    <select id="gm-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
+    <label>Región</label>
+    <select id="gm-region" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Provincia</label>
+    <select id="gm-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Emaús</label>
+    <select id="gm-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <label>EE</label>
+    <select id="gm-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <button class="btn btn-sm btn-primary" id="btn-gm-filtrar">Filtrar</button>
+  </div>
+  <div id="gm-contenido" style="padding:16px 24px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
+  </div>
+</div>
+
+<!-- Tab Itinerancia -->
+<div id="tab-itinerancia" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label>Período</label>
+    <select id="it-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
+    <select id="it-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
+    <label>Región</label>
+    <select id="it-region" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Provincia</label>
+    <select id="it-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Emaús</label>
+    <select id="it-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <label>EE</label>
+    <select id="it-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <button class="btn btn-sm btn-primary" id="btn-it-filtrar">Filtrar</button>
+  </div>
+  <div id="it-contenido" style="padding:16px 24px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
+  </div>
+</div>
+
+<!-- Tab BTU -->
+<div id="tab-btu" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label>Período</label>
+    <select id="btu-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
+    <select id="btu-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
+    <label>Región</label>
+    <select id="btu-region" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Provincia</label>
+    <select id="btu-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Emaús</label>
+    <select id="btu-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <label>EE</label>
+    <select id="btu-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <button class="btn btn-sm btn-primary" id="btn-btu-filtrar">Filtrar</button>
+  </div>
+  <div id="btu-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
   </div>
 </div>
@@ -848,6 +914,9 @@ document.querySelectorAll('.tablero-tab').forEach(tab => {
     if (target === 'apoyo-escolar') iniciarApoyoEscolar();
     if (target === 'internet') iniciarInternet();
     if (target === 'edilicias') iniciarEdilicias();
+    if (target === 'grupo-motor') iniciarGrupoMotor();
+    if (target === 'itinerancia') iniciarItinerancia();
+    if (target === 'btu') iniciarBtu();
   });
 });
 
@@ -1331,6 +1400,387 @@ async function cargarEdilicias() {
             </div>`).join('') : '<p class="text-muted" style="font-size:13px">Sin datos</p>'}
         </div>
       </div>`;
+  } catch(e) {
+    contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+  }
+}
+
+// ── Tab Grupo Motor ──
+let gmIniciado = false;
+
+const GM_FREQ_COLORS = {
+  'Una vez por semana':                          '#3b82f6',
+  'Una vez al mes':                              '#22c55e',
+  'Una vez cada 15 días':                        '#a855f7',
+  'Sólo cuando tengo una actividad específica':  '#f59e0b',
+  'Sin dato':                                    '#d1d5db',
+};
+
+async function iniciarGrupoMotor() {
+  if (!gmIniciado) {
+    gmIniciado = true;
+    await cargarFiltrosGm();
+    ['gm-anio','gm-semestre'].forEach(id =>
+      document.getElementById(id).addEventListener('change', () => { limpiarFiltrosCascada('gm'); cargarFiltrosGm(); }));
+    document.getElementById('gm-region').addEventListener('change', () => { limpiarFiltrosCascada('gm','region'); cargarFiltrosGm(); });
+    document.getElementById('gm-provincia').addEventListener('change', () => { limpiarFiltrosCascada('gm','provincia'); cargarFiltrosGm(); });
+    document.getElementById('gm-emaus').addEventListener('change', () => { limpiarFiltrosCascada('gm','emaus'); cargarFiltrosGm(); });
+    document.getElementById('btn-gm-filtrar').addEventListener('click', cargarGrupoMotor);
+  }
+  cargarGrupoMotor();
+}
+
+async function cargarFiltrosGm() {
+  const params = new URLSearchParams({ anio: document.getElementById('gm-anio').value, semestre: document.getElementById('gm-semestre').value });
+  const region = document.getElementById('gm-region').value;
+  const prov   = document.getElementById('gm-provincia').value;
+  const emausId= document.getElementById('gm-emaus').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('gm-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('gm-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('gm-emaus',    f.emaus);
+    poblarSelectFiltro('gm-ee',       f.ee);
+  } catch(e) { console.warn('filtros gm', e); }
+}
+
+async function cargarGrupoMotor() {
+  const contenido = document.getElementById('gm-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({ anio: document.getElementById('gm-anio').value, semestre: document.getElementById('gm-semestre').value });
+  const region = document.getElementById('gm-region').value;
+  const prov   = document.getElementById('gm-provincia').value;
+  const emausId= document.getElementById('gm-emaus').value;
+  const eeId   = document.getElementById('gm-ee').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  if (eeId)    params.set('ee_id', eeId);
+  try {
+    const d = await api.get('/tablero/grupo-motor?' + params.toString());
+    if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
+
+    // Donut de frecuencia
+    const cx = 100, cy = 100, r = 70, stroke = 28;
+    const totalFreq = d.frecuencia.reduce((s, f) => s + f.cantidad, 0);
+    let startAngle = -Math.PI / 2;
+    let paths = '';
+    d.frecuencia.forEach(f => {
+      if (!f.cantidad) return;
+      const angle = (f.cantidad / totalFreq) * 2 * Math.PI;
+      const x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle);
+      const x2 = cx + r * Math.cos(startAngle + angle), y2 = cy + r * Math.sin(startAngle + angle);
+      const large = angle > Math.PI ? 1 : 0;
+      const color = GM_FREQ_COLORS[f.valor] || '#9ca3af';
+      paths += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z" fill="${color}" opacity="0.9">
+        <title>${f.valor}: ${f.cantidad} (${f.pct}%)</title></path>`;
+      startAngle += angle;
+    });
+    const donutSvg = `<svg viewBox="0 0 200 200" class="ae-donut-svg">
+      ${paths}
+      <circle cx="${cx}" cy="${cy}" r="${r - stroke}" fill="white"/>
+      <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="13" fill="#374151" font-weight="600">${d.total_ee}</text>
+      <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="10" fill="#6b7280">EEs relevados</text>
+    </svg>`;
+    const freqLegend = d.frecuencia.filter(f => f.cantidad > 0).map(f => {
+      const color = GM_FREQ_COLORS[f.valor] || '#9ca3af';
+      return `<div class="ae-legend-item">
+        <div class="ae-legend-dot" style="background:${color}"></div>
+        <span>${f.valor} — ${f.pct}%</span>
+      </div>`;
+    }).join('');
+
+    // Barras de rangos de cantidad
+    const statCantidad = `
+      <div style="display:flex;gap:24px;margin-bottom:12px">
+        <div><span style="font-size:22px;font-weight:700;color:#111827">${d.cantidad.promedio ?? '—'}</span> <span style="color:#6b7280;font-size:13px">promedio</span></div>
+        <div><span style="font-size:22px;font-weight:700;color:#111827">${d.cantidad.mediana ?? '—'}</span> <span style="color:#6b7280;font-size:13px">mediana</span></div>
+      </div>`;
+    const rangoBars = d.cantidad.rangos.map(rg => `
+      <div class="ae-bar-row">
+        <div class="ae-bar-label" style="width:90px">${rg.rango}</div>
+        <div class="ae-bar-track">
+          <div class="ae-bar-fill" style="width:${rg.pct}%;background:#6366f1"></div>
+        </div>
+        <div style="width:80px;flex-shrink:0;font-size:13px;color:#374151">
+          <strong>${rg.pct}%</strong> <span style="color:#6b7280">(${rg.cantidad})</span>
+        </div>
+      </div>`).join('');
+
+    // Barras de roles
+    const rolesBars = d.roles.map(r => `
+      <div class="ae-bar-row">
+        <div class="ae-bar-label" style="width:260px">${r.rol}</div>
+        <div class="ae-bar-track">
+          <div class="ae-bar-fill" style="width:${r.pct}%;background:#0ea5e9"></div>
+        </div>
+        <div style="width:80px;flex-shrink:0;font-size:13px;color:#374151">
+          <strong>${r.pct}%</strong> <span style="color:#6b7280">(${r.cantidad})</span>
+        </div>
+      </div>`).join('');
+
+    contenido.innerHTML = `
+      <p class="ae-info">${d.total_ee} EEs relevados</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px">
+        <div>
+          <div class="ae-bars-title">Frecuencia de reunión</div>
+          <div class="ae-donut-wrap">${donutSvg}</div>
+          <div class="ae-legend">${freqLegend}</div>
+        </div>
+        <div>
+          <div class="ae-bars-title">Cantidad de integrantes</div>
+          ${statCantidad}
+          ${rangoBars || '<p class="text-muted" style="font-size:13px">Sin datos</p>'}
+        </div>
+      </div>
+      <div class="ae-bars-title">Roles del grupo motor <span style="font-weight:400;color:#6b7280;font-size:13px">(% EEs que declaró cada rol)</span></div>
+      ${rolesBars || '<p class="text-muted" style="font-size:13px">Sin datos</p>'}
+    `;
+  } catch(e) {
+    contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+  }
+}
+
+// ── Tab Itinerancia ──
+let itIniciado = false;
+
+const IT_REALIZA_COLORS = { 'Sí': '#22c55e', 'No': '#ec4899', 'Sin dato': '#d1d5db' };
+const IT_FREQ_COLORS = {
+  '1 vez por semana':            '#3b82f6',
+  'Más de una vez por semana':   '#f59e0b',
+  'Una vez cada 15 días':        '#a855f7',
+  '1 vez por mes':               '#22c55e',
+  '1 vez por año':               '#ec4899',
+  'Sin dato':                    '#d1d5db',
+};
+
+function itDonut(items, colorMap, totalLabel, totalValor) {
+  const cx = 100, cy = 100, r = 70, stroke = 28;
+  const total = items.reduce((s, f) => s + f.cantidad, 0);
+  if (!total) return { svg: '', legend: '' };
+  let startAngle = -Math.PI / 2;
+  let paths = '';
+  items.forEach(f => {
+    if (!f.cantidad) return;
+    const angle = (f.cantidad / total) * 2 * Math.PI;
+    const x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle);
+    const x2 = cx + r * Math.cos(startAngle + angle), y2 = cy + r * Math.sin(startAngle + angle);
+    const large = angle > Math.PI ? 1 : 0;
+    const key = f.valor || f.actividad || f.espacio || f.rol;
+    const color = colorMap[key] || '#9ca3af';
+    paths += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z" fill="${color}" opacity="0.9">
+      <title>${key}: ${f.cantidad} (${f.pct}%)</title></path>`;
+    startAngle += angle;
+  });
+  const svg = `<svg viewBox="0 0 200 200" class="ae-donut-svg">
+    ${paths}
+    <circle cx="${cx}" cy="${cy}" r="${r - stroke}" fill="white"/>
+    <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="13" fill="#374151" font-weight="600">${totalValor}</text>
+    <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="10" fill="#6b7280">${totalLabel}</text>
+  </svg>`;
+  const legend = items.filter(f => f.cantidad > 0).map(f => {
+    const key = f.valor || f.actividad || f.espacio || f.rol;
+    const color = colorMap[key] || '#9ca3af';
+    return `<div class="ae-legend-item">
+      <div class="ae-legend-dot" style="background:${color}"></div>
+      <span>${key} — ${f.pct}%</span>
+    </div>`;
+  }).join('');
+  return { svg, legend };
+}
+
+function itBarras(items, labelKey, color, labelWidth) {
+  if (!items || !items.length) return '<p class="text-muted" style="font-size:13px">Sin datos</p>';
+  return items.map(item => `
+    <div class="ae-bar-row">
+      <div class="ae-bar-label" style="width:${labelWidth || 240}px">${item[labelKey]}</div>
+      <div class="ae-bar-track">
+        <div class="ae-bar-fill" style="width:${item.pct}%;background:${color}"></div>
+      </div>
+      <div style="width:80px;flex-shrink:0;font-size:13px;color:#374151">
+        <strong>${item.pct}%</strong> <span style="color:#6b7280">(${item.cantidad})</span>
+      </div>
+    </div>`).join('');
+}
+
+async function iniciarItinerancia() {
+  if (!itIniciado) {
+    itIniciado = true;
+    await cargarFiltrosIt();
+    ['it-anio','it-semestre'].forEach(id =>
+      document.getElementById(id).addEventListener('change', () => { limpiarFiltrosCascada('it'); cargarFiltrosIt(); }));
+    document.getElementById('it-region').addEventListener('change', () => { limpiarFiltrosCascada('it','region'); cargarFiltrosIt(); });
+    document.getElementById('it-provincia').addEventListener('change', () => { limpiarFiltrosCascada('it','provincia'); cargarFiltrosIt(); });
+    document.getElementById('it-emaus').addEventListener('change', () => { limpiarFiltrosCascada('it','emaus'); cargarFiltrosIt(); });
+    document.getElementById('btn-it-filtrar').addEventListener('click', cargarItinerancia);
+  }
+  cargarItinerancia();
+}
+
+async function cargarFiltrosIt() {
+  const params = new URLSearchParams({ anio: document.getElementById('it-anio').value, semestre: document.getElementById('it-semestre').value });
+  const region = document.getElementById('it-region').value;
+  const prov   = document.getElementById('it-provincia').value;
+  const emausId= document.getElementById('it-emaus').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('it-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('it-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('it-emaus',    f.emaus);
+    poblarSelectFiltro('it-ee',       f.ee);
+  } catch(e) { console.warn('filtros it', e); }
+}
+
+async function cargarItinerancia() {
+  const contenido = document.getElementById('it-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({ anio: document.getElementById('it-anio').value, semestre: document.getElementById('it-semestre').value });
+  const region = document.getElementById('it-region').value;
+  const prov   = document.getElementById('it-provincia').value;
+  const emausId= document.getElementById('it-emaus').value;
+  const eeId   = document.getElementById('it-ee').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  if (eeId)    params.set('ee_id', eeId);
+  try {
+    const d = await api.get('/tablero/itinerancia?' + params.toString());
+    if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
+
+    const realizaDonut = itDonut(d.realiza, IT_REALIZA_COLORS, 'EEs relevados', d.total_ee);
+
+    if (!d.total_realiza) {
+      contenido.innerHTML = `
+        <p class="ae-info">${d.total_ee} EEs relevados</p>
+        <div style="max-width:420px">
+          <div class="ae-bars-title">¿Realiza itinerancia?</div>
+          <div class="ae-donut-wrap">${realizaDonut.svg}</div>
+          <div class="ae-legend">${realizaDonut.legend}</div>
+        </div>
+        <p class="text-muted text-center py-4">Ningún EE declaró realizar itinerancia en este período.</p>`;
+      return;
+    }
+
+    const freqDonut = itDonut(d.frecuencia, IT_FREQ_COLORS, 'realizan itinerancia', d.total_realiza);
+
+    contenido.innerHTML = `
+      <p class="ae-info">${d.total_ee} EEs relevados · ${d.total_realiza} realizan itinerancia</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px">
+        <div>
+          <div class="ae-bars-title">¿Realiza itinerancia?</div>
+          <div class="ae-donut-wrap">${realizaDonut.svg}</div>
+          <div class="ae-legend">${realizaDonut.legend}</div>
+        </div>
+        <div>
+          <div class="ae-bars-title">Frecuencia</div>
+          <div class="ae-donut-wrap">${freqDonut.svg}</div>
+          <div class="ae-legend">${freqDonut.legend}</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px">
+        <div>
+          <div class="ae-bars-title">Actividades realizadas <span style="font-weight:400;color:#6b7280;font-size:13px">(sobre ${d.total_realiza} EEs)</span></div>
+          ${itBarras(d.actividades, 'actividad', '#10b981', 200)}
+        </div>
+        <div>
+          <div class="ae-bars-title">Espacios donde se realiza <span style="font-weight:400;color:#6b7280;font-size:13px">(sobre ${d.total_realiza} EEs)</span></div>
+          ${itBarras(d.espacios, 'espacio', '#f59e0b', 200)}
+        </div>
+      </div>
+
+      <div class="ae-bars-title">Roles <span style="font-weight:400;color:#6b7280;font-size:13px">(% sobre ${d.total_realiza} EEs que realizan itinerancia)</span></div>
+      ${itBarras(d.roles, 'rol', '#0ea5e9', 260)}
+    `;
+  } catch(e) {
+    contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+  }
+}
+
+// ── Tab BTU ──
+let btuIniciado = false;
+
+async function iniciarBtu() {
+  if (!btuIniciado) {
+    btuIniciado = true;
+    await cargarFiltrosBtu();
+    ['btu-anio','btu-semestre'].forEach(id =>
+      document.getElementById(id).addEventListener('change', () => { limpiarFiltrosCascada('btu'); cargarFiltrosBtu(); }));
+    document.getElementById('btu-region').addEventListener('change', () => { limpiarFiltrosCascada('btu','region'); cargarFiltrosBtu(); });
+    document.getElementById('btu-provincia').addEventListener('change', () => { limpiarFiltrosCascada('btu','provincia'); cargarFiltrosBtu(); });
+    document.getElementById('btu-emaus').addEventListener('change', () => { limpiarFiltrosCascada('btu','emaus'); cargarFiltrosBtu(); });
+    document.getElementById('btn-btu-filtrar').addEventListener('click', cargarBtu);
+  }
+  cargarBtu();
+}
+
+async function cargarFiltrosBtu() {
+  const params = new URLSearchParams({ anio: document.getElementById('btu-anio').value, semestre: document.getElementById('btu-semestre').value });
+  const region = document.getElementById('btu-region').value;
+  const prov   = document.getElementById('btu-provincia').value;
+  const emausId= document.getElementById('btu-emaus').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('btu-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('btu-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('btu-emaus',    f.emaus);
+    poblarSelectFiltro('btu-ee',       f.ee);
+  } catch(e) { console.warn('filtros btu', e); }
+}
+
+async function cargarBtu() {
+  const contenido = document.getElementById('btu-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({ anio: document.getElementById('btu-anio').value, semestre: document.getElementById('btu-semestre').value });
+  const region = document.getElementById('btu-region').value;
+  const prov   = document.getElementById('btu-provincia').value;
+  const emausId= document.getElementById('btu-emaus').value;
+  const eeId   = document.getElementById('btu-ee').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  if (eeId)    params.set('ee_id', eeId);
+  try {
+    const d = await api.get('/tablero/btu?' + params.toString());
+    if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
+
+    const motivosHtml = d.motivos.length
+      ? itBarras(d.motivos, 'motivo', '#ef4444', 260)
+      : '<p class="text-muted" style="font-size:13px">Sin datos de motivos de interrupción</p>';
+
+    contenido.innerHTML = `
+      <p class="ae-info">${d.total_ee} EEs relevados</p>
+      <div class="kpi-grid" style="margin-bottom:32px">
+        <div class="kpi-card kpi-blue">
+          <div class="kpi-label">Diócesis con BTU</div>
+          <div class="kpi-value">${d.diocesis_con_btu}</div>
+        </div>
+        <div class="kpi-card kpi-teal">
+          <div class="kpi-label">Regulares</div>
+          <div class="kpi-value">${d.regulares}</div>
+        </div>
+        <div class="kpi-card kpi-yellow">
+          <div class="kpi-label">Interrumpidos</div>
+          <div class="kpi-value">${d.interrumpidos}</div>
+        </div>
+        <div class="kpi-card kpi-green">
+          <div class="kpi-label">Egresados</div>
+          <div class="kpi-value">${d.egresados}</div>
+        </div>
+      </div>
+      <div class="ae-bars-title">Motivo de interrupción <span style="font-weight:400;color:#6b7280;font-size:13px">(sobre ${d.total_con_motivo} EEs con motivo registrado; "Otro" agrupa respuestas de texto libre)</span></div>
+      ${motivosHtml}
+    `;
   } catch(e) {
     contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
   }

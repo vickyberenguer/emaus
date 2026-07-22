@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
@@ -13,6 +13,8 @@ from app.models.espacio_educativo import (
     RelevamientoEEAccion, RelevamientoEEApoyoPrimarioContenido,
     RelevamientoEEApoyoSecundarioContenido,
     EEAmbiente, EEServicio, EEEquipoCocina, EEEquipoInformatico, EEZona,
+    RelevamientoEEGrupoMotorRol, RelevamientoEEItineranciaActividad,
+    RelevamientoEEItineranciaEspacio, RelevamientoEEBTUAbandonoMotivo,
 )
 from app.routers.auth import get_current_user, require_rol
 from app.routers.control import ANIO_ACTIVO, SEMESTRE_ACTIVO, emaus_ids_for_user
@@ -466,6 +468,326 @@ def edilicias(
         "servicios": bars(serv_counts),
         "equipos_cocina": bars(cocina_counts),
         "equipos_informatico": informatico,
+    }
+
+
+@router.get("/grupo-motor")
+def grupo_motor(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    ee_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+):
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE.id, RelevamientoEE.grupo_motor_cantidad,
+                 RelevamientoEE.grupo_motor_frecuencia)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region == region)
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+
+    ree_rows = ree_query.all()
+    ree_ids = [r[0] for r in ree_rows]
+    total = len(ree_ids)
+    if not total:
+        return {"total_ee": 0}
+
+    def pct(n): return round(n / total * 100, 1) if total else 0
+
+    # Frecuencia de reunión
+    freq_counts: Dict[str, int] = {}
+    for r in ree_rows:
+        k = r[2] or "Sin dato"
+        freq_counts[k] = freq_counts.get(k, 0) + 1
+    frecuencia = sorted(
+        [{"valor": k, "cantidad": v, "pct": pct(v)} for k, v in freq_counts.items()],
+        key=lambda x: -x["cantidad"],
+    )
+
+    # Cantidad de integrantes — estadística + rangos
+    cantidades = [r[1] for r in ree_rows if r[1] is not None]
+    promedio = round(sum(cantidades) / len(cantidades), 1) if cantidades else None
+    mediana = None
+    if cantidades:
+        s = sorted(cantidades)
+        n = len(s)
+        mediana = s[n // 2] if n % 2 else round((s[n // 2 - 1] + s[n // 2]) / 2, 1)
+
+    def rango_de(n):
+        if n == 0: return "0"
+        if n <= 3: return "1-3"
+        if n <= 6: return "4-6"
+        if n <= 10: return "7-10"
+        return "11+"
+
+    rango_counts: Dict[str, int] = {}
+    sin_dato = 0
+    for r in ree_rows:
+        if r[1] is None:
+            sin_dato += 1
+        else:
+            k = rango_de(r[1])
+            rango_counts[k] = rango_counts.get(k, 0) + 1
+    orden_rangos = ["0", "1-3", "4-6", "7-10", "11+"]
+    rangos = [
+        {"rango": k, "cantidad": rango_counts.get(k, 0), "pct": pct(rango_counts.get(k, 0))}
+        for k in orden_rangos if rango_counts.get(k, 0) > 0
+    ]
+    if sin_dato:
+        rangos.append({"rango": "Sin dato", "cantidad": sin_dato, "pct": pct(sin_dato)})
+
+    # Roles del grupo motor (texto libre, hasta 4 por EE) — % sobre EE distintos
+    rol_rows = (
+        db.query(
+            RelevamientoEEGrupoMotorRol.rol,
+            func.count(func.distinct(RelevamientoEEGrupoMotorRol.relevamiento_ee_id)),
+        )
+        .filter(RelevamientoEEGrupoMotorRol.relevamiento_ee_id.in_(ree_ids))
+        .group_by(RelevamientoEEGrupoMotorRol.rol)
+        .all()
+    )
+    roles = sorted(
+        [{"rol": r[0], "cantidad": r[1], "pct": pct(r[1])} for r in rol_rows],
+        key=lambda x: -x["cantidad"],
+    )
+
+    return {
+        "total_ee": total,
+        "frecuencia": frecuencia,
+        "cantidad": {"promedio": promedio, "mediana": mediana, "rangos": rangos},
+        "roles": roles,
+    }
+
+
+@router.get("/itinerancia")
+def itinerancia(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    ee_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+):
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE.id, RelevamientoEE.itinerancia_realizo,
+                 RelevamientoEE.itinerancia_frecuencia)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region == region)
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+
+    ree_rows = ree_query.all()
+    total = len(ree_rows)
+    if not total:
+        return {"total_ee": 0}
+
+    def pct(n, base): return round(n / base * 100, 1) if base else 0
+
+    # ¿Realiza itinerancia?
+    si = sum(1 for r in ree_rows if r[1] is True)
+    no = sum(1 for r in ree_rows if r[1] is False)
+    sin_dato = total - si - no
+    realiza = [
+        {"valor": "Sí", "cantidad": si, "pct": pct(si, total)},
+        {"valor": "No", "cantidad": no, "pct": pct(no, total)},
+        {"valor": "Sin dato", "cantidad": sin_dato, "pct": pct(sin_dato, total)},
+    ]
+
+    # Ids de EE que realizan itinerancia — base para el resto de las secciones
+    ree_ids_realiza = [r[0] for r in ree_rows if r[1] is True]
+    total_realiza = len(ree_ids_realiza)
+
+    if not total_realiza:
+        return {"total_ee": total, "realiza": realiza, "total_realiza": 0,
+                "frecuencia": [], "actividades": [], "espacios": [], "roles": []}
+
+    # Frecuencia — sobre EE que realizan itinerancia
+    freq_counts: Dict[str, int] = {}
+    for r in ree_rows:
+        if r[1] is True:
+            k = r[2] or "Sin dato"
+            freq_counts[k] = freq_counts.get(k, 0) + 1
+    frecuencia = sorted(
+        [{"valor": k, "cantidad": v, "pct": pct(v, total_realiza)} for k, v in freq_counts.items()],
+        key=lambda x: -x["cantidad"],
+    )
+
+    # Actividades realizadas
+    act_rows = (
+        db.query(
+            RelevamientoEEItineranciaActividad.actividad,
+            func.count(func.distinct(RelevamientoEEItineranciaActividad.relevamiento_ee_id)),
+        )
+        .filter(RelevamientoEEItineranciaActividad.relevamiento_ee_id.in_(ree_ids_realiza))
+        .group_by(RelevamientoEEItineranciaActividad.actividad)
+        .all()
+    )
+    actividades = sorted(
+        [{"actividad": r[0], "cantidad": r[1], "pct": pct(r[1], total_realiza)} for r in act_rows],
+        key=lambda x: -x["cantidad"],
+    )
+
+    # Espacios donde se realiza
+    esp_rows = (
+        db.query(
+            RelevamientoEEItineranciaEspacio.espacio,
+            func.count(func.distinct(RelevamientoEEItineranciaEspacio.relevamiento_ee_id)),
+        )
+        .filter(RelevamientoEEItineranciaEspacio.relevamiento_ee_id.in_(ree_ids_realiza))
+        .group_by(RelevamientoEEItineranciaEspacio.espacio)
+        .all()
+    )
+    espacios = sorted(
+        [{"espacio": r[0], "cantidad": r[1], "pct": pct(r[1], total_realiza)} for r in esp_rows],
+        key=lambda x: -x["cantidad"],
+    )
+
+    # Roles (texto libre)
+    rol_rows = (
+        db.query(
+            RelevamientoEEItineranciaRol.rol,
+            func.count(func.distinct(RelevamientoEEItineranciaRol.relevamiento_ee_id)),
+        )
+        .filter(RelevamientoEEItineranciaRol.relevamiento_ee_id.in_(ree_ids_realiza))
+        .group_by(RelevamientoEEItineranciaRol.rol)
+        .all()
+    )
+    roles = sorted(
+        [{"rol": r[0], "cantidad": r[1], "pct": pct(r[1], total_realiza)} for r in rol_rows],
+        key=lambda x: -x["cantidad"],
+    )
+
+    return {
+        "total_ee": total,
+        "realiza": realiza,
+        "total_realiza": total_realiza,
+        "frecuencia": frecuencia,
+        "actividades": actividades,
+        "espacios": espacios,
+        "roles": roles,
+    }
+
+
+@router.get("/btu")
+def btu(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    ee_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+):
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE.id, RelevamientoEE.btu_regulares,
+                 RelevamientoEE.btu_abandonaron, RelevamientoEE.btu_egresados,
+                 Diocesis.id)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region == region)
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+
+    ree_rows = ree_query.all()
+    total = len(ree_rows)
+    if not total:
+        return {"total_ee": 0}
+
+    ree_ids = [r[0] for r in ree_rows]
+    regulares    = sum(r[1] for r in ree_rows if r[1])
+    interrumpidos= sum(r[2] for r in ree_rows if r[2])
+    egresados    = sum(r[3] for r in ree_rows if r[3])
+    diocesis_con_btu = len({r[4] for r in ree_rows if r[1]})
+
+    # Motivos de interrupción — los 6 estructurados + un solo grupo "Otro"
+    # (texto libre, sin normalizar variantes)
+    motivo_label = func.if_(
+        RelevamientoEEBTUAbandonoMotivo.motivo.like("Otro:%"),
+        "Otro",
+        RelevamientoEEBTUAbandonoMotivo.motivo,
+    )
+    motivo_rows = (
+        db.query(motivo_label, func.count(func.distinct(RelevamientoEEBTUAbandonoMotivo.relevamiento_ee_id)))
+        .filter(RelevamientoEEBTUAbandonoMotivo.relevamiento_ee_id.in_(ree_ids))
+        .group_by(motivo_label)
+        .all()
+    )
+    total_con_motivo = len({
+        r[0] for r in
+        db.query(RelevamientoEEBTUAbandonoMotivo.relevamiento_ee_id)
+        .filter(RelevamientoEEBTUAbandonoMotivo.relevamiento_ee_id.in_(ree_ids)).all()
+    })
+    def pct(n): return round(n / total_con_motivo * 100, 1) if total_con_motivo else 0
+    motivos = sorted(
+        [{"motivo": r[0], "cantidad": r[1], "pct": pct(r[1])} for r in motivo_rows],
+        key=lambda x: -x["cantidad"],
+    )
+
+    return {
+        "total_ee": total,
+        "diocesis_con_btu": diocesis_con_btu,
+        "regulares": regulares,
+        "interrumpidos": interrumpidos,
+        "egresados": egresados,
+        "total_con_motivo": total_con_motivo,
+        "motivos": motivos,
     }
 
 

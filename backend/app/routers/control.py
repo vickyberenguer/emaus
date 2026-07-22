@@ -241,8 +241,8 @@ def sync_estado(current_user: Usuario = Depends(require_rol("admin", "responsabl
         return {"estado": "nunca", "iniciado_en": None}
     return {
         "estado":        row.estado,
-        "iniciado_en":   row.iniciado_en.isoformat() if row.iniciado_en else None,
-        "finalizado_en": row.finalizado_en.isoformat() if row.finalizado_en else None,
+        "iniciado_en":   row.iniciado_en.isoformat() + "Z" if row.iniciado_en else None,
+        "finalizado_en": row.finalizado_en.isoformat() + "Z" if row.finalizado_en else None,
         "ok_count":      row.ok_count,
         "err_count":     row.err_count,
         "skip_count":    row.skip_count,
@@ -334,6 +334,7 @@ def trigger_sync(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
     emaus_id: Optional[int] = None,
+    force: bool = False,
     current_user: Usuario = Depends(require_rol("admin")),
 ):
     """
@@ -350,7 +351,8 @@ def trigger_sync(
     if lambda_name:
         # En Lambda: invocar asíncronamente para que corra sin límite de API Gateway
         import boto3, json
-        payload = {"source": "manual-sync", "anio": anio, "semestre": semestre, "apply_reset": True}
+        payload = {"source": "manual-sync", "anio": anio, "semestre": semestre,
+                   "apply_reset": True, "force": force}
         if emaus_id:
             payload["emaus_id"] = emaus_id
         boto3.client("lambda", region_name=os.getenv("AWS_REGION", "us-east-1")).invoke(
@@ -365,7 +367,7 @@ def trigger_sync(
         threading.Thread(
             target=run_sync,
             args=(folder_id, anio, semestre, emaus_id),
-            kwargs={"apply_reset": True},
+            kwargs={"apply_reset": True, "force": force},
             daemon=True,
         ).start()
 

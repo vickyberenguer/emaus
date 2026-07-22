@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -26,6 +26,7 @@ class Emaus(Base):
     frecuencia_acciones = Column(String(100))
     activo = Column(Boolean, default=True)
     spreadsheet_id = Column(String(200), nullable=True)
+    ultima_modificacion_sheet = Column(DateTime, nullable=True)
 
     diocesis = relationship("Diocesis", back_populates="emaus_list")
     atl = relationship("Usuario", back_populates="emaus")
