@@ -1208,10 +1208,25 @@ def establecimientos_tab(
         key=lambda x: -x["cantidad"],
     )
 
+    niveles_raw = [
+        ("Primario",                          sum(1 for _, e in rows if e and e.primario)),
+        ("Secundario",                        sum(1 for _, e in rows if e and e.secundario)),
+        ("Adultos",                           sum(1 for _, e in rows if e and e.adultos)),
+        ("Formación Profesional",             sum(1 for _, e in rows if e and e.formacion_profesional)),
+        ("Alfabetización",                    sum(1 for _, e in rows if e and e.alfabetizacion)),
+        ("Nivel Inicial - Jardín Maternal",   sum(1 for _, e in rows if e and e.nivel_inicial_maternal)),
+        ("Nivel Inicial - Jardín de Infantes", sum(1 for _, e in rows if e and e.nivel_inicial_infantes)),
+    ]
+    niveles = sorted(
+        [{"nivel": n, "cantidad": v, "pct": pct(v)} for n, v in niveles_raw],
+        key=lambda x: -x["cantidad"],
+    )
+
     return {
         "total_establecimientos": total,
         "acciones": acciones,
         "ambito": ambito,
+        "niveles": niveles,
         "jurisdiccion": jurisdiccion,
     }
 

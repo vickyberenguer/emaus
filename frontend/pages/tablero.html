@@ -2271,7 +2271,7 @@ async function cargarEstablecimientos() {
       <div class="ae-bars-title">Acciones</div>
       <div style="max-width:520px;margin-bottom:32px">${itBarras(d.acciones, 'accion', '#0ea5e9', 150)}</div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px">
         <div>
           <div class="ae-bars-title">Ámbito</div>
           <div class="ae-donut-wrap">${ambitoDonut.svg}</div>
@@ -2282,6 +2282,9 @@ async function cargarEstablecimientos() {
           ${itBarras(d.jurisdiccion, 'jurisdiccion', '#ec4899', 160)}
         </div>
       </div>
+
+      <div class="ae-bars-title">Niveles ofrecidos <span style="font-weight:400;color:#6b7280;font-size:13px">(% de establecimientos)</span></div>
+      <div style="max-width:560px">${itBarras(d.niveles, 'nivel', '#22c55e', 260)}</div>
     `;
   } catch(e) {
     contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
