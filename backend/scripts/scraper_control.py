@@ -536,7 +536,7 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
 
         idx = len(batch_ranges)
         range_index["estab_data"] = idx
-        batch_ranges.append(f"'{ESTABLECIMIENTOS_SHEET}'!A2:B")
+        batch_ranges.append(f"'{ESTABLECIMIENTOS_SHEET}'!A3:K")
 
     batch_resp = execute_with_retry(
         sheets.spreadsheets().values().batchGet(
@@ -627,7 +627,8 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
         )
 
     cantidad_talleres = count_filled_rows(get_values("talleres_data")) if has_talleres else 0
-    cantidad_establecimientos = count_filled_rows(get_values("estab_data")) if has_establecimientos else 0
+    estab_rows_data = get_values("estab_data") if has_establecimientos else []
+    cantidad_establecimientos = count_filled_rows(estab_rows_data)
 
     return {
         "ee_count": len(ee_titles),
@@ -646,6 +647,7 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
         "validation_errors": all_validation_errors,
         "ee_field_data": ee_field_data,
         "pi_field_data": pi_field_data,
+        "estab_rows_data": estab_rows_data,
     }
 
 
@@ -1515,6 +1517,80 @@ def upsert_pastoral_pi(engine, emaus_id: int, anio: int, semestre: str,
 
 
 # ---------------------------------------------------------------------------
+# Establecimientos educativos articulados
+# ---------------------------------------------------------------------------
+
+def upsert_establecimientos(engine, emaus_id: int, anio: int, semestre: str,
+                             estab_rows_data: Optional[List[List]]) -> None:
+    """Upserta establecimiento_estado (por CUE) y establecimiento_articulado
+    a partir de la hoja 'Establecimientos' de la planilla.
+
+    Columnas (fila 3 en adelante): A=Jurisdicción, B=Ámbito, C=Departamento,
+    D=Localidad, E=Establecimiento, F-J=Acciones, K=CUE.
+    """
+    if not estab_rows_data:
+        return
+
+    with engine.begin() as conn:
+        rel = conn.execute(
+            text("SELECT id FROM relevamiento WHERE emaus_id=:eid AND anio=:a AND semestre=:s LIMIT 1"),
+            {"eid": emaus_id, "a": anio, "s": semestre},
+        ).fetchone()
+        if not rel:
+            return
+        relevamiento_id = rel[0]
+
+        articulaciones = []
+        for row in estab_rows_data:
+            row = list(row) + [""] * (11 - len(row))  # padear por si la fila viene corta
+            jurisdiccion, ambito, departamento, localidad, nombre = (str(x or "").strip() for x in row[0:5])
+            cue = str(row[10] or "").strip()
+            if not cue:
+                continue  # sin CUE no se puede vincular/crear establecimiento_estado
+
+            estab = conn.execute(
+                text("SELECT id FROM establecimiento_estado WHERE cueanexo=:cue LIMIT 1"),
+                {"cue": cue},
+            ).fetchone()
+            if estab:
+                establecimiento_id = estab[0]
+            else:
+                res = conn.execute(text("""
+                    INSERT INTO establecimiento_estado
+                        (cueanexo, jurisdiccion, ambito, departamento, localidad, nombre, actualizado_en)
+                    VALUES (:cue, :jur, :amb, :depto, :loc, :nom, :hoy)
+                """), {"cue": cue, "jur": jurisdiccion or None, "amb": ambito or None,
+                       "depto": departamento or None, "loc": localidad or None,
+                       "nom": nombre or None, "hoy": datetime.utcnow().date()})
+                establecimiento_id = res.lastrowid
+
+            articulaciones.append({
+                "rel_id": relevamiento_id,
+                "estab_id": establecimiento_id,
+                "institucion": bool(_to_bool(row[5])),
+                "alfa": bool(_to_bool(row[6])),
+                "seguimiento": bool(_to_bool(row[7])),
+                "intercambio": bool(_to_bool(row[8])),
+                "otros": bool(_to_bool(row[9])),
+            })
+
+        # Dedup por establecimiento_id (si el mismo CUE aparece más de una vez en la
+        # planilla) para no violar el UNIQUE KEY (relevamiento_id, establecimiento_id)
+        articulaciones = list({a["estab_id"]: a for a in articulaciones}.values())
+
+        conn.execute(text(
+            "DELETE FROM establecimiento_articulado WHERE relevamiento_id = :rid"
+        ), {"rid": relevamiento_id})
+        if articulaciones:
+            conn.execute(text("""
+                INSERT INTO establecimiento_articulado
+                    (relevamiento_id, establecimiento_id, accion_institucion,
+                     accion_articulacion_alfa, accion_seguimiento, accion_intercambio, accion_otros)
+                VALUES (:rel_id, :estab_id, :institucion, :alfa, :seguimiento, :intercambio, :otros)
+            """), articulaciones)
+
+
+# ---------------------------------------------------------------------------
 # Persistencia en TiDB
 # ---------------------------------------------------------------------------
 
@@ -1522,6 +1598,7 @@ def upsert_control(engine, emaus_id: int, anio: int, semestre: str, metrics: Dic
     errors = metrics.pop("validation_errors", [])
     ee_field_data = metrics.pop("ee_field_data", {})
     pi_field_data = metrics.pop("pi_field_data", None)
+    estab_rows_data = metrics.pop("estab_rows_data", None)
     metrics.setdefault("btu_actual", None)
     metrics.setdefault("bf_actual", None)
 
@@ -1596,6 +1673,8 @@ def upsert_control(engine, emaus_id: int, anio: int, semestre: str, metrics: Dic
         upsert_relevamiento_ee(engine, emaus_id, anio, semestre, ee_field_data)
     if pi_field_data:
         upsert_pastoral_pi(engine, emaus_id, anio, semestre, pi_field_data)
+    if estab_rows_data:
+        upsert_establecimientos(engine, emaus_id, anio, semestre, estab_rows_data)
 
 
 _EMAUS_NAME_FIXES = {
