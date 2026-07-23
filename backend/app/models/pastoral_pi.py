@@ -16,6 +16,7 @@ class PastoralPI(Base):
     id = Column(Integer, primary_key=True, index=True)
     relevamiento_id = Column(Integer, ForeignKey("relevamiento.id"), nullable=False, unique=True)
     anios_desarrollo = Column(Integer)
+    comunidades_total = Column(Integer)
     presento_metodologia = Column(Boolean)
     comunidades_sin_pastoral = Column(Integer)
     capacitadoras = Column(Integer)

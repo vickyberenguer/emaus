@@ -1407,6 +1407,11 @@ def upsert_pastoral_pi(engine, emaus_id: int, anio: int, semestre: str,
             raw = fv.get(yaml_name)
             row[col] = _to_bool(raw) if col in _PI_BOOL_COLS else _to_int(raw)
 
+        row["comunidades_total"] = sum(
+            1 for col in ("Comunidad1", "Comunidad2", "Comunidad3", "Comunidad4")
+            if str(fv.get(col) or "").strip()
+        )
+
         cols = list(row.keys())
         placeholders = ", ".join(f":{c}" for c in cols)
         updates = ", ".join(f"{c} = VALUES({c})" for c in cols if c != "relevamiento_id")

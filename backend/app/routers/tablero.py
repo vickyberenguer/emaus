@@ -8,6 +8,11 @@ from app.models.usuario import Usuario
 from app.models.emaus import Emaus, Diocesis, ResponsableEmaus
 from app.models.control import ControlRelevamiento, ControlAprobacion
 from app.models.relevamiento import Relevamiento
+from app.models.pastoral_pi import (
+    PastoralPI, PastoralPIEnfermedadNinos, PastoralPIEnfermedadEmbarazadas,
+    PastoralPIAccionLider,
+)
+from app.models.establecimiento import EstablecimientoArticulado, EstablecimientoEstado
 from app.models.espacio_educativo import (
     EspacioEducativo, RelevamientoEE, RelevamientoEEItineranciaRol,
     RelevamientoEEAccion, RelevamientoEEApoyoPrimarioContenido,
@@ -875,6 +880,339 @@ def ayj_preocupaciones(
         "total_ee": total,
         "total_con_ranking": total_con_ranking,
         "situaciones": situaciones,
+    }
+
+
+@router.get("/becas-familiares")
+def becas_familiares(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    ee_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+):
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    ree_query = (
+        db.query(
+            RelevamientoEE.id, RelevamientoEE.bf_apoyo_escolar,
+            RelevamientoEE.bf_nivel_inicial, RelevamientoEE.bf_primaria,
+            RelevamientoEE.bf_secundaria, RelevamientoEE.bf_asignaciones,
+            RelevamientoEE.bf_discapacidad, RelevamientoEE.bf_cud,
+            Diocesis.id,
+        )
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region == region)
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+
+    ree_rows = ree_query.all()
+    total = len(ree_rows)
+    if not total:
+        return {"total_ee": 0}
+
+    def suma(idx): return sum(r[idx] for r in ree_rows if r[idx])
+
+    apoyo_escolar = suma(1)
+    nivel_inicial  = suma(2)
+    primaria       = suma(3)
+    secundaria     = suma(4)
+    asignaciones   = suma(5)
+    discapacidad   = suma(6)
+    cud            = suma(7)
+    diocesis_con_bf = len({r[8] for r in ree_rows if r[1]})
+
+    niveles_raw = [
+        ("Nivel Inicial", nivel_inicial),
+        ("Escuela Primaria", primaria),
+        ("Escuela Secundaria", secundaria),
+        ("Apoyo Escolar", apoyo_escolar),
+    ]
+    max_val = max((v for _, v in niveles_raw), default=0) or 1
+    niveles = sorted(
+        [{"nivel": n, "cantidad": v, "pct": round(v / max_val * 100, 1)} for n, v in niveles_raw],
+        key=lambda x: -x["cantidad"],
+    )
+
+    return {
+        "total_ee": total,
+        "diocesis_con_bf": diocesis_con_bf,
+        "niveles": niveles,
+        "asignaciones": asignaciones,
+        "discapacidad": discapacidad,
+        "cud": cud,
+        "pct_cud": round(cud / discapacidad * 100, 1) if discapacidad else 0,
+    }
+
+
+@router.get("/primera-infancia")
+def primera_infancia(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+):
+    # PI es un dato por Emaús (no por EE): sin filtro de EE.
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    query = (
+        db.query(PastoralPI, Diocesis.id)
+        .join(Relevamiento, Relevamiento.id == PastoralPI.relevamiento_id)
+        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .filter(Relevamiento.anio == anio, Relevamiento.semestre == semestre)
+    )
+    if allowed_ids is not None:
+        query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        query = query.filter(Diocesis.region == region)
+    if provincia:
+        query = query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        query = query.filter(Relevamiento.emaus_id == emaus_id)
+
+    rows = query.all()
+    total = len(rows)
+    if not total:
+        return {"total_emaus": 0}
+
+    def suma(attr): return sum(getattr(pi, attr) or 0 for pi, _ in rows)
+
+    diocesis_con_pi = len({d for _, d in rows})
+    pi_ids = [pi.id for pi, _ in rows]
+
+    # Metodología presentada a otras comunidades (Sí/No/Sin dato)
+    si = sum(1 for pi, _ in rows if pi.presento_metodologia is True)
+    no = sum(1 for pi, _ in rows if pi.presento_metodologia is False)
+    sin_dato = total - si - no
+    metodologia = [
+        {"valor": "Sí",        "cantidad": si,       "pct": round(si / total * 100, 1)},
+        {"valor": "No",        "cantidad": no,       "pct": round(no / total * 100, 1)},
+        {"valor": "Sin dato",  "cantidad": sin_dato, "pct": round(sin_dato / total * 100, 1)},
+    ]
+    comunidades_metodologia = suma("comunidades_sin_pastoral")
+
+    ninos_raw = [
+        ("0 a 3 años", suma("ninos_0_3")),
+        ("4 a 6 años", suma("ninos_4_6")),
+    ]
+    max_ninos = max((v for _, v in ninos_raw), default=0) or 1
+    ninos = [{"grupo": g, "cantidad": v, "pct": round(v / max_ninos * 100, 1)} for g, v in ninos_raw]
+
+    madres_raw = [
+        ("Embarazadas 12 a 18 años", suma("madres_embarazadas_12_18")),
+        ("Embarazadas 19 a 29 años", suma("madres_embarazadas_19_29")),
+        ("Embarazadas 30 años o más", suma("madres_embarazadas_30_mas")),
+        ("No embarazadas", suma("madres_no_embarazadas")),
+    ]
+    max_madres = max((v for _, v in madres_raw), default=0) or 1
+    madres = [{"grupo": g, "cantidad": v, "pct": round(v / max_madres * 100, 1)} for g, v in madres_raw]
+
+    def top_enfermedades(model, id_field):
+        enf_rows = (
+            db.query(model.enfermedad, func.count(model.id))
+            .filter(id_field.in_(pi_ids))
+            .group_by(model.enfermedad)
+            .all()
+        )
+        total_enf = sum(r[1] for r in enf_rows) or 1
+        return sorted(
+            [{"enfermedad": r[0], "cantidad": r[1], "pct": round(r[1] / total_enf * 100, 1)} for r in enf_rows],
+            key=lambda x: -x["cantidad"],
+        )
+
+    enfermedades_ninos = top_enfermedades(PastoralPIEnfermedadNinos, PastoralPIEnfermedadNinos.pastoral_pi_id)
+    enfermedades_mujeres = top_enfermedades(PastoralPIEnfermedadEmbarazadas, PastoralPIEnfermedadEmbarazadas.pastoral_pi_id)
+
+    return {
+        "total_emaus": total,
+        "diocesis_con_pi": diocesis_con_pi,
+        "lideres": suma("lideres"),
+        "capacitadoras": suma("capacitadoras"),
+        "familias": suma("familias"),
+        "comunidades_total": suma("comunidades_total"),
+        "ninos": ninos,
+        "madres": madres,
+        "enfermedades_ninos": enfermedades_ninos,
+        "enfermedades_mujeres": enfermedades_mujeres,
+        "metodologia": metodologia,
+        "comunidades_metodologia": comunidades_metodologia,
+    }
+
+
+@router.get("/primera-infancia-acciones")
+def primera_infancia_acciones(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+):
+    # PI es un dato por Emaús (no por EE): sin filtro de EE.
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    query = (
+        db.query(PastoralPI.id, Diocesis.id)
+        .join(Relevamiento, Relevamiento.id == PastoralPI.relevamiento_id)
+        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .filter(Relevamiento.anio == anio, Relevamiento.semestre == semestre)
+    )
+    if allowed_ids is not None:
+        query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        query = query.filter(Diocesis.region == region)
+    if provincia:
+        query = query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        query = query.filter(Relevamiento.emaus_id == emaus_id)
+
+    rows = query.all()
+    total = len(rows)
+    if not total:
+        return {"total_emaus": 0}
+
+    diocesis_por_pi = {pi_id: dioc_id for pi_id, dioc_id in rows}
+    pi_ids = list(diocesis_por_pi.keys())
+
+    accion_rows = (
+        db.query(
+            PastoralPIAccionLider.pastoral_pi_id,
+            PastoralPIAccionLider.accion,
+            PastoralPIAccionLider.frecuencia,
+            PastoralPIAccionLider.cantidad_semestre,
+        )
+        .filter(PastoralPIAccionLider.pastoral_pi_id.in_(pi_ids))
+        .filter(PastoralPIAccionLider.realiza == True)
+        .all()
+    )
+
+    ACCIONES = [
+        ("celebracion_vida",     "Celebración de la vida"),
+        ("visita_domiciliaria",  "Visita domiciliaria"),
+        ("reunion_evaluacion",   "Reunión de evaluación"),
+    ]
+
+    resultado = {}
+    for clave, label in ACCIONES:
+        filas = [r for r in accion_rows if r[1] == clave]
+        diocesis_con_accion = len({diocesis_por_pi[r[0]] for r in filas})
+        cantidad_total = sum(r[3] or 0 for r in filas)
+
+        freq_counts: Dict[str, int] = {}
+        for r in filas:
+            k = (r[2] or "Sin dato").strip() or "Sin dato"
+            freq_counts[k] = freq_counts.get(k, 0) + 1
+        total_freq = len(filas) or 1
+        frecuencia = sorted(
+            [{"valor": k, "cantidad": v, "pct": round(v / total_freq * 100, 1)} for k, v in freq_counts.items()],
+            key=lambda x: -x["cantidad"],
+        )
+
+        resultado[clave] = {
+            "label": label,
+            "diocesis_con_accion": diocesis_con_accion,
+            "cantidad_total": cantidad_total,
+            "frecuencia": frecuencia,
+        }
+
+    return {"total_emaus": total, "acciones": resultado}
+
+
+@router.get("/establecimientos")
+def establecimientos_tab(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+):
+    # Establecimientos es un dato por Emaús (cargado directo en la app, no por EE ni scrapeado).
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    query = (
+        db.query(EstablecimientoArticulado, EstablecimientoEstado)
+        .join(Relevamiento, Relevamiento.id == EstablecimientoArticulado.relevamiento_id)
+        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .outerjoin(EstablecimientoEstado, EstablecimientoEstado.id == EstablecimientoArticulado.establecimiento_id)
+        .filter(Relevamiento.anio == anio, Relevamiento.semestre == semestre)
+    )
+    if allowed_ids is not None:
+        query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        query = query.filter(Diocesis.region == region)
+    if provincia:
+        query = query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        query = query.filter(Relevamiento.emaus_id == emaus_id)
+
+    rows = query.all()
+    total = len(rows)
+    if not total:
+        return {"total_establecimientos": 0}
+
+    def pct(n): return round(n / total * 100, 1) if total else 0
+
+    acciones_raw = [
+        ("Alfabetización", sum(1 for a, _ in rows if a.accion_articulacion_alfa)),
+        ("Seguimiento",     sum(1 for a, _ in rows if a.accion_seguimiento)),
+        ("Intercambio",     sum(1 for a, _ in rows if a.accion_intercambio)),
+        ("Institución",     sum(1 for a, _ in rows if a.accion_institucion)),
+        ("Otras",           sum(1 for a, _ in rows if a.accion_otros)),
+    ]
+    acciones = sorted(
+        [{"accion": n, "cantidad": v, "pct": pct(v)} for n, v in acciones_raw],
+        key=lambda x: -x["cantidad"],
+    )
+
+    ambito_counts: Dict[str, int] = {}
+    jurisdiccion_counts: Dict[str, int] = {}
+    for a, e in rows:
+        amb = (e.ambito if e else None) or "Sin dato"
+        ambito_counts[amb] = ambito_counts.get(amb, 0) + 1
+        jur = (e.jurisdiccion if e else None) or "Sin dato"
+        jurisdiccion_counts[jur] = jurisdiccion_counts.get(jur, 0) + 1
+
+    ambito = sorted(
+        [{"valor": k, "cantidad": v, "pct": pct(v)} for k, v in ambito_counts.items()],
+        key=lambda x: -x["cantidad"],
+    )
+    jurisdiccion = sorted(
+        [{"jurisdiccion": k, "cantidad": v, "pct": pct(v)} for k, v in jurisdiccion_counts.items()],
+        key=lambda x: -x["cantidad"],
+    )
+
+    return {
+        "total_establecimientos": total,
+        "acciones": acciones,
+        "ambito": ambito,
+        "jurisdiccion": jurisdiccion,
     }
 
 

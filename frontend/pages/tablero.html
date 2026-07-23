@@ -301,6 +301,10 @@
   <a href="#" class="tablero-tab" data-tab="itinerancia">Itinerancia</a>
   <a href="#" class="tablero-tab" data-tab="btu">BTU</a>
   <a href="#" class="tablero-tab" data-tab="ayj-preocupaciones">AyJ - Situaciones Preocupantes</a>
+  <a href="#" class="tablero-tab" data-tab="becas-familiares">Becas Familiares</a>
+  <a href="#" class="tablero-tab" data-tab="primera-infancia">Primera Infancia</a>
+  <a href="#" class="tablero-tab" data-tab="primera-infancia-acciones">Primera Infancia - Líderes/Acciones</a>
+  <a href="#" class="tablero-tab" data-tab="establecimientos">Establecimientos Educativos</a>
 </div>
 
 <!-- Filtro por responsable (solo admin) -->
@@ -642,6 +646,84 @@
   </div>
 </div>
 
+<!-- Tab Becas Familiares -->
+<div id="tab-becas-familiares" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label>Período</label>
+    <select id="bf-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
+    <select id="bf-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
+    <label>Región</label>
+    <select id="bf-region" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Provincia</label>
+    <select id="bf-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Emaús</label>
+    <select id="bf-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <label>EE</label>
+    <select id="bf-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <button class="btn btn-sm btn-primary" id="btn-bf-filtrar">Filtrar</button>
+  </div>
+  <div id="bf-contenido" style="padding:16px 24px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
+  </div>
+</div>
+
+<!-- Tab Primera Infancia -->
+<div id="tab-primera-infancia" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label>Período</label>
+    <select id="pi-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
+    <select id="pi-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
+    <label>Región</label>
+    <select id="pi-region" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Provincia</label>
+    <select id="pi-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Emaús</label>
+    <select id="pi-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <button class="btn btn-sm btn-primary" id="btn-pi-filtrar">Filtrar</button>
+  </div>
+  <div id="pi-contenido" style="padding:16px 24px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
+  </div>
+</div>
+
+<!-- Tab Primera Infancia - Líderes/Acciones -->
+<div id="tab-primera-infancia-acciones" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label>Período</label>
+    <select id="pia-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
+    <select id="pia-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
+    <label>Región</label>
+    <select id="pia-region" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Provincia</label>
+    <select id="pia-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Emaús</label>
+    <select id="pia-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <button class="btn btn-sm btn-primary" id="btn-pia-filtrar">Filtrar</button>
+  </div>
+  <div id="pia-contenido" style="padding:16px 24px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
+  </div>
+</div>
+
+<!-- Tab Establecimientos Educativos -->
+<div id="tab-establecimientos" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label>Período</label>
+    <select id="est-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
+    <select id="est-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
+    <label>Región</label>
+    <select id="est-region" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Provincia</label>
+    <select id="est-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Emaús</label>
+    <select id="est-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <button class="btn btn-sm btn-primary" id="btn-est-filtrar">Filtrar</button>
+  </div>
+  <div id="est-contenido" style="padding:16px 24px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
+  </div>
+</div>
+
 <!-- Tab EE - Internet -->
 <div id="tab-internet" class="tab-content" style="display:none">
   <div class="part-filters">
@@ -941,6 +1023,10 @@ document.querySelectorAll('.tablero-tab').forEach(tab => {
     if (target === 'itinerancia') iniciarItinerancia();
     if (target === 'btu') iniciarBtu();
     if (target === 'ayj-preocupaciones') iniciarAyjPreocupaciones();
+    if (target === 'becas-familiares') iniciarBecasFamiliares();
+    if (target === 'primera-infancia') iniciarPrimeraInfancia();
+    if (target === 'primera-infancia-acciones') iniciarPrimeraInfanciaAcciones();
+    if (target === 'establecimientos') iniciarEstablecimientos();
   });
 });
 
@@ -1797,6 +1883,405 @@ async function cargarBtu() {
       </div>
       <div class="ae-bars-title">Motivo de interrupción <span style="font-weight:400;color:#6b7280;font-size:13px">(sobre ${d.total_con_motivo} EEs con motivo registrado; "Otro" agrupa respuestas de texto libre)</span></div>
       ${motivosHtml}
+    `;
+  } catch(e) {
+    contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+  }
+}
+
+// ── Tab Becas Familiares ──
+let bfIniciado = false;
+
+const BF_NIVEL_COLORS = {
+  'Nivel Inicial':       '#22c55e',
+  'Escuela Primaria':    '#3b82f6',
+  'Escuela Secundaria':  '#a855f7',
+  'Apoyo Escolar':       '#f59e0b',
+};
+
+async function iniciarBecasFamiliares() {
+  if (!bfIniciado) {
+    bfIniciado = true;
+    await cargarFiltrosBf();
+    ['bf-anio','bf-semestre'].forEach(id =>
+      document.getElementById(id).addEventListener('change', () => { limpiarFiltrosCascada('bf'); cargarFiltrosBf(); }));
+    document.getElementById('bf-region').addEventListener('change', () => { limpiarFiltrosCascada('bf','region'); cargarFiltrosBf(); });
+    document.getElementById('bf-provincia').addEventListener('change', () => { limpiarFiltrosCascada('bf','provincia'); cargarFiltrosBf(); });
+    document.getElementById('bf-emaus').addEventListener('change', () => { limpiarFiltrosCascada('bf','emaus'); cargarFiltrosBf(); });
+    document.getElementById('btn-bf-filtrar').addEventListener('click', cargarBecasFamiliares);
+  }
+  cargarBecasFamiliares();
+}
+
+async function cargarFiltrosBf() {
+  const params = new URLSearchParams({ anio: document.getElementById('bf-anio').value, semestre: document.getElementById('bf-semestre').value });
+  const region = document.getElementById('bf-region').value;
+  const prov   = document.getElementById('bf-provincia').value;
+  const emausId= document.getElementById('bf-emaus').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('bf-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('bf-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('bf-emaus',    f.emaus);
+    poblarSelectFiltro('bf-ee',       f.ee);
+  } catch(e) { console.warn('filtros bf', e); }
+}
+
+async function cargarBecasFamiliares() {
+  const contenido = document.getElementById('bf-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({ anio: document.getElementById('bf-anio').value, semestre: document.getElementById('bf-semestre').value });
+  const region = document.getElementById('bf-region').value;
+  const prov   = document.getElementById('bf-provincia').value;
+  const emausId= document.getElementById('bf-emaus').value;
+  const eeId   = document.getElementById('bf-ee').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  if (eeId)    params.set('ee_id', eeId);
+  try {
+    const d = await api.get('/tablero/becas-familiares?' + params.toString());
+    if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
+
+    const nivelesBars = d.niveles.map(n => {
+      const color = BF_NIVEL_COLORS[n.nivel] || '#6b7280';
+      return `
+      <div class="ae-bar-row">
+        <div class="ae-bar-label" style="width:180px;color:${color};font-weight:600">${n.nivel}</div>
+        <div class="ae-bar-track">
+          <div class="ae-bar-fill" style="width:${Math.min(n.pct,75)}%;background:${color}">
+            <span class="ae-bar-value"><strong>${n.cantidad}</strong> <span style="color:#6b7280">miembros</span></span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    contenido.innerHTML = `
+      <p class="ae-info">${d.total_ee} EEs relevados</p>
+
+      <div class="kpi-grid" style="margin-bottom:32px">
+        <div class="kpi-card kpi-red">
+          <div class="kpi-label">Diócesis con Becas Familiares</div>
+          <div class="kpi-value">${d.diocesis_con_bf}</div>
+        </div>
+      </div>
+
+      <div class="ae-bars-title">Miembros de familias con BF por nivel educativo <span style="font-weight:400;color:#6b7280;font-size:13px">(acceso a herramientas para la educación)</span></div>
+      <div style="max-width:640px;margin-bottom:32px">${nivelesBars}</div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-blue">
+          <div class="kpi-label">Familias que perciben asignaciones<br><span style="font-size:11px;font-weight:400">(AUH / Progresar / Tarjeta Alimentar u otras)</span></div>
+          <div class="kpi-value">${d.asignaciones}</div>
+        </div>
+        <div class="kpi-card kpi-yellow">
+          <div class="kpi-label">Miembros con discapacidad</div>
+          <div class="kpi-value">${d.discapacidad}</div>
+          <div class="kpi-sub">${d.cud} tramitaron el CUD (${d.pct_cud}%)</div>
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+  }
+}
+
+// ── Tab Primera Infancia ──
+let piIniciado = false;
+
+async function iniciarPrimeraInfancia() {
+  if (!piIniciado) {
+    piIniciado = true;
+    await cargarFiltrosPi();
+    ['pi-anio','pi-semestre'].forEach(id =>
+      document.getElementById(id).addEventListener('change', () => { limpiarFiltrosCascada('pi'); cargarFiltrosPi(); }));
+    document.getElementById('pi-region').addEventListener('change', () => { limpiarFiltrosCascada('pi','region'); cargarFiltrosPi(); });
+    document.getElementById('pi-provincia').addEventListener('change', () => { limpiarFiltrosCascada('pi','provincia'); cargarFiltrosPi(); });
+    document.getElementById('btn-pi-filtrar').addEventListener('click', cargarPrimeraInfancia);
+  }
+  cargarPrimeraInfancia();
+}
+
+async function cargarFiltrosPi() {
+  const params = new URLSearchParams({ anio: document.getElementById('pi-anio').value, semestre: document.getElementById('pi-semestre').value });
+  const region = document.getElementById('pi-region').value;
+  const prov   = document.getElementById('pi-provincia').value;
+  if (region) params.set('region', region);
+  if (prov)   params.set('provincia', prov);
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('pi-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('pi-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('pi-emaus',    f.emaus);
+  } catch(e) { console.warn('filtros pi', e); }
+}
+
+function piBarras(items, color) {
+  if (!items || !items.length) return '<p class="text-muted" style="font-size:13px">Sin datos</p>';
+  return items.map(item => `
+    <div class="ae-bar-row">
+      <div class="ae-bar-label" style="width:200px">${item.grupo}</div>
+      <div class="ae-bar-track">
+        <div class="ae-bar-fill" style="width:${Math.min(item.pct,75)}%;background:${color}">
+          <span class="ae-bar-value"><strong>${item.cantidad}</strong></span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function piEnfermedadBarras(items, color) {
+  if (!items || !items.length) return '<p class="text-muted" style="font-size:13px">Sin datos</p>';
+  return items.map(item => `
+    <div class="ae-bar-row">
+      <div class="ae-bar-label" style="width:180px">${item.enfermedad}</div>
+      <div class="ae-bar-track">
+        <div class="ae-bar-fill" style="width:${Math.min(item.pct,75)}%;background:${color}">
+          <span class="ae-bar-value"><strong>${item.pct}%</strong> <span style="color:#6b7280">(${item.cantidad})</span></span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function cargarPrimeraInfancia() {
+  const contenido = document.getElementById('pi-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({ anio: document.getElementById('pi-anio').value, semestre: document.getElementById('pi-semestre').value });
+  const region = document.getElementById('pi-region').value;
+  const prov   = document.getElementById('pi-provincia').value;
+  const emausId= document.getElementById('pi-emaus').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  try {
+    const d = await api.get('/tablero/primera-infancia?' + params.toString());
+    if (!d.total_emaus) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos de Primera Infancia para el período seleccionado.</p>'; return; }
+
+    const metodologiaDonut = itDonut(d.metodologia, IT_REALIZA_COLORS, 'Emaús', d.total_emaus);
+
+    contenido.innerHTML = `
+      <p class="ae-info">${d.total_emaus} Emaús con Primera Infancia cargada</p>
+
+      <div class="kpi-grid" style="margin-bottom:32px">
+        <div class="kpi-card kpi-red">
+          <div class="kpi-label">Diócesis</div>
+          <div class="kpi-value">${d.diocesis_con_pi}</div>
+        </div>
+        <div class="kpi-card kpi-blue">
+          <div class="kpi-label">Comunidades totales</div>
+          <div class="kpi-value">${d.comunidades_total}</div>
+        </div>
+        <div class="kpi-card kpi-teal">
+          <div class="kpi-label">Líderes</div>
+          <div class="kpi-value">${d.lideres}</div>
+        </div>
+        <div class="kpi-card kpi-green">
+          <div class="kpi-label">Capacitadoras</div>
+          <div class="kpi-value">${d.capacitadoras}</div>
+        </div>
+        <div class="kpi-card kpi-yellow">
+          <div class="kpi-label">Familias</div>
+          <div class="kpi-value">${d.familias}</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px">
+        <div>
+          <div class="ae-bars-title">Niños por edad</div>
+          ${piBarras(d.ninos, '#22c55e')}
+        </div>
+        <div>
+          <div class="ae-bars-title">Madres</div>
+          ${piBarras(d.madres, '#ec4899')}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+        <div>
+          <div class="ae-bars-title">Enfermedades más frecuentes en niños/niñas</div>
+          ${piEnfermedadBarras(d.enfermedades_ninos, '#3b82f6')}
+        </div>
+        <div>
+          <div class="ae-bars-title">Enfermedades más frecuentes en mujeres</div>
+          ${piEnfermedadBarras(d.enfermedades_mujeres, '#a855f7')}
+        </div>
+      </div>
+
+      <div style="margin-top:32px;display:grid;grid-template-columns:auto auto;gap:32px;align-items:center;justify-content:start">
+        <div>
+          <div class="ae-bars-title">Metodología de la Pastoral compartida con otras comunidades</div>
+          <div class="ae-donut-wrap" style="max-width:220px">${metodologiaDonut.svg}</div>
+          <div class="ae-legend">${metodologiaDonut.legend}</div>
+        </div>
+        <div class="kpi-card kpi-blue">
+          <div class="kpi-label">Comunidades alcanzadas</div>
+          <div class="kpi-value">${d.comunidades_metodologia}</div>
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+  }
+}
+
+// ── Tab Primera Infancia - Líderes/Acciones ──
+let piaIniciado = false;
+
+async function iniciarPrimeraInfanciaAcciones() {
+  if (!piaIniciado) {
+    piaIniciado = true;
+    await cargarFiltrosPia();
+    ['pia-anio','pia-semestre'].forEach(id =>
+      document.getElementById(id).addEventListener('change', () => { limpiarFiltrosCascada('pia'); cargarFiltrosPia(); }));
+    document.getElementById('pia-region').addEventListener('change', () => { limpiarFiltrosCascada('pia','region'); cargarFiltrosPia(); });
+    document.getElementById('pia-provincia').addEventListener('change', () => { limpiarFiltrosCascada('pia','provincia'); cargarFiltrosPia(); });
+    document.getElementById('btn-pia-filtrar').addEventListener('click', cargarPrimeraInfanciaAcciones);
+  }
+  cargarPrimeraInfanciaAcciones();
+}
+
+async function cargarFiltrosPia() {
+  const params = new URLSearchParams({ anio: document.getElementById('pia-anio').value, semestre: document.getElementById('pia-semestre').value });
+  const region = document.getElementById('pia-region').value;
+  const prov   = document.getElementById('pia-provincia').value;
+  if (region) params.set('region', region);
+  if (prov)   params.set('provincia', prov);
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('pia-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('pia-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('pia-emaus',    f.emaus);
+  } catch(e) { console.warn('filtros pia', e); }
+}
+
+async function cargarPrimeraInfanciaAcciones() {
+  const contenido = document.getElementById('pia-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({ anio: document.getElementById('pia-anio').value, semestre: document.getElementById('pia-semestre').value });
+  const region = document.getElementById('pia-region').value;
+  const prov   = document.getElementById('pia-provincia').value;
+  const emausId= document.getElementById('pia-emaus').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  try {
+    const d = await api.get('/tablero/primera-infancia-acciones?' + params.toString());
+    if (!d.total_emaus) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos de Primera Infancia para el período seleccionado.</p>'; return; }
+
+    const COLORES = { celebracion_vida: '#ec4899', visita_domiciliaria: '#3b82f6', reunion_evaluacion: '#22c55e' };
+    const ORDEN = ['celebracion_vida', 'visita_domiciliaria', 'reunion_evaluacion'];
+
+    const secciones = ORDEN.map(clave => {
+      const a = d.acciones[clave];
+      const color = COLORES[clave];
+      const freqBars = a.frecuencia.length ? a.frecuencia.map(f => `
+        <div class="ae-bar-row">
+          <div class="ae-bar-label" style="width:130px">${f.valor}</div>
+          <div class="ae-bar-track">
+            <div class="ae-bar-fill" style="width:${Math.min(f.pct,75)}%;background:${color}">
+              <span class="ae-bar-value"><strong>${f.pct}%</strong> <span style="color:#6b7280">(${f.cantidad})</span></span>
+            </div>
+          </div>
+        </div>`).join('') : '<p class="text-muted" style="font-size:13px">Sin datos</p>';
+
+      return `
+        <div style="margin-bottom:36px">
+          <div class="ae-bars-title" style="font-size:16px;color:${color}">${a.label}</div>
+          <div class="kpi-grid" style="margin-bottom:16px">
+            <div class="kpi-card kpi-blue">
+              <div class="kpi-label">Diócesis con ${a.label.toLowerCase()}</div>
+              <div class="kpi-value">${a.diocesis_con_accion}</div>
+            </div>
+            <div class="kpi-card kpi-teal">
+              <div class="kpi-label">${a.label} — total</div>
+              <div class="kpi-value">${a.cantidad_total}</div>
+            </div>
+          </div>
+          <div style="max-width:520px">${freqBars}</div>
+        </div>`;
+    }).join('');
+
+    contenido.innerHTML = `
+      <p class="ae-info">${d.total_emaus} Emaús con Primera Infancia cargada</p>
+      ${secciones}
+    `;
+  } catch(e) {
+    contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+  }
+}
+
+// ── Tab Establecimientos Educativos ──
+let estIniciado = false;
+
+const EST_AMBITO_COLORS = { 'Estatal': '#3b82f6', 'Privado': '#f59e0b', 'Social/cooperativa': '#a855f7', 'Sin dato': '#d1d5db' };
+
+async function iniciarEstablecimientos() {
+  if (!estIniciado) {
+    estIniciado = true;
+    await cargarFiltrosEst();
+    ['est-anio','est-semestre'].forEach(id =>
+      document.getElementById(id).addEventListener('change', () => { limpiarFiltrosCascada('est'); cargarFiltrosEst(); }));
+    document.getElementById('est-region').addEventListener('change', () => { limpiarFiltrosCascada('est','region'); cargarFiltrosEst(); });
+    document.getElementById('est-provincia').addEventListener('change', () => { limpiarFiltrosCascada('est','provincia'); cargarFiltrosEst(); });
+    document.getElementById('btn-est-filtrar').addEventListener('click', cargarEstablecimientos);
+  }
+  cargarEstablecimientos();
+}
+
+async function cargarFiltrosEst() {
+  const params = new URLSearchParams({ anio: document.getElementById('est-anio').value, semestre: document.getElementById('est-semestre').value });
+  const region = document.getElementById('est-region').value;
+  const prov   = document.getElementById('est-provincia').value;
+  if (region) params.set('region', region);
+  if (prov)   params.set('provincia', prov);
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('est-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('est-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('est-emaus',    f.emaus);
+  } catch(e) { console.warn('filtros est', e); }
+}
+
+async function cargarEstablecimientos() {
+  const contenido = document.getElementById('est-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({ anio: document.getElementById('est-anio').value, semestre: document.getElementById('est-semestre').value });
+  const region = document.getElementById('est-region').value;
+  const prov   = document.getElementById('est-provincia').value;
+  const emausId= document.getElementById('est-emaus').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  try {
+    const d = await api.get('/tablero/establecimientos?' + params.toString());
+    if (!d.total_establecimientos) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
+
+    const ambitoDonut = itDonut(d.ambito, EST_AMBITO_COLORS, 'Establecimientos', d.total_establecimientos);
+
+    contenido.innerHTML = `
+      <div class="kpi-grid" style="margin-bottom:32px">
+        <div class="kpi-card kpi-red">
+          <div class="kpi-label">Establecimientos</div>
+          <div class="kpi-value">${d.total_establecimientos}</div>
+        </div>
+      </div>
+
+      <div class="ae-bars-title">Acciones</div>
+      <div style="max-width:520px;margin-bottom:32px">${itBarras(d.acciones, 'accion', '#0ea5e9', 150)}</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+        <div>
+          <div class="ae-bars-title">Ámbito</div>
+          <div class="ae-donut-wrap">${ambitoDonut.svg}</div>
+          <div class="ae-legend">${ambitoDonut.legend}</div>
+        </div>
+        <div>
+          <div class="ae-bars-title">Jurisdicción</div>
+          ${itBarras(d.jurisdiccion, 'jurisdiccion', '#ec4899', 160)}
+        </div>
+      </div>
     `;
   } catch(e) {
     contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
