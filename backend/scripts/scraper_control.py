@@ -403,6 +403,9 @@ def eval_condition(condition: Dict, field_values: Dict[str, Any]) -> bool:
             return total == cell_numeric(field_values.get(condition["equals_field"]))
         if "equals" in condition:
             return total == float(condition["equals"])
+        if "at_most_sum_of" in condition:
+            limite = sum(cell_numeric(field_values.get(f)) for f in condition["at_most_sum_of"])
+            return total <= limite
     if "all_unique" in condition:
         vals = [field_values.get(f) for f in condition["all_unique"]]
         nums = [cell_numeric(v) for v in vals if cell_has_value(v)]
@@ -479,14 +482,23 @@ def _parse_completion_from_values(values: List[List], diagonal: bool) -> bool:
 
 
 def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
-                       anio: int, semestre: str, dry_run: bool, apply_reset: bool = False) -> Dict:
+                       anio: int, semestre: str, dry_run: bool, apply_reset: bool = False,
+                       hojas_inactivas: Optional[set] = None) -> Dict:
     """
     Scrapa una planilla completa con el mínimo de llamadas API posible.
     Usa batchGet para leer completion + C16 de todas las hojas en una sola llamada.
+
+    hojas_inactivas: nombres de hoja (normalizados) de EE dados de baja — se excluyen
+    del conteo aunque la hoja siga visible en Sheets (ej. si el ocultamiento falló o
+    no se corrió todavía), para que Control refleje la baja sin depender de eso.
     """
     all_titles = get_sheet_titles(sheets, spreadsheet_id)
 
-    ee_titles = [t for t in all_titles if t not in EXCLUDED_SHEETS]
+    hojas_inactivas = hojas_inactivas or set()
+    ee_titles = [
+        t for t in all_titles
+        if t not in EXCLUDED_SHEETS and _normalize_ee_name(t) not in hojas_inactivas
+    ]
     has_pi = PI_SHEET_TITLE in all_titles
     # Detectar nombre real de la hoja Talleres (puede ser el nombre estándar o el alternativo)
     talleres_sheet_name = TALLERES_SHEET if TALLERES_SHEET in all_titles else (
@@ -767,7 +779,6 @@ _EE_FIELD_MAP = {
     "Asistentes_25_34":             "asistentes_25_35",  # nombre distinto en DB
     "Asistentes_35_50":             "asistentes_35_50",
     "Asistentes_Mas50":             "asistentes_mas_50",
-    "GM_RC_Nro":                    "grupo_motor_cantidad",
     "GM_RC_Freq":                   "grupo_motor_frecuencia",
     "AyJ_Nro":                      "adolescentes_referentes",
     "AyJ_Freq":                     "adolescentes_frecuencia",
@@ -996,6 +1007,13 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
                     row[col] = str(raw).strip()[:200] if raw not in (None, "") else None
                 else:
                     row[col] = _to_int(raw)
+
+            # grupo_motor_cantidad se calcula sumando las cantidades de los 4 roles
+            # (D178-D181) en vez de leer el total declarado (C175, GM_RC_Nro) — los
+            # ATL suelen completar los roles pero no ese campo de total aparte.
+            row["grupo_motor_cantidad"] = sum(
+                _to_int(fv.get(cant_key)) or 0 for _, cant_key in _GM_ROLES
+            ) or None
 
             cols = list(row.keys())
             placeholders = ", ".join(f":{c}" for c in cols)
@@ -1854,6 +1872,19 @@ def get_all_emaus(engine) -> List[Dict]:
              "ultima_modificacion_sheet": r[3]} for r in rows]
 
 
+def get_hojas_inactivas(engine, emaus_id: int) -> set:
+    """Nombres de hoja (normalizados) de los EE dados de baja de un Emaús —
+    se usan para excluirlos del conteo del scraper aunque la hoja siga
+    visible en Sheets."""
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text("SELECT nombre_hoja FROM espacio_educativo "
+                 "WHERE emaus_id = :eid AND activo = FALSE AND nombre_hoja IS NOT NULL"),
+            {"eid": emaus_id},
+        ).fetchall()
+    return {_normalize_ee_name(r[0]) for r in rows if r[0]}
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -1924,10 +1955,12 @@ def main():
 
         print(f"  [{emaus['id']}] {emaus['nombre']} ...", end=" ", flush=True)
         try:
+            hojas_inactivas = get_hojas_inactivas(engine, emaus["id"])
             metrics = scrape_spreadsheet(
                 sheets_svc, spreadsheet_id, spec,
                 args.anio, args.semestre, args.dry_run,
                 apply_reset=args.apply_reset,
+                hojas_inactivas=hojas_inactivas,
             )
             metrics["_spreadsheet_id"] = spreadsheet_id
             n_err = len([e for e in metrics["validation_errors"] if e["severity"] == "error"])
@@ -2033,10 +2066,12 @@ def run_sync(folder_id: str, anio: int = ANIO_DEFAULT, semestre: str = SEMESTRE_
                 continue
 
             try:
+                hojas_inactivas = get_hojas_inactivas(engine, emaus["id"])
                 metrics = scrape_spreadsheet(
                     sheets_svc, spreadsheet_id, spec,
                     anio, semestre, dry_run,
                     apply_reset=apply_reset,
+                    hojas_inactivas=hojas_inactivas,
                 )
                 metrics["_spreadsheet_id"] = spreadsheet_id
                 if not dry_run:

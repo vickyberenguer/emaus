@@ -1917,6 +1917,114 @@ validations:
 
 
 # =============================================================
+# Coherencia: los participantes de cada programa deben estar
+# contenidos dentro de las franjas etarias de Asistentes (C10-C15)
+# =============================================================
+
+  - id: asistentes_apescolar_primaria
+    sheet: ee
+    description: "Apoyo Escolar Primaria no puede superar los Asistentes de 7 a 14 años"
+    severity: warning
+    require_all:
+      - sum_of: [ApEscolar_Nro_Primaria]
+        at_most_sum_of: [Asistentes_7_14]
+    message: "Apoyo Escolar Primaria (C53) supera a los Asistentes de 7 a 14 años (C11) — revisar que todos los participantes estén contados en Asistentes"
+
+  - id: asistentes_apescolar_secundaria
+    sheet: ee
+    description: "Apoyo Escolar Secundaria no puede superar los Asistentes de 15 a 24 años"
+    severity: warning
+    require_all:
+      - sum_of: [ApEscolar_Nro_Secundaria]
+        at_most_sum_of: [Asistentes_15_24]
+    message: "Apoyo Escolar Secundaria (C54) supera a los Asistentes de 15 a 24 años (C12) — revisar que todos los participantes estén contados en Asistentes"
+
+  - id: asistentes_alfabetizacion_ninos
+    sheet: ee
+    description: "Alfabetización de niños (6-9 y 10-14) no puede superar los Asistentes de 7 a 14 años"
+    severity: warning
+    require_all:
+      - sum_of: [Alfabetizacion_6_9, Alfabetizacion_10_14]
+        at_most_sum_of: [Asistentes_7_14]
+    message: "Alfabetización 6-9 + 10-14 (C94/C95) supera a los Asistentes de 7 a 14 años (C11) — revisar que todos los participantes estén contados en Asistentes"
+
+  - id: asistentes_alfabetizacion_jovenes
+    sheet: ee
+    description: "Alfabetización 15-24 no puede superar los Asistentes de 15 a 24 años"
+    severity: warning
+    require_all:
+      - sum_of: [Alfabetizacion_15_24]
+        at_most_sum_of: [Asistentes_15_24]
+    message: "Alfabetización 15-24 (C96) supera a los Asistentes de 15 a 24 años (C12) — revisar que todos los participantes estén contados en Asistentes"
+
+  - id: asistentes_alfabetizacion_adultos
+    sheet: ee
+    description: "Alfabetización 25+ no puede superar los Asistentes de 25 años en adelante"
+    severity: warning
+    require_all:
+      - sum_of: [Alfabetizacion_25mas]
+        at_most_sum_of: [Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "Alfabetización 25+ (C97) supera a los Asistentes de 25 años en adelante (C13+C14+C15) — revisar que todos los participantes estén contados en Asistentes"
+
+  - id: asistentes_dale_ninos
+    sheet: ee
+    description: "DALE de niños (6-9 y 10-14) no puede superar los Asistentes de 7 a 14 años"
+    severity: warning
+    require_all:
+      - sum_of: [DALE_6_9, DALE_10_14]
+        at_most_sum_of: [Asistentes_7_14]
+    message: "DALE 6-9 + 10-14 (C103/C104) supera a los Asistentes de 7 a 14 años (C11) — revisar que todos los participantes estén contados en Asistentes"
+
+  - id: asistentes_dale_jovenes
+    sheet: ee
+    description: "DALE 15-24 no puede superar los Asistentes de 15 a 24 años"
+    severity: warning
+    require_all:
+      - sum_of: [DALE_15_24]
+        at_most_sum_of: [Asistentes_15_24]
+    message: "DALE 15-24 (C105) supera a los Asistentes de 15 a 24 años (C12) — revisar que todos los participantes estén contados en Asistentes"
+
+  - id: asistentes_dale_adultos
+    sheet: ee
+    description: "DALE 25+ no puede superar los Asistentes de 25 años en adelante"
+    severity: warning
+    require_all:
+      - sum_of: [DALE_25mas]
+        at_most_sum_of: [Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "DALE 25+ (C106) supera a los Asistentes de 25 años en adelante (C13+C14+C15) — revisar que todos los participantes estén contados en Asistentes"
+
+  - id: asistentes_btu
+    sheet: ee
+    description: "BTU regulares (jóvenes de 17 a 35) no puede superar los Asistentes de 15 a 34 años"
+    severity: warning
+    require_all:
+      - sum_of: [BTU_regulares]
+        at_most_sum_of: [Asistentes_15_24, Asistentes_25_34]
+    message: "BTU regulares (C67) supera a los Asistentes de 15 a 34 años (C12+C13) — revisar que todos los participantes estén contados en Asistentes"
+
+  - id: asistentes_grupo_motor
+    sheet: ee
+    description: "Grupo Motor (suma de roles) no puede superar los Asistentes de 25 años en adelante"
+    severity: warning
+    require_all:
+      - sum_of: [GM_Rol1_Cant, GM_Rol2_Cant, GM_Rol3_Cant, GM_Rol4_Cant]
+        at_most_sum_of: [Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "Grupo Motor (suma de roles D178-D181) supera a los Asistentes de 25 años en adelante (C13+C14+C15) — revisar que todos los participantes estén contados en Asistentes"
+
+  - id: grupo_motor_total_coincide_roles
+    sheet: ee
+    description: "La cantidad total de Grupo Motor (C175) debe coincidir con la suma de las cantidades por rol (D178-D181)"
+    severity: warning
+    when:
+      field: GM_RC_Nro
+      not_empty: true
+    require_all:
+      - sum_of: [GM_Rol1_Cant, GM_Rol2_Cant, GM_Rol3_Cant, GM_Rol4_Cant]
+        equals_field: GM_RC_Nro
+    message: "La cantidad total de Grupo Motor (C175) no coincide con la suma de las cantidades por rol (D178-D181) — revisar"
+
+
+# =============================================================
 # FLUJO DE VALIDACIÓN Y APROBACIÓN
 # =============================================================
 #
