@@ -1467,12 +1467,29 @@ def participantes(
         emaus_count = db.query(func.count(func.distinct(Relevamiento.emaus_id))) \
             .filter(Relevamiento.id.in_(relevamiento_ids)).scalar() or 0
 
+    # Provincias distintas en el alcance filtrado
+    provincias_count = 0
+    if relevamiento_ids:
+        provincias_count = db.query(func.count(func.distinct(Diocesis.provincia))) \
+            .join(Emaus, Emaus.diocesis_id == Diocesis.id) \
+            .join(Relevamiento, Relevamiento.emaus_id == Emaus.id) \
+            .filter(Relevamiento.id.in_(relevamiento_ids)).scalar() or 0
+
+    # Emaús con Primera Infancia cargada, dentro del mismo alcance filtrado
+    pi_count = 0
+    if relevamiento_ids:
+        pi_count = db.query(func.count(func.distinct(Relevamiento.emaus_id))) \
+            .join(PastoralPI, PastoralPI.relevamiento_id == Relevamiento.id) \
+            .filter(Relevamiento.id.in_(relevamiento_ids)).scalar() or 0
+
     btu_total = s("btu_regulares")
     bf_total = s("bf_nivel_inicial") + s("bf_primaria") + s("bf_secundaria")
 
     return {
         "ee_count": ee_count,
         "emaus_count": emaus_count,
+        "provincias_count": provincias_count,
+        "pi_count": pi_count,
         "btu_total": btu_total,
         "bf_total": bf_total,
         "asistentes": {

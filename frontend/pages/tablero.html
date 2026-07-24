@@ -200,34 +200,6 @@
     }
     .part-filters select.sel-periodo { border-color: #2563eb; background: #eff6ff; color: #2563eb; font-weight: 600; }
 
-    .part-top { display: grid; grid-template-columns: 1fr 160px 1fr; gap: 12px; margin-bottom: 14px; }
-
-    .part-hero {
-      background: #fff; border: 1px solid #e2e5ed; border-radius: 10px;
-      padding: 16px; border-left: 4px solid;
-    }
-    .part-hero-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
-    .part-hero-val { font-size: 34px; font-weight: 700; line-height: 1; }
-    .part-hero-note { font-size: 11px; color: #9ca3af; margin-top: 3px; }
-
-    .part-side { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-    .part-ee-stack { display: flex; flex-direction: column; gap: 8px; }
-    .part-ee-card {
-      background: #fff; border: 1px solid #e2e5ed; border-radius: 10px;
-      padding: 10px; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; text-align: center; flex: 1;
-    }
-    .part-ee-val { font-size: 26px; font-weight: 700; color: #0d9488; line-height: 1; }
-    .part-ee-label { font-size: 10px; color: #6b7280; margin-top: 3px; line-height: 1.2; }
-
-    .part-mini-bars { margin-top: 12px; border-top: 1px solid #f0f1f5; padding-top: 12px; display: flex; flex-direction: column; gap: 5px; }
-    .part-bar-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
-    .part-bar-lbl { width: 76px; color: #6b7280; text-align: right; flex-shrink: 0; }
-    .part-bar-track { flex: 1; border-radius: 3px; height: 13px; overflow: hidden; }
-    .part-bar-fill { height: 100%; border-radius: 3px; }
-    .part-bar-val { width: 38px; font-weight: 600; text-align: right; font-size: 11px; flex-shrink: 0; }
-
     .part-progs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     .prog-card {
       background: #fff; border: 1px solid #e2e5ed; border-radius: 10px; overflow: hidden;
@@ -456,48 +428,64 @@
   </div>
   <div id="part-error" class="alert alert-danger mx-0 mb-3" style="display:none"></div>
 
-  <!-- Top: Asistentes+Colaboradores | Emaús+EE count | BTU+Becas Familiares -->
-  <div class="part-top">
-
-    <div class="part-side">
-      <div class="part-hero" style="border-color:#2563eb">
-        <div class="part-hero-label">Asistentes</div>
-        <div class="part-hero-val" id="part-asist-val" style="color:#2563eb">—</div>
-        <div class="part-hero-note">personas que asisten a los EEs</div>
-        <div class="part-mini-bars" id="part-age-bars"></div>
-      </div>
-      <div class="part-hero" style="border-color:#7c3aed">
-        <div class="part-hero-label">Colaboradores</div>
-        <div class="part-hero-val" id="part-colab-val" style="color:#7c3aed">—</div>
-        <div class="part-hero-note">itinerancia + grupo motor</div>
-        <div class="part-mini-bars" id="part-colab-bars"></div>
+  <!-- Fila 1: cobertura -->
+  <div class="part-progs" style="margin-bottom:18px">
+    <div class="prog-card">
+      <div class="prog-head" style="border-color:#0ea5e9">
+        <div class="prog-head-name">Provincias</div>
+        <div class="prog-head-val" id="part-prov-val" style="color:#0369a1">—</div>
       </div>
     </div>
-
-    <div class="part-ee-stack">
-      <div class="part-ee-card">
-        <div class="part-ee-val" id="part-emaus-val">—</div>
-        <div class="part-ee-label">Cantidad<br>Emaús</div>
-      </div>
-      <div class="part-ee-card">
-        <div class="part-ee-val" id="part-ee-val">—</div>
-        <div class="part-ee-label">Espacios<br>Educativos</div>
+    <div class="prog-card">
+      <div class="prog-head" style="border-color:#0d9488">
+        <div class="prog-head-name">Emaús</div>
+        <div class="prog-head-val" id="part-emaus-val" style="color:#0d9488">—</div>
       </div>
     </div>
-
-    <div class="part-side">
-      <div class="part-hero" style="border-color:#0d9488">
-        <div class="part-hero-label">BTU</div>
-        <div class="part-hero-val" id="part-btu-val" style="color:#0d9488">—</div>
-        <div class="part-hero-note">becarios regulares</div>
-      </div>
-      <div class="part-hero" style="border-color:#d97706">
-        <div class="part-hero-label">Becas Familiares</div>
-        <div class="part-hero-val" id="part-bf-val" style="color:#d97706">—</div>
-        <div class="part-hero-note">chicos escolarizados</div>
+    <div class="prog-card">
+      <div class="prog-head" style="border-color:#0d9488">
+        <div class="prog-head-name">Espacios Educativos</div>
+        <div class="prog-head-val" id="part-ee-val" style="color:#0d9488">—</div>
       </div>
     </div>
+    <div class="prog-card">
+      <div class="prog-head" style="border-color:#e11d48">
+        <div class="prog-head-name">Primera Infancia</div>
+        <div class="prog-head-val" id="part-pi-val" style="color:#e11d48">—</div>
+      </div>
+    </div>
+  </div>
 
+  <!-- Fila 2: participantes -->
+  <div class="part-progs" style="margin-bottom:18px">
+    <div class="prog-card">
+      <div class="prog-head" style="border-color:#2563eb">
+        <div class="prog-head-name">Asistentes</div>
+        <div class="prog-head-val" id="part-asist-val" style="color:#2563eb">—</div>
+      </div>
+      <div class="prog-body" id="part-age-bars"></div>
+    </div>
+    <div class="prog-card">
+      <div class="prog-head" style="border-color:#7c3aed">
+        <div class="prog-head-name">Colaboradores</div>
+        <div class="prog-head-val" id="part-colab-val" style="color:#7c3aed">—</div>
+      </div>
+      <div class="prog-body" id="part-colab-bars"></div>
+    </div>
+    <div class="prog-card">
+      <div class="prog-head" style="border-color:#0d9488">
+        <div class="prog-head-name">BTU</div>
+        <div class="prog-head-val" id="part-btu-val" style="color:#0d9488">—</div>
+      </div>
+      <div class="prog-body" style="padding:10px 14px;font-size:11px;color:#9ca3af">Becarios regulares</div>
+    </div>
+    <div class="prog-card">
+      <div class="prog-head" style="border-color:#d97706">
+        <div class="prog-head-name">Becas Familiares</div>
+        <div class="prog-head-val" id="part-bf-val" style="color:#d97706">—</div>
+      </div>
+      <div class="prog-body" style="padding:10px 14px;font-size:11px;color:#9ca3af">Chicos escolarizados</div>
+    </div>
   </div>
 
   <!-- Programas -->
@@ -1130,11 +1118,6 @@ async function cargarFiltros() {
   } catch(e) { /* no crítico */ }
 }
 
-function bar(val, max, color) {
-  const pct = max > 0 ? (val / max * 100).toFixed(1) : 0;
-  return `<div class="part-bar-track" style="background:#f5f6fa"><div class="part-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
-}
-
 function progBar(val, max, color) {
   const pct = max > 0 ? (val / max * 100).toFixed(1) : 0;
   return `<div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${color}"></div></div>`;
@@ -1143,28 +1126,30 @@ function progBar(val, max, color) {
 function n(val) { return (val || 0).toLocaleString('es-AR'); }
 
 function renderParticipantes(d) {
-  document.getElementById('part-ee-val').textContent       = n(d.ee_count);
-  document.getElementById('part-emaus-val').textContent    = n(d.emaus_count);
-  document.getElementById('part-asist-val').textContent    = n(d.asistentes.total);
-  document.getElementById('part-colab-val').textContent    = n(d.colaboradores.total);
-  document.getElementById('part-btu-val').textContent      = n(d.btu_total);
-  document.getElementById('part-bf-val').textContent       = n(d.bf_total);
+  document.getElementById('part-prov-val').textContent      = n(d.provincias_count);
+  document.getElementById('part-emaus-val').textContent     = n(d.emaus_count);
+  document.getElementById('part-ee-val').textContent        = n(d.ee_count);
+  document.getElementById('part-pi-val').textContent        = n(d.pi_count);
+  document.getElementById('part-asist-val').textContent     = n(d.asistentes.total);
+  document.getElementById('part-colab-val').textContent     = n(d.colaboradores.total);
+  document.getElementById('part-btu-val').textContent       = n(d.btu_total);
+  document.getElementById('part-bf-val').textContent        = n(d.bf_total);
 
   const maxAge = Math.max(d.asistentes['0_6'], d.asistentes['7_14'], d.asistentes['15_24'],
     d.asistentes['25_35'], d.asistentes['35_50'], d.asistentes['mas_50'], 1);
 
   document.getElementById('part-age-bars').innerHTML = `
-    <div class="part-bar-row"><span class="part-bar-lbl">0 a 6 años</span>${bar(d.asistentes['0_6'], maxAge,'#93c5fd')}<span class="part-bar-val" style="color:#1e40af">${n(d.asistentes['0_6'])}</span></div>
-    <div class="part-bar-row"><span class="part-bar-lbl">7 a 14 años</span>${bar(d.asistentes['7_14'], maxAge,'#93c5fd')}<span class="part-bar-val" style="color:#1e40af">${n(d.asistentes['7_14'])}</span></div>
-    <div class="part-bar-row"><span class="part-bar-lbl">15 a 24 años</span>${bar(d.asistentes['15_24'], maxAge,'#93c5fd')}<span class="part-bar-val" style="color:#1e40af">${n(d.asistentes['15_24'])}</span></div>
-    <div class="part-bar-row"><span class="part-bar-lbl">25 a 34 años</span>${bar(d.asistentes['25_35'], maxAge,'#93c5fd')}<span class="part-bar-val" style="color:#1e40af">${n(d.asistentes['25_35'])}</span></div>
-    <div class="part-bar-row"><span class="part-bar-lbl">35 a 50 años</span>${bar(d.asistentes['35_50'], maxAge,'#93c5fd')}<span class="part-bar-val" style="color:#1e40af">${n(d.asistentes['35_50'])}</span></div>
-    <div class="part-bar-row"><span class="part-bar-lbl">Más de 50</span>${bar(d.asistentes['mas_50'], maxAge,'#93c5fd')}<span class="part-bar-val" style="color:#1e40af">${n(d.asistentes['mas_50'])}</span></div>`;
+    <div class="prog-row"><span class="prog-lbl">0 a 6 años</span>${progBar(d.asistentes['0_6'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['0_6'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">7 a 14 años</span>${progBar(d.asistentes['7_14'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['7_14'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">15 a 24 años</span>${progBar(d.asistentes['15_24'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['15_24'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">25 a 34 años</span>${progBar(d.asistentes['25_35'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['25_35'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">35 a 50 años</span>${progBar(d.asistentes['35_50'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['35_50'])}</span></div>
+    <div class="prog-row"><span class="prog-lbl">Más de 50</span>${progBar(d.asistentes['mas_50'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['mas_50'])}</span></div>`;
 
   const maxColab = Math.max(d.colaboradores.grupo_motor, d.colaboradores.itinerancia, 1);
   document.getElementById('part-colab-bars').innerHTML = `
-    <div class="part-bar-row"><span class="part-bar-lbl">Grupo Motor</span>${bar(d.colaboradores.grupo_motor, maxColab,'#c4b5fd')}<span class="part-bar-val" style="color:#7c3aed">${n(d.colaboradores.grupo_motor)}</span></div>
-    <div class="part-bar-row"><span class="part-bar-lbl">Itinerancia</span>${bar(d.colaboradores.itinerancia, maxColab,'#c4b5fd')}<span class="part-bar-val" style="color:#7c3aed">${n(d.colaboradores.itinerancia)}</span></div>`;
+    <div class="prog-row"><span class="prog-lbl">Grupo Motor</span>${progBar(d.colaboradores.grupo_motor, maxColab,'#c4b5fd')}<span class="prog-val" style="color:#7c3aed">${n(d.colaboradores.grupo_motor)}</span></div>
+    <div class="prog-row"><span class="prog-lbl">Itinerancia</span>${progBar(d.colaboradores.itinerancia, maxColab,'#c4b5fd')}<span class="prog-val" style="color:#7c3aed">${n(d.colaboradores.itinerancia)}</span></div>`;
 
   // Apoyo Escolar
   const aeMax = Math.max(d.apoyo_escolar.primaria, d.apoyo_escolar.secundaria, 1);
