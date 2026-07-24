@@ -610,7 +610,17 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
                     all_validation_errors.append({**e, "hoja_nombre": PI_SHEET_TITLE, "fecha": now})
             else:
                 pi_completa = True
-                pi_field_data = field_values
+                # Si está marcada completa pero las primeras preguntas sustantivas
+                # (AniosPI, Capacitadora, Comunidad1) vienen todas vacías, se
+                # considera que ese Emaús no tiene Primera Infancia activa y no
+                # se crea el registro pastoral_pi.
+                primeras_respuestas = (
+                    str(field_values.get("AniosPI") or "").strip(),
+                    str(field_values.get("Capacitadora") or "").strip(),
+                    str(field_values.get("Comunidad1") or "").strip(),
+                )
+                if any(primeras_respuestas):
+                    pi_field_data = field_values
                 for e in [w for w in errors if w["severity"] == "warning"]:
                     all_validation_errors.append({**e, "hoja_nombre": PI_SHEET_TITLE, "fecha": now})
 
@@ -1748,6 +1758,73 @@ def leer_bf_planilla(sheets_svc, spreadsheet_id: str) -> Dict[str, int]:
     return result
 
 
+def _get_file_modified_time(drive, file_id: str) -> Optional[datetime]:
+    """Consulta solo el metadato modifiedTime de un archivo de Drive (liviano, sin leer datos)."""
+    if not file_id:
+        return None
+    try:
+        meta = execute_with_retry(
+            drive.files().get(fileId=file_id, fields="modifiedTime", supportsAllDrives=True)
+        )
+        return _parse_drive_datetime(meta.get("modifiedTime"))
+    except Exception as e:
+        print(f"  [warn] No se pudo consultar modifiedTime de {file_id}: {e}")
+        return None
+
+
+def sync_btu_bf_directo(engine, sheets_svc, drive_svc, emaus_list: List[Dict],
+                         anio: int, semestre: str, force: bool = False) -> None:
+    """
+    Actualiza btu_actual/bf_actual en control_relevamiento leyendo las planillas
+    externas BTU y BF, pero solo si cambiaron desde el último sync (según
+    modifiedTime de Drive) — evita releer ~120 filas en cada sync cuando nada
+    cambió, y actualiza directamente por UPDATE en vez de depender de que el
+    emaús individual también haya cambiado (así los cambios en BTU/BF se
+    reflejan aunque ninguna planilla de EE se haya modificado).
+    """
+    with engine.begin() as conn:
+        estado = {r[0]: r[1] for r in conn.execute(
+            text("SELECT nombre, ultima_modificacion FROM sync_planilla_externa")
+        ).fetchall()}
+
+    for clave, spreadsheet_id_env, leer_fn, campo in (
+        ("btu", "BTU_SPREADSHEET_ID", leer_btu_planilla, "btu_actual"),
+        ("bf",  "BF_SPREADSHEET_ID",  leer_bf_planilla,  "bf_actual"),
+    ):
+        spreadsheet_id = os.getenv(spreadsheet_id_env, "")
+        if not spreadsheet_id:
+            print(f"  [warn] {spreadsheet_id_env} no configurado")
+            continue
+
+        modified_time = _get_file_modified_time(drive_svc, spreadsheet_id)
+        ultima = estado.get(clave)
+        if not force and modified_time is not None and ultima is not None and modified_time <= ultima:
+            print(f"  [SKIP-SINCAMBIOS] planilla {clave.upper()} sin cambios desde el último sync")
+            continue
+
+        mapa: Dict[str, int] = leer_fn(sheets_svc, spreadsheet_id)
+        if not mapa:
+            print(f"  [warn] No se leyeron datos de {clave.upper()}")
+            continue
+        print(f"  {clave.upper()} leídos para {len(mapa)} Emaús — aplicando cambios")
+
+        with engine.begin() as conn:
+            for emaus in emaus_list:
+                valor = mapa.get(emaus["nombre"])
+                if valor is None:
+                    continue
+                conn.execute(text(f"""
+                    UPDATE control_relevamiento
+                    SET {campo} = COALESCE(:valor, {campo})
+                    WHERE emaus_id = :emaus_id AND anio = :anio AND semestre = :semestre
+                """), {"valor": valor, "emaus_id": emaus["id"], "anio": anio, "semestre": semestre})
+
+            if modified_time is not None:
+                conn.execute(text("""
+                    UPDATE sync_planilla_externa SET ultima_modificacion = :mt WHERE nombre = :nombre
+                """), {"mt": modified_time, "nombre": clave})
+
+
 def find_emaus_id(engine, nombre: str) -> Optional[int]:
     with engine.connect() as conn:
         row = conn.execute(
@@ -1820,20 +1897,10 @@ def main():
             modified_by_id[item["id"]] = dt
 
 
-    # Leer BTU y BF una sola vez antes del loop
-    btu_spreadsheet_id = os.getenv("BTU_SPREADSHEET_ID", "")
-    btu_map: Dict[str, int] = leer_btu_planilla(sheets_svc, btu_spreadsheet_id)
-    if btu_map:
-        print(f"  BTU leídos para {len(btu_map)} Emaús")
-    else:
-        print(f"  [warn] No se leyeron datos BTU (BTU_SPREADSHEET_ID={btu_spreadsheet_id!r})")
-
-    bf_spreadsheet_id = os.getenv("BF_SPREADSHEET_ID", "")
-    bf_map: Dict[str, int] = leer_bf_planilla(sheets_svc, bf_spreadsheet_id)
-    if bf_map:
-        print(f"  BF leídos para {len(bf_map)} Emaús")
-    else:
-        print(f"  [warn] No se leyeron datos BF (BF_SPREADSHEET_ID={bf_spreadsheet_id!r})")
+    # BTU/BF: se releen y aplican solo si sus planillas externas cambiaron
+    if not args.dry_run:
+        sync_btu_bf_directo(engine, sheets_svc, drive_svc, emaus_list,
+                             args.anio, args.semestre, force=args.force)
 
     ok = err = skip = 0
 
@@ -1863,8 +1930,6 @@ def main():
                 apply_reset=args.apply_reset,
             )
             metrics["_spreadsheet_id"] = spreadsheet_id
-            metrics["btu_actual"] = btu_map.get(emaus["nombre"])
-            metrics["bf_actual"]  = bf_map.get(emaus["nombre"])
             n_err = len([e for e in metrics["validation_errors"] if e["severity"] == "error"])
             n_warn = len([e for e in metrics["validation_errors"] if e["severity"] == "warning"])
 
@@ -1939,20 +2004,9 @@ def run_sync(folder_id: str, anio: int = ANIO_DEFAULT, semestre: str = SEMESTRE_
         if (dt := _parse_drive_datetime(item.get("modifiedTime"))) is not None
     }
 
-    # Leer datos BTU y BF de planillas externas (una sola vez para todo el sync)
-    btu_spreadsheet_id = os.getenv("BTU_SPREADSHEET_ID", "")
-    btu_map: Dict[str, int] = leer_btu_planilla(sheets_svc, btu_spreadsheet_id)
-    if btu_map:
-        print(f"  BTU leídos para {len(btu_map)} Emaús")
-    else:
-        print(f"  [warn] No se leyeron datos BTU (BTU_SPREADSHEET_ID={btu_spreadsheet_id!r})")
-
-    bf_spreadsheet_id = os.getenv("BF_SPREADSHEET_ID", "")
-    bf_map: Dict[str, int] = leer_bf_planilla(sheets_svc, bf_spreadsheet_id)
-    if bf_map:
-        print(f"  BF leídos para {len(bf_map)} Emaús")
-    else:
-        print(f"  [warn] No se leyeron datos BF (BF_SPREADSHEET_ID={bf_spreadsheet_id!r})")
+    # BTU/BF: se releen y aplican solo si sus planillas externas cambiaron
+    if not dry_run:
+        sync_btu_bf_directo(engine, sheets_svc, drive_svc, emaus_list, anio, semestre, force=force)
 
     ok = err = skip = 0
     errores_detalle = []
@@ -1985,8 +2039,6 @@ def run_sync(folder_id: str, anio: int = ANIO_DEFAULT, semestre: str = SEMESTRE_
                     apply_reset=apply_reset,
                 )
                 metrics["_spreadsheet_id"] = spreadsheet_id
-                metrics["btu_actual"] = btu_map.get(emaus["nombre"])
-                metrics["bf_actual"] = bf_map.get(emaus["nombre"])
                 if not dry_run:
                     upsert_control(engine, emaus["id"], anio, semestre, metrics)
                     if modified_time is not None:
