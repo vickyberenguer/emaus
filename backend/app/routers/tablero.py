@@ -1460,8 +1460,21 @@ def participantes(
     grupo_motor = s("grupo_motor_cantidad")
     total_colaboradores = int(iti_sum) + grupo_motor
 
+    # Cantidad de Emaús distintos en el alcance filtrado
+    relevamiento_ids = list({r.relevamiento_id for r in rees})
+    emaus_count = 0
+    if relevamiento_ids:
+        emaus_count = db.query(func.count(func.distinct(Relevamiento.emaus_id))) \
+            .filter(Relevamiento.id.in_(relevamiento_ids)).scalar() or 0
+
+    btu_total = s("btu_regulares")
+    bf_total = s("bf_nivel_inicial") + s("bf_primaria") + s("bf_secundaria")
+
     return {
         "ee_count": ee_count,
+        "emaus_count": emaus_count,
+        "btu_total": btu_total,
+        "bf_total": bf_total,
         "asistentes": {
             "total": total_asistentes,
             "0_6":    asistentes_0_6,

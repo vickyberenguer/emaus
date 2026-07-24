@@ -210,20 +210,23 @@
     .part-hero-val { font-size: 34px; font-weight: 700; line-height: 1; }
     .part-hero-note { font-size: 11px; color: #9ca3af; margin-top: 3px; }
 
+    .part-side { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .part-ee-stack { display: flex; flex-direction: column; gap: 8px; }
     .part-ee-card {
       background: #fff; border: 1px solid #e2e5ed; border-radius: 10px;
-      padding: 16px; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; text-align: center;
+      padding: 10px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center; flex: 1;
     }
-    .part-ee-val { font-size: 48px; font-weight: 700; color: #0d9488; line-height: 1; }
-    .part-ee-label { font-size: 11px; color: #6b7280; margin-top: 4px; }
+    .part-ee-val { font-size: 26px; font-weight: 700; color: #0d9488; line-height: 1; }
+    .part-ee-label { font-size: 10px; color: #6b7280; margin-top: 3px; line-height: 1.2; }
 
     .part-mini-bars { margin-top: 12px; border-top: 1px solid #f0f1f5; padding-top: 12px; display: flex; flex-direction: column; gap: 5px; }
-    .part-bar-row { display: flex; align-items: center; gap: 8px; font-size: 11px; }
-    .part-bar-lbl { width: 90px; color: #6b7280; text-align: right; flex-shrink: 0; }
+    .part-bar-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+    .part-bar-lbl { width: 76px; color: #6b7280; text-align: right; flex-shrink: 0; }
     .part-bar-track { flex: 1; border-radius: 3px; height: 13px; overflow: hidden; }
     .part-bar-fill { height: 100%; border-radius: 3px; }
-    .part-bar-val { width: 44px; font-weight: 600; text-align: right; font-size: 11px; }
+    .part-bar-val { width: 38px; font-weight: 600; text-align: right; font-size: 11px; flex-shrink: 0; }
 
     .part-progs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     .prog-card {
@@ -255,6 +258,9 @@
     font-weight:600; font-size:13px;
   }
   .acc-eje-nombre { color:#1e293b; }
+  .acc-eje-chevron { display:inline-block; margin-right:6px; color:#64748b; font-size:11px; transition:transform .2s; }
+  .acc-eje-detalle { max-height:0; overflow:hidden; transition:max-height .25s ease; }
+  .acc-eje-detalle.abierto { max-height:600px; }
 
   .acc-accion-fila {
     display:grid; grid-template-columns:220px 1fr;
@@ -450,26 +456,46 @@
   </div>
   <div id="part-error" class="alert alert-danger mx-0 mb-3" style="display:none"></div>
 
-  <!-- Top: Asistentes | EE count | Colaboradores -->
+  <!-- Top: Asistentes+Colaboradores | Emaús+EE count | BTU+Becas Familiares -->
   <div class="part-top">
 
-    <div class="part-hero" style="border-color:#2563eb">
-      <div class="part-hero-label">Asistentes</div>
-      <div class="part-hero-val" id="part-asist-val" style="color:#2563eb">—</div>
-      <div class="part-hero-note">personas que asisten a los EEs</div>
-      <div class="part-mini-bars" id="part-age-bars"></div>
+    <div class="part-side">
+      <div class="part-hero" style="border-color:#2563eb">
+        <div class="part-hero-label">Asistentes</div>
+        <div class="part-hero-val" id="part-asist-val" style="color:#2563eb">—</div>
+        <div class="part-hero-note">personas que asisten a los EEs</div>
+        <div class="part-mini-bars" id="part-age-bars"></div>
+      </div>
+      <div class="part-hero" style="border-color:#7c3aed">
+        <div class="part-hero-label">Colaboradores</div>
+        <div class="part-hero-val" id="part-colab-val" style="color:#7c3aed">—</div>
+        <div class="part-hero-note">itinerancia + grupo motor</div>
+        <div class="part-mini-bars" id="part-colab-bars"></div>
+      </div>
     </div>
 
-    <div class="part-ee-card">
-      <div class="part-ee-val" id="part-ee-val">—</div>
-      <div class="part-ee-label">Espacios<br>Educativos</div>
+    <div class="part-ee-stack">
+      <div class="part-ee-card">
+        <div class="part-ee-val" id="part-emaus-val">—</div>
+        <div class="part-ee-label">Cantidad<br>Emaús</div>
+      </div>
+      <div class="part-ee-card">
+        <div class="part-ee-val" id="part-ee-val">—</div>
+        <div class="part-ee-label">Espacios<br>Educativos</div>
+      </div>
     </div>
 
-    <div class="part-hero" style="border-color:#7c3aed">
-      <div class="part-hero-label">Colaboradores</div>
-      <div class="part-hero-val" id="part-colab-val" style="color:#7c3aed">—</div>
-      <div class="part-hero-note">itinerancia + grupo motor</div>
-      <div class="part-mini-bars" id="part-colab-bars"></div>
+    <div class="part-side">
+      <div class="part-hero" style="border-color:#0d9488">
+        <div class="part-hero-label">BTU</div>
+        <div class="part-hero-val" id="part-btu-val" style="color:#0d9488">—</div>
+        <div class="part-hero-note">becarios regulares</div>
+      </div>
+      <div class="part-hero" style="border-color:#d97706">
+        <div class="part-hero-label">Becas Familiares</div>
+        <div class="part-hero-val" id="part-bf-val" style="color:#d97706">—</div>
+        <div class="part-hero-note">chicos escolarizados</div>
+      </div>
     </div>
 
   </div>
@@ -1118,8 +1144,11 @@ function n(val) { return (val || 0).toLocaleString('es-AR'); }
 
 function renderParticipantes(d) {
   document.getElementById('part-ee-val').textContent       = n(d.ee_count);
+  document.getElementById('part-emaus-val').textContent    = n(d.emaus_count);
   document.getElementById('part-asist-val').textContent    = n(d.asistentes.total);
   document.getElementById('part-colab-val').textContent    = n(d.colaboradores.total);
+  document.getElementById('part-btu-val').textContent      = n(d.btu_total);
+  document.getElementById('part-bf-val').textContent       = n(d.bf_total);
 
   const maxAge = Math.max(d.asistentes['0_6'], d.asistentes['7_14'], d.asistentes['15_24'],
     d.asistentes['25_35'], d.asistentes['35_50'], d.asistentes['mas_50'], 1);
@@ -1283,16 +1312,17 @@ function renderAcciones(d) {
       <span class="text-muted small ms-2">${d.total_ee} EEs relevados</span>
     </div>`;
 
-  for (const eje of d.ejes) {
+  d.ejes.forEach((eje, idx) => {
     const ag = eje.agrupador;
     html += `
     <div class="acc-eje-bloque">
-      <div class="acc-eje-header">
-        <span class="acc-eje-nombre">${eje.eje}</span>
+      <div class="acc-eje-header" style="cursor:pointer" onclick="toggleAccEje(${idx})">
+        <span class="acc-eje-nombre"><span class="acc-eje-chevron" id="acc-chevron-${idx}">&#9656;</span>${eje.eje}</span>
         <div class="acc-eje-barra-wrap">
           ${renderBarra(ag.si, ag.no, ag.sin_dato, ag.total)}
         </div>
-      </div>`;
+      </div>
+      <div class="acc-eje-detalle" id="acc-detalle-${idx}">`;
     for (const a of eje.acciones) {
       html += `
       <div class="acc-accion-fila">
@@ -1302,10 +1332,18 @@ function renderAcciones(d) {
         </div>
       </div>`;
     }
-    html += `</div>`;
-  }
+    html += `</div></div>`;
+  });
 
   document.getElementById('acc-contenido').innerHTML = html;
+}
+
+function toggleAccEje(idx) {
+  const detalle = document.getElementById(`acc-detalle-${idx}`);
+  const chevron = document.getElementById(`acc-chevron-${idx}`);
+  const abrir = !detalle.classList.contains('abierto');
+  detalle.classList.toggle('abierto', abrir);
+  chevron.style.transform = abrir ? 'rotate(90deg)' : 'rotate(0deg)';
 }
 
 // ── Tab Internet ──
