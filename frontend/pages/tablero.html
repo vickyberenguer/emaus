@@ -1572,20 +1572,22 @@ async function cargarGrupoMotor() {
     const d = await api.get('/tablero/grupo-motor?' + params.toString());
     if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
 
-    // Donut de frecuencia
+    // Donut de frecuencia (excluye "Sin dato")
     const cx = 100, cy = 100, r = 70, stroke = 28;
-    const totalFreq = d.frecuencia.reduce((s, f) => s + f.cantidad, 0);
+    const freqSinDato = d.frecuencia.filter(f => f.valor !== 'Sin dato');
+    const totalFreq = freqSinDato.reduce((s, f) => s + f.cantidad, 0);
     let startAngle = -Math.PI / 2;
     let paths = '';
-    d.frecuencia.forEach(f => {
+    freqSinDato.forEach(f => {
       if (!f.cantidad) return;
+      const pctLocal = (f.cantidad / totalFreq * 100).toFixed(1);
       const angle = (f.cantidad / totalFreq) * 2 * Math.PI;
       const x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle);
       const x2 = cx + r * Math.cos(startAngle + angle), y2 = cy + r * Math.sin(startAngle + angle);
       const large = angle > Math.PI ? 1 : 0;
       const color = GM_FREQ_COLORS[f.valor] || '#9ca3af';
       paths += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z" fill="${color}" opacity="0.9">
-        <title>${f.valor}: ${f.cantidad} (${f.pct}%)</title></path>`;
+        <title>${f.valor}: ${f.cantidad} (${pctLocal}%)</title></path>`;
       startAngle += angle;
     });
     const donutSvg = `<svg viewBox="0 0 200 200" class="ae-donut-svg">
@@ -1594,11 +1596,12 @@ async function cargarGrupoMotor() {
       <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="13" fill="#374151" font-weight="600">${d.total_ee}</text>
       <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="10" fill="#6b7280">EEs relevados</text>
     </svg>`;
-    const freqLegend = d.frecuencia.filter(f => f.cantidad > 0).map(f => {
+    const freqLegend = freqSinDato.filter(f => f.cantidad > 0).map(f => {
       const color = GM_FREQ_COLORS[f.valor] || '#9ca3af';
+      const pctLocal = (f.cantidad / totalFreq * 100).toFixed(1);
       return `<div class="ae-legend-item">
         <div class="ae-legend-dot" style="background:${color}"></div>
-        <span>${f.valor} — ${f.pct}%</span>
+        <span>${f.valor} — ${pctLocal}%</span>
       </div>`;
     }).join('');
 
@@ -1666,12 +1669,14 @@ const IT_FREQ_COLORS = {
 
 function itDonut(items, colorMap, totalLabel, totalValor) {
   const cx = 100, cy = 100, r = 70, stroke = 28;
-  const total = items.reduce((s, f) => s + f.cantidad, 0);
+  const itemsSinDato = items.filter(f => (f.valor || f.actividad || f.espacio || f.rol) !== 'Sin dato');
+  const total = itemsSinDato.reduce((s, f) => s + f.cantidad, 0);
   if (!total) return { svg: '', legend: '' };
   let startAngle = -Math.PI / 2;
   let paths = '';
-  items.forEach(f => {
+  itemsSinDato.forEach(f => {
     if (!f.cantidad) return;
+    const pctLocal = (f.cantidad / total * 100).toFixed(1);
     const angle = (f.cantidad / total) * 2 * Math.PI;
     const x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle);
     const x2 = cx + r * Math.cos(startAngle + angle), y2 = cy + r * Math.sin(startAngle + angle);
@@ -1679,7 +1684,7 @@ function itDonut(items, colorMap, totalLabel, totalValor) {
     const key = f.valor || f.actividad || f.espacio || f.rol;
     const color = colorMap[key] || '#9ca3af';
     paths += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z" fill="${color}" opacity="0.9">
-      <title>${key}: ${f.cantidad} (${f.pct}%)</title></path>`;
+      <title>${key}: ${f.cantidad} (${pctLocal}%)</title></path>`;
     startAngle += angle;
   });
   const svg = `<svg viewBox="0 0 200 200" class="ae-donut-svg">
@@ -1688,12 +1693,13 @@ function itDonut(items, colorMap, totalLabel, totalValor) {
     <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="13" fill="#374151" font-weight="600">${totalValor}</text>
     <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="10" fill="#6b7280">${totalLabel}</text>
   </svg>`;
-  const legend = items.filter(f => f.cantidad > 0).map(f => {
+  const legend = itemsSinDato.filter(f => f.cantidad > 0).map(f => {
     const key = f.valor || f.actividad || f.espacio || f.rol;
     const color = colorMap[key] || '#9ca3af';
+    const pctLocal = (f.cantidad / total * 100).toFixed(1);
     return `<div class="ae-legend-item">
       <div class="ae-legend-dot" style="background:${color}"></div>
-      <span>${key} — ${f.pct}%</span>
+      <span>${key} — ${pctLocal}%</span>
     </div>`;
   }).join('');
   return { svg, legend };
@@ -2470,12 +2476,13 @@ function renderNivelPanel(d, nivel) {
     return `<p class="text-muted text-center py-4">Sin datos de apoyo escolar ${nivel} para el período seleccionado.</p>`;
   }
 
-  // Donut SVG de frecuencia
+  // Donut SVG de frecuencia (excluye "Sin respuesta")
   const cx = 100, cy = 100, r = 70, stroke = 28;
-  const total = d.frecuencia.reduce((s, f) => s + f.cantidad, 0);
+  const frecSinDato = d.frecuencia.filter(f => f.valor !== 'Sin respuesta');
+  const total = frecSinDato.reduce((s, f) => s + f.cantidad, 0);
   let startAngle = -Math.PI / 2;
   let paths = '';
-  d.frecuencia.forEach(f => {
+  frecSinDato.forEach(f => {
     if (!f.cantidad) return;
     const angle = (f.cantidad / total) * 2 * Math.PI;
     const x1 = cx + r * Math.cos(startAngle);
@@ -2499,7 +2506,7 @@ function renderNivelPanel(d, nivel) {
     <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="10" fill="#6b7280">EEs con apoyo</text>
   </svg>`;
 
-  const legend = d.frecuencia.filter(f => f.cantidad > 0).map(f => {
+  const legend = frecSinDato.filter(f => f.cantidad > 0).map(f => {
     const color = AE_FREQ_COLORS[f.valor] || '#9ca3af';
     const pct = (f.cantidad / total * 100).toFixed(1);
     return `<div class="ae-legend-item">
