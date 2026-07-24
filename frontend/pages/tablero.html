@@ -778,34 +778,12 @@
     <button class="btn btn-sm btn-primary" id="btn-ae-filtrar">Filtrar</button>
   </div>
 
-  <!-- Sub-tabs Primaria / Secundaria -->
-  <div style="display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin:16px 24px 0">
-    <button class="ae-subtab active" data-nivel="primaria">Primaria</button>
-    <button class="ae-subtab" data-nivel="secundaria">Secundaria</button>
-  </div>
-
   <div id="ae-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
   </div>
 </div>
 
 <style>
-.ae-subtab {
-  padding: 8px 24px;
-  border: none;
-  background: none;
-  color: #6b7280;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: color .15s;
-}
-.ae-subtab.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
-}
 .ae-donut-wrap { display:flex; justify-content:center; margin:24px 0 8px; }
 .ae-donut-svg { max-width:320px; width:100%; }
 .ae-legend { display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:center; margin-bottom:24px; font-size:13px; }
@@ -2405,7 +2383,6 @@ async function cargarAyjPreocupaciones() {
 // ── Tab Apoyo Escolar ──
 let aeIniciado = false;
 let aeDatos = null;
-let aeNivel = 'primaria';
 
 const AE_FREQ_COLORS = {
   'Una vez a la semana':          '#3b82f6',
@@ -2440,15 +2417,6 @@ async function iniciarApoyoEscolar() {
     document.getElementById('btn-ae-filtrar').addEventListener('click', () => {
       aeDatos = null;
       cargarApoyoEscolar();
-    });
-
-    document.querySelectorAll('.ae-subtab').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.ae-subtab').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        aeNivel = btn.dataset.nivel;
-        if (aeDatos) renderApoyoEscolar();
-      });
     });
   }
   if (!aeDatos) cargarApoyoEscolar();
@@ -2497,12 +2465,9 @@ async function cargarApoyoEscolar() {
   }
 }
 
-function renderApoyoEscolar() {
-  const d = aeDatos[aeNivel];
-  const contenido = document.getElementById('ae-contenido');
+function renderNivelPanel(d, nivel) {
   if (!d || d.total_con_apoyo === 0) {
-    contenido.innerHTML = `<p class="text-muted text-center py-4">Sin datos de apoyo escolar ${aeNivel} para el período seleccionado.</p>`;
-    return;
+    return `<p class="text-muted text-center py-4">Sin datos de apoyo escolar ${nivel} para el período seleccionado.</p>`;
   }
 
   // Donut SVG de frecuencia
@@ -2544,7 +2509,6 @@ function renderApoyoEscolar() {
   }).join('');
 
   // Barras de contenidos (ordenadas por %, desc)
-  const maxPct = d.contenidos.length ? d.contenidos[0].pct : 1;
   const bars = d.contenidos.map(c => `
     <div class="ae-bar-row">
       <div class="ae-bar-label">${c.contenido}</div>
@@ -2555,12 +2519,24 @@ function renderApoyoEscolar() {
       </div>
     </div>`).join('');
 
-  contenido.innerHTML = `
-    <p class="ae-info text-center">${aeDatos.total_ee} EEs relevados · ${d.total_con_apoyo} con apoyo escolar ${aeNivel}</p>
+  return `
+    <div class="ae-bars-title" style="text-align:center;font-size:16px">${nivel === 'primaria' ? 'Primaria' : 'Secundaria'}</div>
+    <p class="ae-info text-center">${d.total_con_apoyo} con apoyo escolar ${nivel}</p>
     <div class="ae-donut-wrap">${donutSvg}</div>
     <div class="ae-legend">${legend}</div>
     <div class="ae-bars-title">Contenidos trabajados</div>
     ${bars || '<p class="text-muted">Sin datos de contenidos.</p>'}
+  `;
+}
+
+function renderApoyoEscolar() {
+  const contenido = document.getElementById('ae-contenido');
+  contenido.innerHTML = `
+    <p class="ae-info text-center">${aeDatos.total_ee} EEs relevados</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+      <div>${renderNivelPanel(aeDatos.primaria, 'primaria')}</div>
+      <div>${renderNivelPanel(aeDatos.secundaria, 'secundaria')}</div>
+    </div>
   `;
 }
 </script>
