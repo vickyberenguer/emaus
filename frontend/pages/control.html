@@ -11,6 +11,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/main.css">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <style>
+    .th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+    .th-sort:hover { background-color: rgba(0,0,0,.04); }
+  </style>
 </head>
 <body>
 
@@ -84,22 +88,22 @@
       <table class="table table-hover table-sm align-middle mb-0" id="tabla-control">
         <thead class="table-light">
           <tr>
-            <th>Emaús</th>
-            <th class="text-center">EE total</th>
-            <th class="text-center">EE completos</th>
-            <th class="text-center">EE errores</th>
-            <th class="text-center">PI</th>
-            <th class="text-center">Talleres</th>
-            <th class="text-center">Estab.</th>
-            <th class="text-center">Asistentes</th>
-            <th class="text-center">BTU</th>
-            <th class="text-center">Dif BTU</th>
-            <th class="text-center">BF</th>
-            <th class="text-center">Dif BF</th>
-            <th class="text-center">Talleres #</th>
-            <th class="text-center">Estab. #</th>
-            <th class="text-center">Último sync</th>
-            <th class="text-center">Estado</th>
+            <th class="th-sort" data-sort="emaus" data-label="Emaús">Emaús</th>
+            <th class="text-center th-sort" data-sort="ee_total" data-label="EE total">EE total</th>
+            <th class="text-center th-sort" data-sort="ee_completos" data-label="EE completos">EE completos</th>
+            <th class="text-center th-sort" data-sort="ee_errores" data-label="EE errores">EE errores</th>
+            <th class="text-center th-sort" data-sort="pi" data-label="PI">PI</th>
+            <th class="text-center th-sort" data-sort="talleres" data-label="Talleres">Talleres</th>
+            <th class="text-center th-sort" data-sort="estab" data-label="Estab.">Estab.</th>
+            <th class="text-center th-sort" data-sort="asistentes" data-label="Asistentes">Asistentes</th>
+            <th class="text-center th-sort" data-sort="btu" data-label="BTU">BTU</th>
+            <th class="text-center th-sort" data-sort="dif_btu" data-label="Dif BTU">Dif BTU</th>
+            <th class="text-center th-sort" data-sort="bf" data-label="BF">BF</th>
+            <th class="text-center th-sort" data-sort="dif_bf" data-label="Dif BF">Dif BF</th>
+            <th class="text-center th-sort" data-sort="talleres_n" data-label="Talleres #">Talleres #</th>
+            <th class="text-center th-sort" data-sort="estab_n" data-label="Estab. #">Estab. #</th>
+            <th class="text-center th-sort" data-sort="sync" data-label="Último sync">Último sync</th>
+            <th class="text-center th-sort" data-sort="estado" data-label="Estado">Estado</th>
             <th class="text-center">Acciones</th>
           </tr>
         </thead>
@@ -164,6 +168,46 @@ let datosControl = [];
 let emausSeleccionado = null;
 let accionPendiente = null;
 let esAdmin = false;
+let sortCol = null;
+let sortDir = 1; // 1 = ascendente, -1 = descendente
+
+// Valor comparable por columna para el ordenamiento
+const SORT_KEYS = {
+  emaus:        d => d.emaus_nombre.toLowerCase(),
+  ee_total:     d => d.ee_count,
+  ee_completos: d => d.ee_declarados_completos,
+  ee_errores:   d => d.ee_con_errores,
+  pi:           d => d.pi_con_errores ? -1 : (!d.pi_existe ? 0 : (d.pi_completa ? 2 : 1)),
+  talleres:     d => d.talleres_completo ? 1 : 0,
+  estab:        d => d.establecimientos_completo ? 1 : 0,
+  asistentes:   d => d.total_asistentes_ee,
+  btu:          d => d.btu_relevado || 0,
+  dif_btu:      d => d.btu_actual == null ? -Infinity : (d.btu_actual - (d.btu_relevado || 0)),
+  bf:           d => d.bf_relevado || 0,
+  dif_bf:       d => d.bf_actual == null ? -Infinity : (d.bf_actual - (d.bf_relevado || 0)),
+  talleres_n:   d => d.cantidad_talleres,
+  estab_n:      d => d.cantidad_establecimientos,
+  sync:         d => d.ultimo_sync || '',
+  estado:       d => d.aprobacion?.estado || (d.listo_para_aprobar ? 'listo' : 'pendiente'),
+};
+
+function ordenarPor(col) {
+  if (sortCol === col) {
+    sortDir *= -1;
+  } else {
+    sortCol = col;
+    sortDir = 1;
+  }
+  renderTabla();
+}
+
+function actualizarThsOrden() {
+  document.querySelectorAll('#tabla-control thead .th-sort').forEach(th => {
+    const col = th.dataset.sort;
+    const arrow = sortCol === col ? (sortDir === 1 ? ' ▲' : ' ▼') : '';
+    th.textContent = th.dataset.label + arrow;
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Init
@@ -183,6 +227,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('filtro-emaus').addEventListener('input', renderTabla);
   document.getElementById('btn-sync').addEventListener('click', triggerSync);
+
+  document.querySelectorAll('#tabla-control thead .th-sort').forEach(th => {
+    th.addEventListener('click', () => ordenarPor(th.dataset.sort));
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -229,10 +277,22 @@ function renderDifBtu(d) { return renderDif(d.btu_actual, d.btu_relevado); }
 function renderDifBf(d)  { return renderDif(d.bf_actual,  d.bf_relevado);  }
 
 function renderTabla() {
+  actualizarThsOrden();
+
   const filtro = document.getElementById('filtro-emaus').value.toLowerCase();
   const datos = datosControl.filter(d =>
     !filtro || d.emaus_nombre.toLowerCase().includes(filtro)
   );
+
+  if (sortCol && SORT_KEYS[sortCol]) {
+    const keyFn = SORT_KEYS[sortCol];
+    datos.sort((a, b) => {
+      const va = keyFn(a), vb = keyFn(b);
+      if (va < vb) return -1 * sortDir;
+      if (va > vb) return 1 * sortDir;
+      return 0;
+    });
+  }
 
   if (!datos.length) {
     document.getElementById('tbody-control').innerHTML =
