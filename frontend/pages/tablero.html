@@ -1426,6 +1426,8 @@ async function cargarInternet() {
 
 // ── Tab Edilicias ──
 let edIniciado = false;
+const ED_RAMPA_COLORS = { 'Sí': '#22c55e', 'No': '#f43f5e' };
+const ED_RECREACION_COLORS = { 'Cubierto': '#0ea5e9', 'Descubierto': '#f59e0b', 'No tiene': '#d1d5db' };
 
 async function iniciarEdilicias() {
   if (!edIniciado) {
@@ -1489,8 +1491,19 @@ async function cargarEdilicias() {
 
     const N = d.total_ee;
 
+    const recreacionDonut = itDonut(
+      (d.espacio_recreacion || []).map(x => ({ valor: x.label, cantidad: x.cantidad })),
+      ED_RECREACION_COLORS, 'EEs relevados', N,
+    );
+    const rampaDonut = itDonut(d.rampa || [], ED_RAMPA_COLORS, 'EEs relevados', N);
+
     contenido.innerHTML = `
       <p class="ae-info">${N} EEs relevados</p>
+
+      <div style="margin-bottom:32px;max-width:520px;margin-left:auto;margin-right:auto">
+        <div class="ae-bars-title" style="text-align:center">Titularidad</div>
+        ${edBarras(d.titularidad, 'label', 'pct', 'cantidad', '#a855f7', 220)}
+      </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px">
         <div>
@@ -1503,9 +1516,20 @@ async function cargarEdilicias() {
         </div>
       </div>
 
+      <div style="margin-bottom:32px;max-width:520px">
+        <div class="ae-bars-title">Acceso principal</div>
+        ${edBarras(d.acceso_principal, 'label', 'pct', 'cantidad', '#14b8a6', 220)}
+      </div>
+
       <div style="margin-bottom:32px">
         <div class="ae-bars-title">Ambientes <span style="font-weight:400;color:#6b7280;font-size:13px">(% EEs que tienen)</span></div>
         ${edBarras(d.ambientes, 'label', 'pct', 'cantidad', '#10b981', 240)}
+      </div>
+
+      <div style="margin-bottom:32px;max-width:340px">
+        <div class="ae-bars-title" style="text-align:center">Espacio de recreación</div>
+        <div class="ae-donut-wrap">${recreacionDonut.svg}</div>
+        <div class="ae-legend">${recreacionDonut.legend}</div>
       </div>
 
       <div style="margin-bottom:32px">
@@ -1513,7 +1537,7 @@ async function cargarEdilicias() {
         ${edBarras(d.servicios, 'label', 'pct', 'cantidad', '#f59e0b', 240)}
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px">
         <div>
           <div class="ae-bars-title">Equipamiento cocina <span style="font-weight:400;color:#6b7280;font-size:13px">(% EEs)</span></div>
           ${edBarras(d.equipos_cocina, 'label', 'pct', 'cantidad', '#ef4444', 200)}
@@ -1530,6 +1554,12 @@ async function cargarEdilicias() {
               </div>
             </div>`).join('') : '<p class="text-muted" style="font-size:13px">Sin datos</p>'}
         </div>
+      </div>
+
+      <div style="max-width:340px;margin:0 auto">
+        <div class="ae-bars-title" style="text-align:center">Rampa de acceso para discapacidad</div>
+        <div class="ae-donut-wrap">${rampaDonut.svg}</div>
+        <div class="ae-legend">${rampaDonut.legend}</div>
       </div>`;
   } catch(e) {
     contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
