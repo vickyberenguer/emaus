@@ -24,6 +24,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       atl:          '/pages/relevamiento.html',
       responsable:  '/pages/control.html',
       admin:        '/pages/control.html',
+      tablero:      '/pages/tablero.html',
     }[data.rol] || '/index.html';
 
     window.location.href = destino;

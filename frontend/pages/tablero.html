@@ -265,7 +265,7 @@
     </span>
     <span class="d-flex align-items-center gap-2 ms-2">
       <span class="navbar-module-switcher">
-        <a href="/pages/control.html"  class="module-btn"><i class="bi bi-bar-chart-line"></i> Control</a>
+        <a href="/pages/control.html"  class="module-btn" id="link-control"><i class="bi bi-bar-chart-line"></i> Control</a>
         <a href="/pages/tablero.html"  class="module-btn active"><i class="bi bi-graph-up"></i> Tablero</a>
         <a href="/pages/admin.html"    class="module-btn" id="link-admin"><i class="bi bi-gear"></i> Admin</a>
       </span>
@@ -812,14 +812,17 @@ const ANIO = 2026;
 const SEMESTRE = '1';
 
 let esAdmin = false;
+let soloTablero = false;
 let datos = null;
 
 async function init() {
-  session.requireRol(['admin', 'responsable']);
+  session.requireRol(['admin', 'responsable', 'tablero']);
   session.pintarNavbar('Tablero');
   esAdmin = session.rol() === 'admin';
+  soloTablero = session.rol() === 'tablero';
 
   if (!esAdmin) document.getElementById('link-admin').style.display = 'none';
+  if (soloTablero) document.getElementById('link-control').style.display = 'none';
 
   if (esAdmin) {
     actualizarFiltroBar('estado-carga');
@@ -827,10 +830,21 @@ async function init() {
     document.getElementById('sel-responsable').addEventListener('change', cargarDatos);
   }
 
-  // Estado de carga activo por defecto
-  document.getElementById('tab-participantes').style.display = 'none';
+  if (soloTablero) {
+    // El rol "tablero" no tiene acceso a "Estado de carga": ocultar el tab
+    // y arrancar directamente en "Participantes".
+    document.querySelector('.tablero-tab[data-tab="estado-carga"]').style.display = 'none';
+    document.querySelector('.tablero-tab.active').classList.remove('active');
+    document.querySelector('.tablero-tab[data-tab="participantes"]').classList.add('active');
+    document.getElementById('tab-estado-carga').style.display = 'none';
+    document.getElementById('tab-participantes').style.display = 'block';
+    await cargarParticipantes();
+  } else {
+    // Estado de carga activo por defecto
+    document.getElementById('tab-participantes').style.display = 'none';
+    await cargarDatos();
+  }
 
-  await cargarDatos();
   await cargarFiltros();
 
   // Período → recargar filtros completos
