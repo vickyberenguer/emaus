@@ -178,6 +178,7 @@ def listar_control(
         .filter(
             ControlRelevamiento.anio == anio,
             ControlRelevamiento.semestre == semestre,
+            Emaus.activo == True,
         )
     )
     if allowed_ids is not None:

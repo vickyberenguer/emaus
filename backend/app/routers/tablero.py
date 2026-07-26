@@ -65,7 +65,7 @@ def estado_carga(
 
     query = (
         db.query(ControlRelevamiento, Emaus, ControlAprobacion)
-        .join(Emaus, Emaus.id == ControlRelevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == ControlRelevamiento.emaus_id, Emaus.activo == True))
         .outerjoin(ControlAprobacion, and_(
             ControlAprobacion.emaus_id == ControlRelevamiento.emaus_id,
             ControlAprobacion.anio == ControlRelevamiento.anio,
@@ -177,14 +177,17 @@ def filtros_participantes(
     q = (
         db.query(Diocesis.region, Diocesis.provincia, Emaus.id, Emaus.nombre,
                  EspacioEducativo.id, EspacioEducativo.nombre)
-        .join(Emaus, Emaus.diocesis_id == Diocesis.id)
+        .join(Emaus, and_(Emaus.diocesis_id == Diocesis.id, Emaus.activo == True))
         .join(Relevamiento, and_(
             Relevamiento.emaus_id == Emaus.id,
             Relevamiento.anio == anio,
             Relevamiento.semestre == semestre,
         ))
         .join(RelevamientoEE, RelevamientoEE.relevamiento_id == Relevamiento.id)
-        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
         .distinct()
         .order_by(Diocesis.region, Diocesis.provincia, Emaus.nombre, EspacioEducativo.nombre)
     )
@@ -266,9 +269,12 @@ def acciones(
             Relevamiento.anio == anio,
             Relevamiento.semestre == semestre,
         ))
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
-        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
     )
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
@@ -391,8 +397,9 @@ def edilicias(
             Relevamiento.anio == anio,
             Relevamiento.semestre == semestre,
         ))
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .filter(EspacioEducativo.activo == True)
         .distinct()
     )
     if allowed_ids is not None:
@@ -498,9 +505,12 @@ def grupo_motor(
             Relevamiento.anio == anio,
             Relevamiento.semestre == semestre,
         ))
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
-        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
     )
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
@@ -607,9 +617,12 @@ def itinerancia(
             Relevamiento.anio == anio,
             Relevamiento.semestre == semestre,
         ))
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
-        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
     )
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
@@ -736,9 +749,12 @@ def btu(
             Relevamiento.anio == anio,
             Relevamiento.semestre == semestre,
         ))
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
-        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
     )
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
@@ -817,9 +833,12 @@ def ayj_preocupaciones(
             Relevamiento.anio == anio,
             Relevamiento.semestre == semestre,
         ))
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
-        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
     )
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
@@ -909,9 +928,12 @@ def becas_familiares(
             Relevamiento.anio == anio,
             Relevamiento.semestre == semestre,
         ))
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
-        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
     )
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
@@ -979,7 +1001,7 @@ def primera_infancia(
     query = (
         db.query(PastoralPI, Diocesis.id)
         .join(Relevamiento, Relevamiento.id == PastoralPI.relevamiento_id)
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
         .filter(Relevamiento.anio == anio, Relevamiento.semestre == semestre)
     )
@@ -1077,7 +1099,7 @@ def primera_infancia_acciones(
     query = (
         db.query(PastoralPI.id, Diocesis.id)
         .join(Relevamiento, Relevamiento.id == PastoralPI.relevamiento_id)
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
         .filter(Relevamiento.anio == anio, Relevamiento.semestre == semestre)
     )
@@ -1158,7 +1180,7 @@ def establecimientos_tab(
     query = (
         db.query(EstablecimientoArticulado, EstablecimientoEstado)
         .join(Relevamiento, Relevamiento.id == EstablecimientoArticulado.relevamiento_id)
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
         .outerjoin(EstablecimientoEstado, EstablecimientoEstado.id == EstablecimientoArticulado.establecimiento_id)
         .filter(Relevamiento.anio == anio, Relevamiento.semestre == semestre)
@@ -1251,9 +1273,12 @@ def internet(
             Relevamiento.anio == anio,
             Relevamiento.semestre == semestre,
         ))
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
-        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
     )
     if allowed_ids is not None:
         q = q.filter(Relevamiento.emaus_id.in_(allowed_ids))
@@ -1321,9 +1346,12 @@ def apoyo_escolar(
             Relevamiento.anio == anio,
             Relevamiento.semestre == semestre,
         ))
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
-        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
     )
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
@@ -1419,9 +1447,12 @@ def participantes(
             Relevamiento.anio == anio,
             Relevamiento.semestre == semestre,
         ))
-        .join(Emaus, Emaus.id == Relevamiento.emaus_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
         .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
-        .join(EspacioEducativo, EspacioEducativo.id == RelevamientoEE.espacio_educativo_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
     )
 
     if allowed_ids is not None:
@@ -1471,7 +1502,7 @@ def participantes(
     provincias_count = 0
     if relevamiento_ids:
         provincias_count = db.query(func.count(func.distinct(Diocesis.provincia))) \
-            .join(Emaus, Emaus.diocesis_id == Diocesis.id) \
+            .join(Emaus, and_(Emaus.diocesis_id == Diocesis.id, Emaus.activo == True)) \
             .join(Relevamiento, Relevamiento.emaus_id == Emaus.id) \
             .filter(Relevamiento.id.in_(relevamiento_ids)).scalar() or 0
 
