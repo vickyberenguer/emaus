@@ -171,7 +171,7 @@ def filtros_participantes(
     provincia: Optional[str] = None,
     emaus_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     """Valores disponibles para los filtros cascada del tablero."""
     q = (
@@ -257,7 +257,7 @@ def acciones(
     emaus_id: Optional[int] = None,
     ee_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     allowed_ids = emaus_ids_for_user(current_user, db)
 
@@ -384,7 +384,7 @@ def edilicias(
     emaus_id: Optional[int] = None,
     ee_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     allowed_ids = emaus_ids_for_user(current_user, db)
 
@@ -493,7 +493,7 @@ def grupo_motor(
     emaus_id: Optional[int] = None,
     ee_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     allowed_ids = emaus_ids_for_user(current_user, db)
 
@@ -605,7 +605,7 @@ def itinerancia(
     emaus_id: Optional[int] = None,
     ee_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     allowed_ids = emaus_ids_for_user(current_user, db)
 
@@ -736,7 +736,7 @@ def btu(
     emaus_id: Optional[int] = None,
     ee_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     allowed_ids = emaus_ids_for_user(current_user, db)
 
@@ -822,7 +822,7 @@ def ayj_preocupaciones(
     emaus_id: Optional[int] = None,
     ee_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     allowed_ids = emaus_ids_for_user(current_user, db)
 
@@ -911,7 +911,7 @@ def becas_familiares(
     emaus_id: Optional[int] = None,
     ee_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     allowed_ids = emaus_ids_for_user(current_user, db)
 
@@ -993,7 +993,7 @@ def primera_infancia(
     provincia: Optional[str] = None,
     emaus_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     # PI es un dato por Emaús (no por EE): sin filtro de EE.
     allowed_ids = emaus_ids_for_user(current_user, db)
@@ -1091,7 +1091,7 @@ def primera_infancia_acciones(
     provincia: Optional[str] = None,
     emaus_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     # PI es un dato por Emaús (no por EE): sin filtro de EE.
     allowed_ids = emaus_ids_for_user(current_user, db)
@@ -1172,7 +1172,7 @@ def establecimientos_tab(
     provincia: Optional[str] = None,
     emaus_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     # Establecimientos es un dato por Emaús (cargado directo en la app, no por EE ni scrapeado).
     allowed_ids = emaus_ids_for_user(current_user, db)
@@ -1262,7 +1262,7 @@ def internet(
     emaus_id: Optional[int] = None,
     ee_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     allowed_ids = emaus_ids_for_user(current_user, db)
 
@@ -1332,7 +1332,7 @@ def apoyo_escolar(
     emaus_id: Optional[int] = None,
     ee_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     allowed_ids = emaus_ids_for_user(current_user, db)
 
@@ -1436,7 +1436,7 @@ def participantes(
     emaus_id: Optional[int] = None,
     ee_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     allowed_ids = emaus_ids_for_user(current_user, db)
 

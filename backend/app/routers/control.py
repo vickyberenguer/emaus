@@ -120,8 +120,8 @@ def is_listo(ctrl: ControlRelevamiento) -> bool:
 
 
 def emaus_ids_for_user(user: Usuario, db: Session) -> Optional[List[int]]:
-    """None = ver todos (admin). Lista = solo esos Emaús (responsable)."""
-    if user.rol == "admin":
+    """None = ver todos (admin, tablero). Lista = solo esos Emaús (responsable)."""
+    if user.rol in ("admin", "tablero"):
         return None
     return [
         r.emaus_id for r in

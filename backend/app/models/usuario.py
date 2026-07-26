@@ -9,6 +9,7 @@ class RolEnum(str, enum.Enum):
     atl = "atl"
     responsable = "responsable"
     admin = "admin"
+    tablero = "tablero"
 
 
 class Usuario(Base):
