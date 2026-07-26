@@ -211,10 +211,12 @@ def filtros_participantes(
     emaus_list = {r[2]: r[3] for r in base_emaus}
 
     # EE filtrados por región, provincia y/o emaús
+    # Se antepone el nombre del Emaús porque hay EE con el mismo nombre en
+    # distintos Emaús y si no, no se puede distinguir a cuál pertenece cada uno.
     base_ee = base_emaus
     if emaus_id:
         base_ee = [r for r in base_ee if r[2] == emaus_id]
-    ee_list = {r[4]: r[5] for r in base_ee}
+    ee_list = {r[4]: f"{r[3]} - {r[5]}" for r in base_ee}
 
     return {
         "regiones":  regiones,
@@ -447,11 +449,23 @@ def edilicias(
     ).group_by(EEAmbiente.ambiente).all()
     amb_counts = {r[0]: int(r[1] or 0) for r in amb_rows}
 
-    # Servicios (presencia = tener registro)
-    serv_rows = db.query(EEServicio.servicio, func.count(EEServicio.id)).filter(
+    # Servicios: los de tipo "sí/no" (Agua corriente, Aljibe/Reservorio, Agua
+    # fuera del terreno, Cloacas, Luz de red, Señal móvil) solo cuentan si la
+    # respuesta fue afirmativa — antes se contaba cualquier respuesta (incluido
+    # "No") como "tiene el servicio". Los de texto libre (Residuos, Internet
+    # Provisto, Combustible Cocina) siguen contando cualquier respuesta no vacía.
+    SERVICIOS_SI_NO = {
+        "Agua corriente", "Aljibe/Reservorio", "Agua fuera del terreno",
+        "Cloacas", "Luz de red", "Señal móvil",
+    }
+    AFIRMATIVOS = {"true", "verdadero", "sí", "si", "1"}
+    serv_counts = {}
+    for servicio, valor in db.query(EEServicio.servicio, EEServicio.valor).filter(
         EEServicio.espacio_educativo_id.in_(ee_ids)
-    ).group_by(EEServicio.servicio).all()
-    serv_counts = {r[0]: r[1] for r in serv_rows}
+    ).all():
+        if servicio in SERVICIOS_SI_NO and (valor or "").strip().lower() not in AFIRMATIVOS:
+            continue
+        serv_counts[servicio] = serv_counts.get(servicio, 0) + 1
 
     # Equipos cocina
     cocina_rows = db.query(EEEquipoCocina.equipo, func.sum(func.if_(EEEquipoCocina.tiene, 1, 0))).filter(
