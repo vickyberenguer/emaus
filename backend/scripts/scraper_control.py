@@ -657,7 +657,11 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
         "ee_declarados_completos": ee_declarados,
         "ee_pendientes": ee_pendientes,
         "ee_con_errores": ee_con_errores,
-        "pi_existe": has_pi,
+        # "pi_existe" indica si hay datos reales de Primera Infancia, no solo si
+        # existe la hoja: si está marcada "Completa" pero las preguntas
+        # sustantivas vinieron vacías (ver guard de pi_field_data más arriba),
+        # se considera que ese Emaús no tiene PI, aunque la hoja exista.
+        "pi_existe": has_pi and not (pi_completa and pi_field_data is None),
         "pi_completa": pi_completa,
         "pi_con_errores": pi_con_errores,
         "talleres_completo": talleres_completo,
