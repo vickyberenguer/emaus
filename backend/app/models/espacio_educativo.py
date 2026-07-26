@@ -17,6 +17,7 @@ class EspacioEducativo(Base):
     construccion_material = Column(String(100))
     rampa_acceso = Column(Boolean, default=False)
     acceso_principal = Column(String(100))
+    espacio_recreacion = Column(String(50))
     activo = Column(Boolean, default=True)
     nombre_hoja = Column(String(200), nullable=True)
 

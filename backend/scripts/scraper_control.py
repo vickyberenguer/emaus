@@ -723,10 +723,11 @@ _ZONAS = [
 ]
 
 # Ambientes: columna planilla → nombre en ee_ambiente.ambiente
+# "Espacio de recreación" NO va acá: sus respuestas reales son "Cubierto"/
+# "Descubierto"/"No tiene" (no sí/no), se guarda aparte en espacio_educativo.
 _AMBIENTES = [
     ("EE_Comedor",           "Comedor"),
     ("EE_Despensa",          "Despensa"),
-    ("EE_EspacioRecreacion", "Espacio de recreación"),
     ("EE_Banio",             "Baño"),
     ("EE_Cocina",            "Cocina"),
 ]
@@ -1264,7 +1265,8 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
                             titularidad = :titularidad,
                             nombre_titular = :titular,
                             rampa_acceso = :rampa,
-                            acceso_principal = :acceso
+                            acceso_principal = :acceso,
+                            espacio_recreacion = :espacio_recreacion
                         WHERE id = :id"""),
                 {
                     "construccion": str(fv.get("EE_Edil_Construccion") or "").strip()[:100] or None,
@@ -1272,6 +1274,7 @@ def upsert_relevamiento_ee(engine, emaus_id: int, anio: int, semestre: str,
                     "titular":      str(fv.get("EE_Edil_Titular") or "").strip()[:200] or None,
                     "rampa":        _to_bool(fv.get("EE_Edil_Rampa")),
                     "acceso":       str(fv.get("EE_Edil_AccesoPor") or "").strip()[:100] or None,
+                    "espacio_recreacion": str(fv.get("EE_EspacioRecreacion") or "").strip()[:50] or None,
                     "id": ee_id,
                 },
             )

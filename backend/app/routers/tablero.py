@@ -392,7 +392,11 @@ def edilicias(
 
     # EEs que participaron en el período con filtros
     ee_query = (
-        db.query(EspacioEducativo.id, EspacioEducativo.construccion_material)
+        db.query(
+            EspacioEducativo.id, EspacioEducativo.construccion_material,
+            EspacioEducativo.titularidad, EspacioEducativo.acceso_principal,
+            EspacioEducativo.rampa_acceso, EspacioEducativo.espacio_recreacion,
+        )
         .join(RelevamientoEE, RelevamientoEE.espacio_educativo_id == EspacioEducativo.id)
         .join(Relevamiento, and_(
             Relevamiento.id == RelevamientoEE.relevamiento_id,
@@ -435,6 +439,34 @@ def edilicias(
     for r in ee_rows:
         k = r[1] or "Sin dato"
         const_counts[k] = const_counts.get(k, 0) + 1
+
+    # Titularidad (a quién pertenece el espacio: diócesis, parroquia, etc.)
+    titularidad_counts = {}
+    for r in ee_rows:
+        k = r[2] or "Sin dato"
+        titularidad_counts[k] = titularidad_counts.get(k, 0) + 1
+
+    # Acceso principal (asfalto / ripio / tierra)
+    acceso_counts = {}
+    for r in ee_rows:
+        k = r[3] or "Sin dato"
+        acceso_counts[k] = acceso_counts.get(k, 0) + 1
+
+    # Rampa de acceso para discapacidad (sí/no)
+    rampa_si = sum(1 for r in ee_rows if r[4] is True)
+    rampa_no = sum(1 for r in ee_rows if r[4] is False)
+    rampa_sin_dato = total - rampa_si - rampa_no
+    rampa = [
+        {"valor": "Sí", "cantidad": rampa_si, "pct": pct(rampa_si)},
+        {"valor": "No", "cantidad": rampa_no, "pct": pct(rampa_no)},
+        {"valor": "Sin dato", "cantidad": rampa_sin_dato, "pct": pct(rampa_sin_dato)},
+    ]
+
+    # Espacio de recreación: no es sí/no, las respuestas son Cubierto/Descubierto/No tiene
+    recreacion_counts = {}
+    for r in ee_rows:
+        k = r[5] or "Sin dato"
+        recreacion_counts[k] = recreacion_counts.get(k, 0) + 1
 
     # Zonas (multi-valor)
     zona_counts = {}
@@ -489,12 +521,16 @@ def edilicias(
 
     return {
         "total_ee": total,
+        "titularidad": bars(titularidad_counts),
         "construccion": bars(const_counts),
         "zonas": bars(zona_counts),
+        "acceso_principal": bars(acceso_counts),
         "ambientes": bars(amb_counts),
+        "espacio_recreacion": bars(recreacion_counts),
         "servicios": bars(serv_counts),
         "equipos_cocina": bars(cocina_counts),
         "equipos_informatico": informatico,
+        "rampa": rampa,
     }
 
 
