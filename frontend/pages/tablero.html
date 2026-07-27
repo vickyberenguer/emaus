@@ -285,6 +285,7 @@
   <a href="#" class="tablero-tab" data-tab="grupo-motor">Grupo Motor</a>
   <a href="#" class="tablero-tab" data-tab="itinerancia">Itinerancia</a>
   <a href="#" class="tablero-tab" data-tab="btu">BTU</a>
+  <a href="#" class="tablero-tab" data-tab="btu-becarios">BTU - Becados</a>
   <a href="#" class="tablero-tab" data-tab="ayj-preocupaciones">AyJ - Situaciones Preocupantes</a>
   <a href="#" class="tablero-tab" data-tab="becas-familiares">Becas Familiares</a>
   <a href="#" class="tablero-tab" data-tab="primera-infancia">Primera Infancia</a>
@@ -640,6 +641,28 @@
     <button class="btn btn-sm btn-primary" id="btn-btu-filtrar">Filtrar</button>
   </div>
   <div id="btu-contenido" style="padding:16px 24px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
+  </div>
+</div>
+
+<!-- Tab BTU - Becarios (datos individuales, scraper aparte) -->
+<div id="tab-btu-becarios" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label class="lbl-periodo">Año</label>
+    <select id="bb-anio" class="sel-periodo">
+      <option value="2026">2026</option>
+      <option value="2025">2025</option>
+      <option value="2024">2024</option>
+    </select>
+    <label>Región</label>
+    <select id="bb-region" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Provincia</label>
+    <select id="bb-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <label>Emaús</label>
+    <select id="bb-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <button class="btn btn-sm btn-primary" id="btn-bb-filtrar">Filtrar</button>
+  </div>
+  <div id="bb-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
   </div>
 </div>
@@ -1045,6 +1068,7 @@ document.querySelectorAll('.tablero-tab').forEach(tab => {
     if (target === 'grupo-motor') iniciarGrupoMotor();
     if (target === 'itinerancia') iniciarItinerancia();
     if (target === 'btu') iniciarBtu();
+    if (target === 'btu-becarios') iniciarBtuBecarios();
     if (target === 'ayj-preocupaciones') iniciarAyjPreocupaciones();
     if (target === 'becas-familiares') iniciarBecasFamiliares();
     if (target === 'primera-infancia') iniciarPrimeraInfancia();
@@ -1943,6 +1967,199 @@ async function cargarBtu() {
       </div>
       <div class="ae-bars-title">Motivo de interrupción <span style="font-weight:400;color:#6b7280;font-size:13px">(sobre ${d.total_con_motivo} EEs con motivo registrado; "Otro" agrupa respuestas de texto libre)</span></div>
       ${motivosHtml}
+    `;
+  } catch(e) {
+    contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+  }
+}
+
+// ── Tab BTU - Becarios ──
+let bbIniciado = false;
+
+const BB_SEXO_COLORS = { 'F': '#ec4899', 'M': '#3b82f6' };
+const BB_AMBITO_COLORS = { 'Publico': '#3b82f6', 'Privado': '#f59e0b' };
+const BB_NIVEL_COLORS = { 'Terciario': '#f59e0b', 'Universitario': '#22c55e' };
+const BB_INSTANCIA_COLORS = { 'Principio': '#ec4899', 'Mitad': '#3b82f6', 'Final': '#14b8a6' };
+
+async function iniciarBtuBecarios() {
+  if (!bbIniciado) {
+    bbIniciado = true;
+    await cargarFiltrosBtuBecarios();
+    document.getElementById('bb-anio').addEventListener('change', () => { limpiarFiltrosCascada('bb'); cargarFiltrosBtuBecarios(); });
+    document.getElementById('bb-region').addEventListener('change', () => { limpiarFiltrosCascada('bb','region'); cargarFiltrosBtuBecarios(); });
+    document.getElementById('bb-provincia').addEventListener('change', () => { limpiarFiltrosCascada('bb','provincia'); cargarFiltrosBtuBecarios(); });
+    document.getElementById('btn-bb-filtrar').addEventListener('click', cargarBtuBecarios);
+  }
+  cargarBtuBecarios();
+}
+
+async function cargarFiltrosBtuBecarios() {
+  const params = new URLSearchParams({ anio: document.getElementById('bb-anio').value });
+  const region = document.getElementById('bb-region').value;
+  const prov   = document.getElementById('bb-provincia').value;
+  if (region) params.set('region', region);
+  if (prov)   params.set('provincia', prov);
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('bb-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('bb-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('bb-emaus',    f.emaus);
+  } catch(e) { console.warn('filtros bb', e); }
+}
+
+// Barra horizontal de 2 segmentos con ancho total fijo (100%) — para % por rama
+function bbBarraPct(label, pctF, pctM, countF, countM, labelWidth) {
+  const lblF = pctF >= 8 ? `${pctF}%` : '';
+  const lblM = pctM >= 8 ? `${pctM}%` : '';
+  return `
+    <div class="ae-bar-row">
+      <div class="ae-bar-label" style="width:${labelWidth}px">${label}</div>
+      <div class="ae-bar-track" style="padding:0;overflow:hidden">
+        <div style="display:flex;height:100%;width:100%">
+          <div style="width:${pctF}%;background:${BB_SEXO_COLORS.F};display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600" title="F: ${countF}">${lblF}</div>
+          <div style="width:${pctM}%;background:${BB_SEXO_COLORS.M};display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600" title="M: ${countM}">${lblM}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// Barra horizontal de 2 segmentos con ancho proporcional al total (conteos absolutos) — para edad x sexo
+function bbBarraConteo(label, countF, countM, maxTotal, labelWidth) {
+  const total = countF + countM;
+  const anchoTotal = maxTotal ? Math.max(Math.round(total / maxTotal * 100), 2) : 0;
+  const pctF = total ? Math.round(countF / total * 100) : 0;
+  const pctM = 100 - pctF;
+  return `
+    <div class="ae-bar-row">
+      <div class="ae-bar-label" style="width:${labelWidth}px">${label}</div>
+      <div class="ae-bar-track" style="padding:0;overflow:hidden">
+        <div style="display:flex;height:100%;width:${anchoTotal}%">
+          <div style="width:${pctF}%;background:${BB_SEXO_COLORS.F};display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600">${countF || ''}</div>
+          <div style="width:${pctM}%;background:${BB_SEXO_COLORS.M};display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600">${countM || ''}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleBbRama(idx) {
+  const detalle = document.getElementById(`bb-rama-detalle-${idx}`);
+  const chevron = document.getElementById(`bb-rama-chevron-${idx}`);
+  const abrir = !detalle.classList.contains('abierto');
+  detalle.classList.toggle('abierto', abrir);
+  chevron.style.transform = abrir ? 'rotate(90deg)' : 'rotate(0deg)';
+}
+
+async function cargarBtuBecarios() {
+  const contenido = document.getElementById('bb-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({ anio: document.getElementById('bb-anio').value });
+  const region = document.getElementById('bb-region').value;
+  const prov   = document.getElementById('bb-provincia').value;
+  const emausId= document.getElementById('bb-emaus').value;
+  if (region)  params.set('region', region);
+  if (prov)    params.set('provincia', prov);
+  if (emausId) params.set('emaus_id', emausId);
+  try {
+    const d = await api.get('/tablero/btu-becarios?' + params.toString());
+    if (!d.total_becarios) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
+
+    const sexoDonut = itDonut(d.sexo, BB_SEXO_COLORS, 'Becados activos', d.total_becarios);
+    const ambitoDonut = itDonut(d.ambito, BB_AMBITO_COLORS, 'Becados activos', d.total_becarios);
+    const nivelDonut = itDonut(d.nivel, BB_NIVEL_COLORS, 'Becados activos', d.total_becarios);
+    const instanciaDonut = itDonut(d.instancia_carrera, BB_INSTANCIA_COLORS, 'Con dato', d.instancia_carrera.reduce((s,x)=>s+x.cantidad,0));
+
+    const maxEdadTotal = Math.max(...d.edad_sexo.map(r => r.F + r.M), 1);
+    const edadSexoHtml = d.edad_sexo.map(r => bbBarraConteo(r.rango, r.F, r.M, maxEdadTotal, 80)).join('');
+
+    const ramaHtml = d.rama.map((r, idx) => {
+      const carreras = d.carreras_por_rama[r.rama] || [];
+      const carrerasHtml = carreras.map(c => `
+        <div class="ae-bar-row">
+          <div class="ae-bar-label" style="width:260px">${c.carrera}</div>
+          <div class="ae-bar-track">
+            <div class="ae-bar-fill" style="width:${Math.min(c.pct,75)}%;background:#94a3b8">
+              <span class="ae-bar-value"><strong>${c.pct}%</strong> <span style="color:#6b7280">(${c.cantidad})</span></span>
+            </div>
+          </div>
+        </div>`).join('');
+      return `
+        <div class="acc-eje-bloque">
+          <div class="acc-eje-header" style="cursor:pointer" onclick="toggleBbRama(${idx})">
+            <span class="acc-eje-nombre"><span class="acc-eje-chevron" id="bb-rama-chevron-${idx}">&#9656;</span>${r.rama}</span>
+            <div class="acc-eje-barra-wrap" style="flex:1;display:flex;align-items:center;gap:10px">
+              <div class="ae-bar-track" style="flex:1">
+                <div class="ae-bar-fill" style="width:${Math.min(r.pct,90)}%;background:#6366f1">
+                  <span class="ae-bar-value"><strong>${r.pct}%</strong> <span style="color:#6b7280">(${r.cantidad})</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="acc-eje-detalle" id="bb-rama-detalle-${idx}">${carrerasHtml}</div>
+        </div>`;
+    }).join('');
+
+    const ramaSexoHtml = d.rama_sexo.map(r => bbBarraPct(r.rama, r.F_pct, r.M_pct, r.F, r.M, 160)).join('');
+
+    contenido.innerHTML = `
+      <p class="ae-info">${d.total_becarios} becados activos relevados</p>
+
+      <div class="kpi-grid kpi-grid-center" style="margin-bottom:32px">
+        <div class="kpi-card kpi-blue">
+          <div class="kpi-label">Becados activos</div>
+          <div class="kpi-value">${d.total_becarios}</div>
+        </div>
+        <div class="kpi-card kpi-teal">
+          <div class="kpi-label">Edad promedio</div>
+          <div class="kpi-value">${d.edad_promedio ?? '—'}</div>
+        </div>
+        <div class="kpi-card kpi-yellow">
+          <div class="kpi-label">Antigüedad beca promedio</div>
+          <div class="kpi-value">${d.antiguedad_beca_promedio ?? '—'}</div>
+        </div>
+        <div class="kpi-card kpi-green">
+          <div class="kpi-label">Antigüedad alumno promedio</div>
+          <div class="kpi-value">${d.antiguedad_alumno_promedio ?? '—'}</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px;margin-bottom:32px">
+        <div>
+          <div class="ae-bars-title" style="text-align:center">Sexo</div>
+          <div class="ae-donut-wrap">${sexoDonut.svg}</div>
+          <div class="ae-legend">${sexoDonut.legend}</div>
+        </div>
+        <div>
+          <div class="ae-bars-title" style="text-align:center">Ámbito</div>
+          <div class="ae-donut-wrap">${ambitoDonut.svg}</div>
+          <div class="ae-legend">${ambitoDonut.legend}</div>
+        </div>
+        <div>
+          <div class="ae-bars-title" style="text-align:center">Nivel</div>
+          <div class="ae-donut-wrap">${nivelDonut.svg}</div>
+          <div class="ae-legend">${nivelDonut.legend}</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:32px">
+        <div class="ae-bars-title">Por edad y sexo</div>
+        ${edadSexoHtml}
+      </div>
+
+      <div style="margin-bottom:32px">
+        <div class="ae-bars-title">Ranking de rama <span style="font-weight:400;color:#6b7280;font-size:13px">(clic para ver las carreras de cada rama)</span></div>
+        ${ramaHtml}
+      </div>
+
+      <div style="margin-bottom:32px;max-width:640px">
+        <div class="ae-bars-title">Por rama y sexo</div>
+        ${ramaSexoHtml}
+      </div>
+
+      <div style="max-width:340px;margin:0 auto">
+        <div class="ae-bars-title" style="text-align:center">Instancia de la carrera</div>
+        <div class="ae-donut-wrap">${instanciaDonut.svg}</div>
+        <div class="ae-legend">${instanciaDonut.legend}</div>
+      </div>
     `;
   } catch(e) {
     contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
