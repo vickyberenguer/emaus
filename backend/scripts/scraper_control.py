@@ -2044,12 +2044,20 @@ def run_sync(folder_id: str, anio: int = ANIO_DEFAULT, semestre: str = SEMESTRE_
         if (dt := _parse_drive_datetime(item.get("modifiedTime"))) is not None
     }
 
-    # BTU/BF: se releen y aplican solo si sus planillas externas cambiaron
-    if not dry_run:
-        sync_btu_bf_directo(engine, sheets_svc, drive_svc, emaus_list, anio, semestre, force=force)
-
+    # BTU/BF: se releen y aplican solo si sus planillas externas cambiaron.
+    # Va en su propio try/except: si esto explota (red, cuota de Sheets, etc.)
+    # y queda afuera del try de más abajo, el sync entero queda colgado para
+    # siempre en sync_estado (estado='corriendo', sin ok/err/skip) porque
+    # nunca se llega a escribir el resultado final. Con esto, un fallo acá
+    # se registra en el detalle pero no bloquea el resto del sync.
     ok = err = skip = 0
     errores_detalle = []
+    if not dry_run:
+        try:
+            sync_btu_bf_directo(engine, sheets_svc, drive_svc, emaus_list, anio, semestre, force=force)
+        except Exception as exc:
+            print(f"  [error] sync_btu_bf_directo falló: {exc}")
+            errores_detalle.append(f"[BTU/BF] {exc}")
 
     try:
         for emaus in emaus_list:

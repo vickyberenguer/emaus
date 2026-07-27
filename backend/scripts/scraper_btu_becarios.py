@@ -45,6 +45,10 @@ MESES = ["febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
 ALIAS_DIOCESIS = {
     "san carlos de bariloche": "bariloche",
     "sde": "santiago del estero",
+    "san roque": "pinedo gancedo",
+    "comodoro": "comodoro rivadavia",
+    "concepcion": "concepcion del uruguay",
+    # "posadas": no corresponde a ningún Emaús vigente — se deja sin matchear a propósito.
 }
 PREFIJOS_DIOCESIS = ("prelatura de ", "diocesis de ", "arquidiocesis de ", "obispado de ")
 
