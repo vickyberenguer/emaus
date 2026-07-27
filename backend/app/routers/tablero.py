@@ -13,6 +13,7 @@ from app.models.pastoral_pi import (
     PastoralPIAccionLider,
 )
 from app.models.establecimiento import EstablecimientoArticulado, EstablecimientoEstado
+from app.models.btu_becario import BtuBecario
 from app.models.espacio_educativo import (
     EspacioEducativo, RelevamientoEE, RelevamientoEEItineranciaRol,
     RelevamientoEEAccion, RelevamientoEEApoyoPrimarioContenido,
@@ -860,6 +861,183 @@ def btu(
         "egresados": egresados,
         "total_con_motivo": total_con_motivo,
         "motivos": motivos,
+    }
+
+
+BTU_ANIO_DEFAULT = 2026
+
+BTU_EDAD_RANGOS = [
+    ("17 o menos", None, 17),
+    ("18-20", 18, 20),
+    ("21-23", 21, 23),
+    ("24-26", 24, 26),
+    ("27-29", 27, 29),
+    ("30-32", 30, 32),
+    ("33-35", 33, 35),
+    ("36-45", 36, 45),
+    ("46 o más", 46, None),
+]
+
+
+def _btu_rango_edad(edad: int) -> str:
+    for nombre, lo, hi in BTU_EDAD_RANGOS:
+        if lo is None and edad <= hi:
+            return nombre
+        if hi is None and edad >= lo:
+            return nombre
+        if lo is not None and hi is not None and lo <= edad <= hi:
+            return nombre
+    return "Sin dato"
+
+
+def _btu_anio_a_entero(valor) -> Optional[int]:
+    try:
+        return int(str(valor).strip()[:4])
+    except (TypeError, ValueError):
+        return None
+
+
+@router.get("/btu-becarios")
+def btu_becarios(
+    anio: int = BTU_ANIO_DEFAULT,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    """Datos individuales de becarios BTU (scrapeados aparte, ver
+    scripts/scraper_btu_becarios.py). Solo becarios activos — nunca se
+    expone DNI ni nombre, solo agregados."""
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    query = (
+        db.query(BtuBecario)
+        .join(Emaus, and_(Emaus.id == BtuBecario.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .filter(BtuBecario.anio == anio, BtuBecario.activo == True)
+    )
+    if allowed_ids is not None:
+        query = query.filter(BtuBecario.emaus_id.in_(allowed_ids))
+    if region:
+        query = query.filter(Diocesis.region == region)
+    if provincia:
+        query = query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        query = query.filter(BtuBecario.emaus_id == emaus_id)
+
+    becarios = query.all()
+    total = len(becarios)
+    if not total:
+        return {"total_becarios": 0}
+
+    def pct(n, base=None):
+        b = total if base is None else base
+        return round(n / b * 100, 1) if b else 0
+
+    # Edad promedio y antigüedades (se usa el año de la hoja como referencia)
+    edades = [b.edad for b in becarios if b.edad is not None]
+    edad_promedio = round(sum(edades) / len(edades), 1) if edades else None
+
+    ant_beca = [anio - y for b in becarios if (y := _btu_anio_a_entero(b.anio_comienzo_beca)) is not None and anio - y >= 0]
+    antiguedad_beca_promedio = round(sum(ant_beca) / len(ant_beca), 1) if ant_beca else None
+
+    ant_alumno = [anio - y for b in becarios if (y := _btu_anio_a_entero(b.anio_comienzo_carrera)) is not None and anio - y >= 0]
+    antiguedad_alumno_promedio = round(sum(ant_alumno) / len(ant_alumno), 1) if ant_alumno else None
+
+    def contar(attr):
+        counts = {}
+        for b in becarios:
+            k = getattr(b, attr) or "Sin dato"
+            counts[k] = counts.get(k, 0) + 1
+        return sorted(
+            [{"valor": k, "cantidad": v, "pct": pct(v)} for k, v in counts.items()],
+            key=lambda x: -x["cantidad"],
+        )
+
+    sexo = contar("sexo")
+    ambito = contar("ambito")
+    nivel = contar("nivel")
+
+    # Edad y sexo por rango etario
+    edad_sexo_counts = {r[0]: {"F": 0, "M": 0} for r in BTU_EDAD_RANGOS}
+    for b in becarios:
+        if b.edad is None or b.sexo not in ("F", "M"):
+            continue
+        edad_sexo_counts[_btu_rango_edad(b.edad)][b.sexo] += 1
+    edad_sexo = [
+        {"rango": r[0], "F": edad_sexo_counts[r[0]]["F"], "M": edad_sexo_counts[r[0]]["M"]}
+        for r in BTU_EDAD_RANGOS
+        if edad_sexo_counts[r[0]]["F"] or edad_sexo_counts[r[0]]["M"]
+    ]
+
+    # Ranking de Rama
+    rama_counts = {}
+    carreras_por_rama = {}
+    for b in becarios:
+        k = b.rama or "Sin clasificar"
+        rama_counts[k] = rama_counts.get(k, 0) + 1
+        carr = (b.carrera or "Sin dato").strip() or "Sin dato"
+        carreras_por_rama.setdefault(k, {})
+        carreras_por_rama[k][carr] = carreras_por_rama[k].get(carr, 0) + 1
+
+    rama = sorted(
+        [{"rama": k, "cantidad": v, "pct": pct(v)} for k, v in rama_counts.items()],
+        key=lambda x: -x["cantidad"],
+    )
+    for k, carreras in carreras_por_rama.items():
+        total_rama = rama_counts.get(k) or 1
+        carreras_por_rama[k] = sorted(
+            [{"carrera": c, "cantidad": v, "pct": round(v / total_rama * 100, 1)} for c, v in carreras.items()],
+            key=lambda x: -x["cantidad"],
+        )
+
+    # Rama x Sexo
+    rama_sexo_counts = {}
+    for b in becarios:
+        k = b.rama or "Sin clasificar"
+        d = rama_sexo_counts.setdefault(k, {"F": 0, "M": 0})
+        if b.sexo in ("F", "M"):
+            d["F" if b.sexo == "F" else "M"] += 1
+    rama_sexo = []
+    for k, d in rama_sexo_counts.items():
+        tot = d["F"] + d["M"]
+        rama_sexo.append({
+            "rama": k, "F": d["F"], "M": d["M"],
+            "F_pct": round(d["F"] / tot * 100, 1) if tot else 0,
+            "M_pct": round(d["M"] / tot * 100, 1) if tot else 0,
+        })
+    rama_sexo.sort(key=lambda x: -(x["F"] + x["M"]))
+
+    # Instancia de la carrera: Principio / Mitad / Final según Anio_cursando / Duracion_Carrera
+    instancia_counts = {}
+    for b in becarios:
+        anio_cursando = _btu_anio_a_entero(b.anio_cursando)
+        duracion = _btu_anio_a_entero(b.duracion_carrera)
+        if not anio_cursando or not duracion:
+            continue
+        p = anio_cursando / duracion * 100
+        valor = "Principio" if p < 33 else ("Mitad" if p < 66 else "Final")
+        instancia_counts[valor] = instancia_counts.get(valor, 0) + 1
+    total_instancia = sum(instancia_counts.values())
+    instancia_carrera = [
+        {"valor": v, "cantidad": c, "pct": round(c / total_instancia * 100, 1) if total_instancia else 0}
+        for v, c in instancia_counts.items()
+    ]
+
+    return {
+        "total_becarios": total,
+        "edad_promedio": edad_promedio,
+        "antiguedad_beca_promedio": antiguedad_beca_promedio,
+        "antiguedad_alumno_promedio": antiguedad_alumno_promedio,
+        "sexo": sexo,
+        "ambito": ambito,
+        "nivel": nivel,
+        "edad_sexo": edad_sexo,
+        "rama": rama,
+        "rama_sexo": rama_sexo,
+        "carreras_por_rama": carreras_por_rama,
+        "instancia_carrera": instancia_carrera,
     }
 
 
