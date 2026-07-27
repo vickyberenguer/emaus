@@ -252,7 +252,9 @@ async function cargarDatos() {
 // ---------------------------------------------------------------------------
 function renderStats() {
   const total = datosControl.length;
-  const listos = datosControl.filter(d => d.listo_para_aprobar).length;
+  // listo_para_aprobar solo indica que no tiene pendientes/errores — no excluye
+  // los que ya se aprobaron, así que hay que descontarlos para no sumarlos dos veces.
+  const listos = datosControl.filter(d => d.listo_para_aprobar && d.aprobacion?.estado !== 'aprobado').length;
   const conErrores = datosControl.filter(d => d.ee_con_errores > 0 || d.pi_con_errores).length;
   const aprobados = datosControl.filter(d => d.aprobacion?.estado === 'aprobado').length;
 
