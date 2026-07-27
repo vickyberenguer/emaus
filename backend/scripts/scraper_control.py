@@ -15,6 +15,7 @@ Uso:
 import argparse
 import json
 import os
+import re
 import socket
 import sys
 
@@ -339,6 +340,20 @@ def cell_numeric(val) -> float:
         return 0.0
 
 
+_RE_BUCKET_MINIMO = re.compile(r"^\s*(\d+)\s*(?:\+|o\s*m[aá]s)", re.IGNORECASE)
+
+
+def cell_numeric_o_minimo(val) -> Tuple[float, bool]:
+    """Como cell_numeric, pero además reconoce opciones tipo '10 o más de 10'
+    (dropdowns con un último casillero abierto 'N o más'). Devuelve
+    (valor, es_minimo) — es_minimo=True indica que el valor real puede ser
+    mayor y hay que comparar con >= en vez de ==."""
+    m = _RE_BUCKET_MINIMO.match(str(val or ""))
+    if m:
+        return float(m.group(1)), True
+    return cell_numeric(val), False
+
+
 def read_sheet_fields(sheets, spreadsheet_id: str, sheet_title: str,
                       field_defs: List[Dict]) -> Dict[str, Any]:
     """Lee todos los campos de una hoja en una sola operación batch."""
@@ -400,7 +415,12 @@ def eval_condition(condition: Dict, field_values: Dict[str, Any]) -> bool:
     if "sum_of" in condition:
         total = sum(cell_numeric(field_values.get(f)) for f in condition["sum_of"])
         if "equals_field" in condition:
-            return total == cell_numeric(field_values.get(condition["equals_field"]))
+            # El campo de comparación puede ser un dropdown con un casillero
+            # abierto tipo "10 o más de 10" — en ese caso la suma debe ser
+            # >= 10, no exactamente 10 (si no, cualquier suma >10 dispara una
+            # alerta falsa de "no coincide").
+            valor, es_minimo = cell_numeric_o_minimo(field_values.get(condition["equals_field"]))
+            return total >= valor if es_minimo else total == valor
         if "equals" in condition:
             return total == float(condition["equals"])
         if "at_most_sum_of" in condition:
