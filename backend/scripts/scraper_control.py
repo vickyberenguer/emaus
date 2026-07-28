@@ -18,6 +18,7 @@ import os
 import re
 import socket
 import sys
+import unicodedata
 
 socket.setdefaulttimeout(90)  # 90s máximo por cualquier llamada de red
 import time
@@ -63,6 +64,175 @@ PI_SHEET_TITLE = "Pastoral Primera Infancia"
 TALLERES_SHEET = "Talleres"
 TALLERES_SHEET_ALT = "Talleres enero-junio 2026"
 ESTABLECIMIENTOS_SHEET = "Establecimientos"
+
+# ---------------------------------------------------------------------------
+# Clasificación de talleres: "Temática" y "Perfil de los capacitadores" vienen
+# como texto libre en la planilla — se clasifican por palabras clave en un
+# set fijo de categorías (igual que "Rama" en BTU). Primer intento; se puede
+# ajustar el diccionario después de ver resultados reales (categoría de
+# reserva: "Sin clasificar").
+# ---------------------------------------------------------------------------
+
+RUBRO_TEMATICO_DICT = [
+    ("alegrate", "Primera Infancia y Desarrollo"),
+    ("estimulacion temprana", "Primera Infancia y Desarrollo"),
+    ("primera infancia", "Primera Infancia y Desarrollo"),
+    ("desarrollo infantil", "Primera Infancia y Desarrollo"),
+    ("dale", "Alfabetización y Lectoescritura"),
+    ("alfabetiz", "Alfabetización y Lectoescritura"),
+    ("lectoescritura", "Alfabetización y Lectoescritura"),
+    ("lectura", "Alfabetización y Lectoescritura"),
+    ("apoyo escolar", "Apoyo Escolar y Educativo"),
+    ("trayectorias educativ", "Apoyo Escolar y Educativo"),
+    ("tutoria", "Apoyo Escolar y Educativo"),
+    ("refuerzo escolar", "Apoyo Escolar y Educativo"),
+    ("orientaciones para apoyo", "Apoyo Escolar y Educativo"),
+    ("costura", "Costura y Textiles"),
+    ("bordado", "Costura y Textiles"),
+    ("textil", "Costura y Textiles"),
+    ("tejido", "Costura y Textiles"),
+    ("cocina", "Cocina y Gastronomía"),
+    ("gastronom", "Cocina y Gastronomía"),
+    ("reposteria", "Cocina y Gastronomía"),
+    ("cocinerit", "Cocina y Gastronomía"),
+    ("huerta", "Huerta y Medio Ambiente"),
+    ("medio ambiente", "Huerta y Medio Ambiente"),
+    ("reciclad", "Huerta y Medio Ambiente"),
+    ("ecologi", "Huerta y Medio Ambiente"),
+    ("danza", "Danza y Folklore"),
+    ("folklor", "Danza y Folklore"),
+    ("folclor", "Danza y Folklore"),
+    ("baile", "Danza y Folklore"),
+    ("musica", "Música"),
+    ("guitarra", "Música"),
+    ("canto", "Música"),
+    ("teatro", "Teatro y Expresión"),
+    ("expresion corporal", "Teatro y Expresión"),
+    ("dibujo", "Arte y Expresión Artística"),
+    ("manualidad", "Arte y Expresión Artística"),
+    ("pintura", "Arte y Expresión Artística"),
+    ("artistic", "Arte y Expresión Artística"),
+    ("deporte", "Deporte y Actividad Física"),
+    ("futbol", "Deporte y Actividad Física"),
+    ("actividad fisica", "Deporte y Actividad Física"),
+    ("gimnasia", "Deporte y Actividad Física"),
+    ("juego", "Juego y Recreación"),
+    ("recreac", "Juego y Recreación"),
+    ("ludic", "Juego y Recreación"),
+    ("salud mental", "Salud Mental y Emocional"),
+    ("emocional", "Salud Mental y Emocional"),
+    ("psicolog", "Salud Mental y Emocional"),
+    ("autoestima", "Salud Mental y Emocional"),
+    ("salud", "Salud y Prevención"),
+    ("prevencion", "Salud y Prevención"),
+    ("nutricion", "Salud y Prevención"),
+    ("primeros auxilios", "Salud y Prevención"),
+    ("odontolog", "Salud y Prevención"),
+    ("higiene", "Salud y Prevención"),
+    ("oficio", "Oficios y Emprendimiento"),
+    ("emprendimiento", "Oficios y Emprendimiento"),
+    ("capacitacion laboral", "Oficios y Emprendimiento"),
+    ("electricidad", "Oficios y Emprendimiento"),
+    ("gasista", "Oficios y Emprendimiento"),
+    ("crianza", "Crianza y Familia"),
+    ("familia", "Crianza y Familia"),
+    ("maternidad", "Crianza y Familia"),
+    ("paternidad", "Crianza y Familia"),
+    ("derecho", "Derechos y Ciudadanía"),
+    ("ciudadania", "Derechos y Ciudadanía"),
+    ("genero", "Derechos y Ciudadanía"),
+    ("violencia", "Derechos y Ciudadanía"),
+    ("convivencia", "Integración Comunitaria"),
+    ("integracion", "Integración Comunitaria"),
+    ("comunitari", "Integración Comunitaria"),
+    ("encuentro", "Integración Comunitaria"),
+    ("colonia", "Integración Comunitaria"),
+    ("valores", "Integración Comunitaria"),
+    ("formacion", "Formación y Capacitación"),
+    ("capacitacion", "Formación y Capacitación"),
+    ("curso", "Formación y Capacitación"),
+]
+
+PERFIL_CAPACITADOR_DICT = [
+    ("estudiante btu", "Estudiante BTU"),
+    ("btu", "Estudiante BTU"),
+    ("docente jubilad", "Docente Jubilado/a"),
+    ("maestra jubilad", "Docente Jubilado/a"),
+    ("maestro jubilad", "Docente Jubilado/a"),
+    ("profesor jubilad", "Docente Jubilado/a"),
+    ("docente", "Docente/Profesor/a"),
+    ("profesor", "Docente/Profesor/a"),
+    ("maestra", "Docente/Profesor/a"),
+    ("maestro", "Docente/Profesor/a"),
+    ("estudiante", "Estudiante"),
+    ("voluntari", "Voluntario/a"),
+    ("enfermer", "Enfermero/a"),
+    ("psicolog", "Psicólogo/a"),
+    ("psicopedagog", "Psicopedagogo/a"),
+    ("medic", "Médico/a"),
+    ("pediatra", "Médico/a"),
+    ("ginecolog", "Médico/a"),
+    ("nutricionista", "Nutricionista"),
+    ("trabajador social", "Trabajador/a Social"),
+    ("trabajadora social", "Trabajador/a Social"),
+    ("madre lider", "Madre Líder"),
+    ("atl", "ATL/Referente"),
+    ("referente", "ATL/Referente"),
+    ("hermana", "Referente"),
+    ("misionera", "Referente"),
+    ("religios", "Referente"),
+    ("organizacion", "Organización Externa"),
+    ("ong", "Organización Externa"),
+    ("sin especificar", "Sin especificar"),
+    ("costurer", "Artesano/a o Técnico/a"),
+    ("artesan", "Artesano/a o Técnico/a"),
+    ("tecnic", "Artesano/a o Técnico/a"),
+]
+
+
+def _normalizar_texto_taller(texto) -> str:
+    if not isinstance(texto, str):
+        return ""
+    texto = texto.lower()
+    texto = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in texto if not unicodedata.combining(c))
+
+
+def clasificar_rubro_tematico(tematica: Optional[str]) -> Optional[str]:
+    if not tematica or not str(tematica).strip():
+        return None
+    norm = _normalizar_texto_taller(tematica)
+    for clave, rubro in RUBRO_TEMATICO_DICT:
+        if clave in norm:
+            return rubro
+    return "Otros"
+
+
+def clasificar_perfiles_capacitador(texto: Optional[str]) -> List[str]:
+    """Un taller puede tener varios perfiles separados por coma. Devuelve la
+    lista de perfiles clasificados (sin duplicados), o ['Sin especificar'] si
+    el texto viene vacío."""
+    if not texto or not str(texto).strip():
+        return ["Sin especificar"]
+    perfiles = []
+    for fragmento in str(texto).split(","):
+        norm = _normalizar_texto_taller(fragmento)
+        if not norm.strip():
+            continue
+        encontrado = None
+        for clave, perfil in PERFIL_CAPACITADOR_DICT:
+            if clave in norm:
+                encontrado = perfil
+                break
+        perfiles.append(encontrado or "Otro Profesional")
+    # Dedup preservando orden
+    vistos = set()
+    resultado = []
+    for p in perfiles:
+        if p not in vistos:
+            vistos.add(p)
+            resultado.append(p)
+    return resultado
 
 # Busca el YAML primero junto al script (Lambda), después en archivosdatos/ (local)
 _yaml_local = SCRIPT_DIR.parent.parent / "archivosdatos" / "especificacion_planillas.yaml"
@@ -563,7 +733,7 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
 
         idx = len(batch_ranges)
         range_index["talleres_data"] = idx
-        batch_ranges.append(f"'{talleres_sheet_name}'!A3:B")
+        batch_ranges.append(f"'{talleres_sheet_name}'!A3:G")
 
     if has_establecimientos:
         idx = len(batch_ranges)
@@ -674,7 +844,8 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
             if sum(1 for cell in row[:min_cols] if str(cell).strip()) >= min_cols
         )
 
-    cantidad_talleres = count_filled_rows(get_values("talleres_data")) if has_talleres else 0
+    talleres_rows_data = get_values("talleres_data") if has_talleres else []
+    cantidad_talleres = count_filled_rows(talleres_rows_data)
     estab_rows_data = get_values("estab_data") if has_establecimientos else []
     cantidad_establecimientos = count_filled_rows(estab_rows_data)
 
@@ -701,6 +872,7 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
         "ee_field_data": ee_field_data,
         "pi_field_data": pi_field_data,
         "estab_rows_data": estab_rows_data,
+        "talleres_rows_data": talleres_rows_data,
     }
 
 
@@ -1652,6 +1824,65 @@ def upsert_establecimientos(engine, emaus_id: int, anio: int, semestre: str,
             """), articulaciones)
 
 
+def upsert_talleres(engine, emaus_id: int, anio: int, semestre: str,
+                     talleres_rows_data: Optional[List[List]]) -> None:
+    """Upserta relevamiento_taller/relevamiento_taller_perfil a partir de la
+    hoja 'Talleres'. Columnas (fila 3 en adelante): A=Eje, B=Tematica,
+    C=Cantidad participantes, D=Cantidad Espacios Educativos,
+    E=Cantidad Comunidades PI, F=Otras instituciones sin Emaús,
+    G=Perfil de los capacitadores (texto libre, puede tener varios por coma).
+    """
+    with engine.begin() as conn:
+        rel = conn.execute(
+            text("SELECT id FROM relevamiento WHERE emaus_id=:eid AND anio=:a AND semestre=:s LIMIT 1"),
+            {"eid": emaus_id, "a": anio, "s": semestre},
+        ).fetchone()
+        if not rel:
+            return
+        relevamiento_id = rel[0]
+
+        conn.execute(text(
+            "DELETE FROM relevamiento_taller WHERE relevamiento_id = :rid"
+        ), {"rid": relevamiento_id})
+
+        if not talleres_rows_data:
+            return
+
+        for row in talleres_rows_data:
+            row = list(row) + [""] * (7 - len(row))
+            eje, tematica = (str(x or "").strip() for x in row[0:2])
+            if not eje or not tematica:
+                continue  # fila incompleta, no cuenta como taller real
+
+            perfil_texto = str(row[6] or "").strip()
+            taller_res = conn.execute(text("""
+                INSERT INTO relevamiento_taller
+                    (relevamiento_id, eje, tematica, rubro_tematico,
+                     cantidad_participantes, cantidad_espacios_educativos,
+                     cantidad_comunidades_pi, otras_instituciones, perfil_capacitadores_texto)
+                VALUES
+                    (:rid, :eje, :tematica, :rubro,
+                     :participantes, :espacios, :comunidades, :otras, :perfil_texto)
+            """), {
+                "rid": relevamiento_id,
+                "eje": eje,
+                "tematica": tematica,
+                "rubro": clasificar_rubro_tematico(tematica),
+                "participantes": _to_int(row[2]),
+                "espacios": _to_int(row[3]),
+                "comunidades": _to_int(row[4]),
+                "otras": _to_int(row[5]),
+                "perfil_texto": perfil_texto or None,
+            })
+            taller_id = taller_res.lastrowid
+
+            perfiles = clasificar_perfiles_capacitador(perfil_texto)
+            if perfiles:
+                conn.execute(text(
+                    "INSERT INTO relevamiento_taller_perfil (taller_id, perfil) VALUES (:tid, :perfil)"
+                ), [{"tid": taller_id, "perfil": p} for p in perfiles])
+
+
 # ---------------------------------------------------------------------------
 # Persistencia en TiDB
 # ---------------------------------------------------------------------------
@@ -1662,6 +1893,7 @@ def upsert_control(engine, emaus_id: int, anio: int, semestre: str, metrics: Dic
     ee_field_data = metrics.pop("ee_field_data", {})
     pi_field_data = metrics.pop("pi_field_data", None)
     estab_rows_data = metrics.pop("estab_rows_data", None)
+    talleres_rows_data = metrics.pop("talleres_rows_data", None)
     metrics.setdefault("btu_actual", None)
     metrics.setdefault("bf_actual", None)
 
@@ -1747,6 +1979,7 @@ def upsert_control(engine, emaus_id: int, anio: int, semestre: str, metrics: Dic
         upsert_pastoral_pi(engine, emaus_id, anio, semestre, pi_field_data)
     if estab_rows_data:
         upsert_establecimientos(engine, emaus_id, anio, semestre, estab_rows_data)
+    upsert_talleres(engine, emaus_id, anio, semestre, talleres_rows_data)
 
 
 _EMAUS_NAME_FIXES = {

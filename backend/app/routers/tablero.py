@@ -14,6 +14,7 @@ from app.models.pastoral_pi import (
 )
 from app.models.establecimiento import EstablecimientoArticulado, EstablecimientoEstado
 from app.models.btu_becario import BtuBecario
+from app.models.relevamiento_taller import RelevamientoTaller, RelevamientoTallerPerfil
 from app.models.espacio_educativo import (
     EspacioEducativo, RelevamientoEE, RelevamientoEEItineranciaRol,
     RelevamientoEEAccion, RelevamientoEEApoyoPrimarioContenido,
@@ -1788,4 +1789,86 @@ def participantes(
             "grupo_motor":  grupo_motor,
             "itinerancia":  int(iti_sum),
         },
+    }
+
+
+@router.get("/talleres")
+def talleres_tab(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[str] = None,
+    provincia: Optional[str] = None,
+    emaus_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    """Datos de la hoja Talleres (una fila por taller, ver scraper_control.py
+    upsert_talleres). rubro_tematico y perfil_capacitador se clasifican por
+    palabras clave a partir de texto libre — primer intento, se puede ajustar."""
+    allowed_ids = emaus_ids_for_user(current_user, db)
+
+    query = (
+        db.query(RelevamientoTaller)
+        .join(Relevamiento, RelevamientoTaller.relevamiento_id == Relevamiento.id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .filter(Relevamiento.anio == anio, Relevamiento.semestre == semestre)
+    )
+    if allowed_ids is not None:
+        query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        query = query.filter(Diocesis.region == region)
+    if provincia:
+        query = query.filter(Diocesis.provincia == provincia)
+    if emaus_id:
+        query = query.filter(Relevamiento.emaus_id == emaus_id)
+
+    talleres_rows = query.all()
+    total = len(talleres_rows)
+    if not total:
+        return {"total_talleres": 0}
+
+    def pct(n):
+        return round(n / total * 100, 1) if total else 0
+
+    total_participantes = sum(t.cantidad_participantes or 0 for t in talleres_rows)
+    total_espacios = sum(t.cantidad_espacios_educativos or 0 for t in talleres_rows)
+    total_otras_instituciones = sum(t.otras_instituciones or 0 for t in talleres_rows)
+
+    def contar(attr):
+        counts = {}
+        for t in talleres_rows:
+            k = getattr(t, attr) or "Sin dato"
+            counts[k] = counts.get(k, 0) + 1
+        return sorted(
+            [{"valor": k, "cantidad": v, "pct": pct(v)} for k, v in counts.items()],
+            key=lambda x: -x["cantidad"],
+        )
+
+    eje = contar("eje")
+    rubro_tematico = contar("rubro_tematico")
+
+    # Perfil capacitador: viene de la tabla hija (un taller puede tener varios,
+    # así que el total de este gráfico puede superar la cantidad de talleres).
+    taller_ids = [t.id for t in talleres_rows]
+    perfil_rows = (
+        db.query(RelevamientoTallerPerfil.perfil,
+                  func.count(func.distinct(RelevamientoTallerPerfil.taller_id)))
+        .filter(RelevamientoTallerPerfil.taller_id.in_(taller_ids))
+        .group_by(RelevamientoTallerPerfil.perfil)
+        .all()
+    ) if taller_ids else []
+    perfil_capacitador = sorted(
+        [{"valor": r[0], "cantidad": r[1], "pct": pct(r[1])} for r in perfil_rows],
+        key=lambda x: -x["cantidad"],
+    )
+
+    return {
+        "total_talleres": total,
+        "total_participantes": total_participantes,
+        "total_espacios_educativos": total_espacios,
+        "total_otras_instituciones": total_otras_instituciones,
+        "eje": eje,
+        "rubro_tematico": rubro_tematico,
+        "perfil_capacitador": perfil_capacitador,
     }
