@@ -34,7 +34,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import pickle
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, bindparam
 
 # ---------------------------------------------------------------------------
 # Config
@@ -533,6 +533,10 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
 
     now = datetime.utcnow()
     all_validation_errors: List[Dict] = []
+    # Hojas que se validaron de verdad en esta corrida (declared=True, sin importar
+    # si pasaron o no) — se usa para no marcar como "resuelto" el error de una hoja
+    # que sigue en Pendiente (no declarada) y que este sync directamente no revisó.
+    hojas_validadas: List[str] = []
 
     # --- Batch 1: leer completion + C16 de todos los EE + PI + Talleres + Establecimientos ---
     batch_ranges = []
@@ -607,6 +611,7 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
         ee_field_data[title] = field_values
 
         if declared:
+            hojas_validadas.append(title)
             errors = validate_sheet(field_values, validations, "ee")
 
             hard_errors = [e for e in errors if e["severity"] == "error"]
@@ -631,6 +636,7 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
     if has_pi:
         declared = _parse_completion_from_values(get_values("pi_completion"), diagonal=False)
         if declared:
+            hojas_validadas.append(PI_SHEET_TITLE)
             field_values = read_sheet_fields(sheets, spreadsheet_id, PI_SHEET_TITLE, pi_field_defs)
             errors = validate_sheet(field_values, validations, "pi")
             hard_errors = [e for e in errors if e["severity"] == "error"]
@@ -691,6 +697,7 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
         "cantidad_establecimientos": cantidad_establecimientos,
         "ultimo_sync": now,
         "validation_errors": all_validation_errors,
+        "hojas_validadas": hojas_validadas,
         "ee_field_data": ee_field_data,
         "pi_field_data": pi_field_data,
         "estab_rows_data": estab_rows_data,
@@ -1651,6 +1658,7 @@ def upsert_establecimientos(engine, emaus_id: int, anio: int, semestre: str,
 
 def upsert_control(engine, emaus_id: int, anio: int, semestre: str, metrics: Dict):
     errors = metrics.pop("validation_errors", [])
+    hojas_validadas = metrics.pop("hojas_validadas", [])
     ee_field_data = metrics.pop("ee_field_data", {})
     pi_field_data = metrics.pop("pi_field_data", None)
     estab_rows_data = metrics.pop("estab_rows_data", None)
@@ -1691,13 +1699,22 @@ def upsert_control(engine, emaus_id: int, anio: int, semestre: str, metrics: Dic
                 ultimo_sync = VALUES(ultimo_sync)
         """), {**metrics, "emaus_id": emaus_id, "anio": anio, "semestre": semestre})
 
-        # Marcar errores anteriores como resueltos
-        conn.execute(text("""
-            UPDATE control_validacion_detalle
-            SET resuelto = TRUE
-            WHERE emaus_id = :emaus_id AND anio = :anio AND semestre = :semestre
-              AND resuelto = FALSE
-        """), {"emaus_id": emaus_id, "anio": anio, "semestre": semestre})
+        # Marcar errores anteriores como resueltos — SOLO de las hojas que se
+        # volvieron a validar en esta corrida (declared=True). Si una hoja quedó
+        # en Pendiente (destildada, no declarada), este sync no la revisó de
+        # nuevo, y si igual la marcáramos resuelta acá el mensaje que explica
+        # POR QUÉ se destildó desaparecería del informe sin que nadie arregló
+        # nada — que es exactamente el bug reportado con Primera Infancia.
+        if hojas_validadas:
+            conn.execute(
+                text("""
+                    UPDATE control_validacion_detalle
+                    SET resuelto = TRUE
+                    WHERE emaus_id = :emaus_id AND anio = :anio AND semestre = :semestre
+                      AND resuelto = FALSE AND hoja_nombre IN :hojas
+                """).bindparams(bindparam("hojas", expanding=True)),
+                {"emaus_id": emaus_id, "anio": anio, "semestre": semestre, "hojas": hojas_validadas},
+            )
 
         # Insertar errores nuevos
         if errors:
