@@ -1932,12 +1932,12 @@ validations:
 
   - id: asistentes_apescolar_secundaria
     sheet: ee
-    description: "Apoyo Escolar Secundaria no puede superar los Asistentes de 15 a 24 años"
+    description: "Apoyo Escolar Secundaria no puede superar los Asistentes de 7 a 14 más 15 a 24 años (en secundario puede haber alumnos de 12 a 19 años)"
     severity: warning
     require_all:
       - sum_of: [ApEscolar_Nro_Secundaria]
-        at_most_sum_of: [Asistentes_15_24]
-    message: "Apoyo Escolar Secundaria (C54) supera a los Asistentes de 15 a 24 años (C12) — revisar que todos los participantes estén contados en Asistentes"
+        at_most_sum_of: [Asistentes_7_14, Asistentes_15_24]
+    message: "Apoyo Escolar Secundaria (C54) supera a los Asistentes de 7 a 14 (C11) más 15 a 24 años (C12) — revisar que todos los participantes estén contados en Asistentes"
 
   - id: asistentes_alfabetizacion_ninos
     sheet: ee
