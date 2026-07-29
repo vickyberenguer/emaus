@@ -494,6 +494,7 @@
     <div id="part-emaus" class="multisel" data-placeholder="Todos los Emaús"></div>
     <div id="part-ee" class="multisel" data-placeholder="Todos los EEs"></div>
     <button onclick="partDatos=null;cargarParticipantes()" style="padding:5px 14px;border-radius:6px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:12px;cursor:pointer">Aplicar</button>
+    <button class="btn btn-sm btn-outline-secondary" onclick="exportarParticipantes()"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="part-error" class="alert alert-danger mx-0 mb-3" style="display:none"></div>
 
@@ -617,6 +618,7 @@
     <label>EE</label>
     <div id="acc-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-acc-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-acc-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
 
   <div id="acc-contenido" style="padding:16px">
@@ -639,6 +641,7 @@
     <label>EE</label>
     <div id="ed-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-ed-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-ed-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="ed-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -660,6 +663,7 @@
     <label>EE</label>
     <div id="gm-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-gm-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-gm-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="gm-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -681,6 +685,7 @@
     <label>EE</label>
     <div id="it-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-it-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-it-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="it-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -702,6 +707,7 @@
     <label>EE</label>
     <div id="btu-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-btu-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-btu-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="btu-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -724,6 +730,7 @@
     <label>Emaús</label>
     <div id="bb-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-bb-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-bb-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="bb-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -745,6 +752,7 @@
     <label>EE</label>
     <div id="ayj-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-ayj-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-ayj-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="ayj-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -766,6 +774,7 @@
     <label>EE</label>
     <div id="bf-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-bf-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-bf-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="bf-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -785,6 +794,7 @@
     <label>Emaús</label>
     <div id="pi-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-pi-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-pi-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="pi-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -804,6 +814,7 @@
     <label>Emaús</label>
     <div id="pia-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-pia-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-pia-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="pia-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -825,6 +836,7 @@
     <label>EE</label>
     <div id="art-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-art-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-art-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="art-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -844,6 +856,7 @@
     <label>Emaús</label>
     <div id="est-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-est-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-est-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="est-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -863,6 +876,7 @@
     <label>Emaús</label>
     <div id="tll-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-tll-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-tll-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="tll-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -884,6 +898,7 @@
     <label>EE</label>
     <div id="int-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-int-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-int-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
   <div id="int-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -905,6 +920,7 @@
     <label>EE</label>
     <div id="ae-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-ae-filtrar">Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-ae-export"><i class="bi bi-download"></i> Exportar a CSV</button>
   </div>
 
   <div id="ae-contenido" style="padding:16px 24px">
@@ -1204,6 +1220,23 @@ async function cargarParticipantes() {
   }
 }
 
+async function exportarParticipantes() {
+  const params = new URLSearchParams({
+    anio: document.getElementById('part-anio').value,
+    semestre: document.getElementById('part-semestre').value,
+  });
+  appendMultiSelect(params, 'region', 'part-region');
+  appendMultiSelect(params, 'provincia', 'part-provincia');
+  appendMultiSelect(params, 'emaus_id', 'part-emaus');
+  appendMultiSelect(params, 'ee_id', 'part-ee');
+  try {
+    const filas = await api.get('/tablero/participantes/export?' + params.toString());
+    descargarCSV(`tablero_participantes_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
+}
+
 // --- Multi-select con checkboxes para los filtros de región/provincia/emaús/EE ---
 // Cierra cualquier panel abierto al hacer clic afuera.
 document.addEventListener('click', () => {
@@ -1274,6 +1307,30 @@ function getMultiSelectValues(id) {
 
 function appendMultiSelect(params, key, id) {
   getMultiSelectValues(id).forEach(v => params.append(key, v));
+}
+
+// Convierte una lista de objetos planos (misma forma en todas las filas) a CSV
+// y dispara la descarga en el navegador.
+function descargarCSV(nombreArchivo, filas) {
+  if (!filas || !filas.length) {
+    alert('No hay datos para exportar con los filtros actuales.');
+    return;
+  }
+  const headers = Object.keys(filas[0]);
+  const escapar = v => {
+    const s = (v === null || v === undefined) ? '' : String(v);
+    return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lineas = [headers.join(';'), ...filas.map(f => headers.map(h => escapar(f[h])).join(';'))];
+  const blob = new Blob(['﻿' + lineas.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function limpiarMultiSelect(id) {
@@ -1445,8 +1502,26 @@ async function iniciarAcciones() {
       cargarFiltrosAcciones();
     });
     document.getElementById('btn-acc-filtrar').addEventListener('click', cargarAcciones);
+    document.getElementById('btn-acc-export').addEventListener('click', exportarAcciones);
   }
   cargarAcciones();
+}
+
+async function exportarAcciones() {
+  const params = new URLSearchParams({
+    anio: document.getElementById('acc-anio').value,
+    semestre: document.getElementById('acc-semestre').value,
+  });
+  appendMultiSelect(params, 'region', 'acc-region');
+  appendMultiSelect(params, 'provincia', 'acc-provincia');
+  appendMultiSelect(params, 'emaus_id', 'acc-emaus');
+  appendMultiSelect(params, 'ee_id', 'acc-ee');
+  try {
+    const filas = await api.get('/tablero/acciones/export?' + params.toString());
+    descargarCSV(`tablero_acciones_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarAcciones() {
@@ -1556,8 +1631,23 @@ async function iniciarInternet() {
     document.getElementById('int-provincia').addEventListener('change', () => { limpiarFiltrosCascada('int','provincia'); cargarFiltrosInt(); });
     document.getElementById('int-emaus').addEventListener('change', () => { limpiarFiltrosCascada('int','emaus'); cargarFiltrosInt(); });
     document.getElementById('btn-int-filtrar').addEventListener('click', cargarInternet);
+    document.getElementById('btn-int-export').addEventListener('click', exportarInternet);
   }
   cargarInternet();
+}
+
+async function exportarInternet() {
+  const params = new URLSearchParams({ anio: document.getElementById('int-anio').value, semestre: document.getElementById('int-semestre').value });
+  appendMultiSelect(params, 'region', 'int-region');
+  appendMultiSelect(params, 'provincia', 'int-provincia');
+  appendMultiSelect(params, 'emaus_id', 'int-emaus');
+  appendMultiSelect(params, 'ee_id', 'int-ee');
+  try {
+    const filas = await api.get('/tablero/internet/export?' + params.toString());
+    descargarCSV(`tablero_internet_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosInt() {
@@ -1635,8 +1725,23 @@ async function iniciarEdilicias() {
     document.getElementById('ed-provincia').addEventListener('change', () => { limpiarFiltrosCascada('ed','provincia'); cargarFiltrosEd(); });
     document.getElementById('ed-emaus').addEventListener('change', () => { limpiarFiltrosCascada('ed','emaus'); cargarFiltrosEd(); });
     document.getElementById('btn-ed-filtrar').addEventListener('click', cargarEdilicias);
+    document.getElementById('btn-ed-export').addEventListener('click', exportarEdilicias);
   }
   cargarEdilicias();
+}
+
+async function exportarEdilicias() {
+  const params = new URLSearchParams({ anio: document.getElementById('ed-anio').value, semestre: document.getElementById('ed-semestre').value });
+  appendMultiSelect(params, 'region', 'ed-region');
+  appendMultiSelect(params, 'provincia', 'ed-provincia');
+  appendMultiSelect(params, 'emaus_id', 'ed-emaus');
+  appendMultiSelect(params, 'ee_id', 'ed-ee');
+  try {
+    const filas = await api.get('/tablero/edilicias/export?' + params.toString());
+    descargarCSV(`tablero_edilicias_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosEd() {
@@ -1776,8 +1881,23 @@ async function iniciarGrupoMotor() {
     document.getElementById('gm-provincia').addEventListener('change', () => { limpiarFiltrosCascada('gm','provincia'); cargarFiltrosGm(); });
     document.getElementById('gm-emaus').addEventListener('change', () => { limpiarFiltrosCascada('gm','emaus'); cargarFiltrosGm(); });
     document.getElementById('btn-gm-filtrar').addEventListener('click', cargarGrupoMotor);
+    document.getElementById('btn-gm-export').addEventListener('click', exportarGrupoMotor);
   }
   cargarGrupoMotor();
+}
+
+async function exportarGrupoMotor() {
+  const params = new URLSearchParams({ anio: document.getElementById('gm-anio').value, semestre: document.getElementById('gm-semestre').value });
+  appendMultiSelect(params, 'region', 'gm-region');
+  appendMultiSelect(params, 'provincia', 'gm-provincia');
+  appendMultiSelect(params, 'emaus_id', 'gm-emaus');
+  appendMultiSelect(params, 'ee_id', 'gm-ee');
+  try {
+    const filas = await api.get('/tablero/grupo-motor/export?' + params.toString());
+    descargarCSV(`tablero_grupo-motor_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosGm() {
@@ -1961,8 +2081,23 @@ async function iniciarItinerancia() {
     document.getElementById('it-provincia').addEventListener('change', () => { limpiarFiltrosCascada('it','provincia'); cargarFiltrosIt(); });
     document.getElementById('it-emaus').addEventListener('change', () => { limpiarFiltrosCascada('it','emaus'); cargarFiltrosIt(); });
     document.getElementById('btn-it-filtrar').addEventListener('click', cargarItinerancia);
+    document.getElementById('btn-it-export').addEventListener('click', exportarItinerancia);
   }
   cargarItinerancia();
+}
+
+async function exportarItinerancia() {
+  const params = new URLSearchParams({ anio: document.getElementById('it-anio').value, semestre: document.getElementById('it-semestre').value });
+  appendMultiSelect(params, 'region', 'it-region');
+  appendMultiSelect(params, 'provincia', 'it-provincia');
+  appendMultiSelect(params, 'emaus_id', 'it-emaus');
+  appendMultiSelect(params, 'ee_id', 'it-ee');
+  try {
+    const filas = await api.get('/tablero/itinerancia/export?' + params.toString());
+    descargarCSV(`tablero_itinerancia_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosIt() {
@@ -2055,8 +2190,23 @@ async function iniciarBtu() {
     document.getElementById('btu-provincia').addEventListener('change', () => { limpiarFiltrosCascada('btu','provincia'); cargarFiltrosBtu(); });
     document.getElementById('btu-emaus').addEventListener('change', () => { limpiarFiltrosCascada('btu','emaus'); cargarFiltrosBtu(); });
     document.getElementById('btn-btu-filtrar').addEventListener('click', cargarBtu);
+    document.getElementById('btn-btu-export').addEventListener('click', exportarBtu);
   }
   cargarBtu();
+}
+
+async function exportarBtu() {
+  const params = new URLSearchParams({ anio: document.getElementById('btu-anio').value, semestre: document.getElementById('btu-semestre').value });
+  appendMultiSelect(params, 'region', 'btu-region');
+  appendMultiSelect(params, 'provincia', 'btu-provincia');
+  appendMultiSelect(params, 'emaus_id', 'btu-emaus');
+  appendMultiSelect(params, 'ee_id', 'btu-ee');
+  try {
+    const filas = await api.get('/tablero/btu/export?' + params.toString());
+    descargarCSV(`tablero_btu_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosBtu() {
@@ -2133,8 +2283,22 @@ async function iniciarBtuBecarios() {
     document.getElementById('bb-region').addEventListener('change', () => { limpiarFiltrosCascada('bb','region'); cargarFiltrosBtuBecarios(); });
     document.getElementById('bb-provincia').addEventListener('change', () => { limpiarFiltrosCascada('bb','provincia'); cargarFiltrosBtuBecarios(); });
     document.getElementById('btn-bb-filtrar').addEventListener('click', cargarBtuBecarios);
+    document.getElementById('btn-bb-export').addEventListener('click', exportarBtuBecarios);
   }
   cargarBtuBecarios();
+}
+
+async function exportarBtuBecarios() {
+  const params = new URLSearchParams({ anio: document.getElementById('bb-anio').value });
+  appendMultiSelect(params, 'region', 'bb-region');
+  appendMultiSelect(params, 'provincia', 'bb-provincia');
+  appendMultiSelect(params, 'emaus_id', 'bb-emaus');
+  try {
+    const filas = await api.get('/tablero/btu-becarios/export?' + params.toString());
+    descargarCSV(`tablero_btu-becarios_${params.get('anio')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosBtuBecarios() {
@@ -2325,8 +2489,23 @@ async function iniciarBecasFamiliares() {
     document.getElementById('bf-provincia').addEventListener('change', () => { limpiarFiltrosCascada('bf','provincia'); cargarFiltrosBf(); });
     document.getElementById('bf-emaus').addEventListener('change', () => { limpiarFiltrosCascada('bf','emaus'); cargarFiltrosBf(); });
     document.getElementById('btn-bf-filtrar').addEventListener('click', cargarBecasFamiliares);
+    document.getElementById('btn-bf-export').addEventListener('click', exportarBecasFamiliares);
   }
   cargarBecasFamiliares();
+}
+
+async function exportarBecasFamiliares() {
+  const params = new URLSearchParams({ anio: document.getElementById('bf-anio').value, semestre: document.getElementById('bf-semestre').value });
+  appendMultiSelect(params, 'region', 'bf-region');
+  appendMultiSelect(params, 'provincia', 'bf-provincia');
+  appendMultiSelect(params, 'emaus_id', 'bf-emaus');
+  appendMultiSelect(params, 'ee_id', 'bf-ee');
+  try {
+    const filas = await api.get('/tablero/becas-familiares/export?' + params.toString());
+    descargarCSV(`tablero_becas-familiares_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosBf() {
@@ -2410,8 +2589,22 @@ async function iniciarPrimeraInfancia() {
     document.getElementById('pi-region').addEventListener('change', () => { limpiarFiltrosCascada('pi','region'); cargarFiltrosPi(); });
     document.getElementById('pi-provincia').addEventListener('change', () => { limpiarFiltrosCascada('pi','provincia'); cargarFiltrosPi(); });
     document.getElementById('btn-pi-filtrar').addEventListener('click', cargarPrimeraInfancia);
+    document.getElementById('btn-pi-export').addEventListener('click', exportarPrimeraInfancia);
   }
   cargarPrimeraInfancia();
+}
+
+async function exportarPrimeraInfancia() {
+  const params = new URLSearchParams({ anio: document.getElementById('pi-anio').value, semestre: document.getElementById('pi-semestre').value });
+  appendMultiSelect(params, 'region', 'pi-region');
+  appendMultiSelect(params, 'provincia', 'pi-provincia');
+  appendMultiSelect(params, 'emaus_id', 'pi-emaus');
+  try {
+    const filas = await api.get('/tablero/primera-infancia/export?' + params.toString());
+    descargarCSV(`tablero_primera-infancia_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosPi() {
@@ -2542,8 +2735,22 @@ async function iniciarPrimeraInfanciaAcciones() {
     document.getElementById('pia-region').addEventListener('change', () => { limpiarFiltrosCascada('pia','region'); cargarFiltrosPia(); });
     document.getElementById('pia-provincia').addEventListener('change', () => { limpiarFiltrosCascada('pia','provincia'); cargarFiltrosPia(); });
     document.getElementById('btn-pia-filtrar').addEventListener('click', cargarPrimeraInfanciaAcciones);
+    document.getElementById('btn-pia-export').addEventListener('click', exportarPrimeraInfanciaAcciones);
   }
   cargarPrimeraInfanciaAcciones();
+}
+
+async function exportarPrimeraInfanciaAcciones() {
+  const params = new URLSearchParams({ anio: document.getElementById('pia-anio').value, semestre: document.getElementById('pia-semestre').value });
+  appendMultiSelect(params, 'region', 'pia-region');
+  appendMultiSelect(params, 'provincia', 'pia-provincia');
+  appendMultiSelect(params, 'emaus_id', 'pia-emaus');
+  try {
+    const filas = await api.get('/tablero/primera-infancia-acciones/export?' + params.toString());
+    descargarCSV(`tablero_primera-infancia-acciones_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosPia() {
@@ -2627,8 +2834,23 @@ async function iniciarArticulaciones() {
     document.getElementById('art-provincia').addEventListener('change', () => { limpiarFiltrosCascada('art','provincia'); cargarFiltrosArticulaciones(); });
     document.getElementById('art-emaus').addEventListener('change', () => { limpiarFiltrosCascada('art','emaus'); cargarFiltrosArticulaciones(); });
     document.getElementById('btn-art-filtrar').addEventListener('click', cargarArticulaciones);
+    document.getElementById('btn-art-export').addEventListener('click', exportarArticulaciones);
   }
   cargarArticulaciones();
+}
+
+async function exportarArticulaciones() {
+  const params = new URLSearchParams({ anio: document.getElementById('art-anio').value, semestre: document.getElementById('art-semestre').value });
+  appendMultiSelect(params, 'region', 'art-region');
+  appendMultiSelect(params, 'provincia', 'art-provincia');
+  appendMultiSelect(params, 'emaus_id', 'art-emaus');
+  appendMultiSelect(params, 'ee_id', 'art-ee');
+  try {
+    const filas = await api.get('/tablero/articulaciones/export?' + params.toString());
+    descargarCSV(`tablero_articulaciones_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosArticulaciones() {
@@ -2704,8 +2926,22 @@ async function iniciarEstablecimientos() {
     document.getElementById('est-region').addEventListener('change', () => { limpiarFiltrosCascada('est','region'); cargarFiltrosEst(); });
     document.getElementById('est-provincia').addEventListener('change', () => { limpiarFiltrosCascada('est','provincia'); cargarFiltrosEst(); });
     document.getElementById('btn-est-filtrar').addEventListener('click', cargarEstablecimientos);
+    document.getElementById('btn-est-export').addEventListener('click', exportarEstablecimientos);
   }
   cargarEstablecimientos();
+}
+
+async function exportarEstablecimientos() {
+  const params = new URLSearchParams({ anio: document.getElementById('est-anio').value, semestre: document.getElementById('est-semestre').value });
+  appendMultiSelect(params, 'region', 'est-region');
+  appendMultiSelect(params, 'provincia', 'est-provincia');
+  appendMultiSelect(params, 'emaus_id', 'est-emaus');
+  try {
+    const filas = await api.get('/tablero/establecimientos/export?' + params.toString());
+    descargarCSV(`tablero_establecimientos_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosEst() {
@@ -2784,8 +3020,22 @@ async function iniciarTalleres() {
     document.getElementById('tll-region').addEventListener('change', () => { limpiarFiltrosCascada('tll','region'); cargarFiltrosTalleres(); });
     document.getElementById('tll-provincia').addEventListener('change', () => { limpiarFiltrosCascada('tll','provincia'); cargarFiltrosTalleres(); });
     document.getElementById('btn-tll-filtrar').addEventListener('click', cargarTalleres);
+    document.getElementById('btn-tll-export').addEventListener('click', exportarTalleres);
   }
   cargarTalleres();
+}
+
+async function exportarTalleres() {
+  const params = new URLSearchParams({ anio: document.getElementById('tll-anio').value, semestre: document.getElementById('tll-semestre').value });
+  appendMultiSelect(params, 'region', 'tll-region');
+  appendMultiSelect(params, 'provincia', 'tll-provincia');
+  appendMultiSelect(params, 'emaus_id', 'tll-emaus');
+  try {
+    const filas = await api.get('/tablero/talleres/export?' + params.toString());
+    descargarCSV(`tablero_talleres_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosTalleres() {
@@ -2873,8 +3123,23 @@ async function iniciarAyjPreocupaciones() {
     document.getElementById('ayj-provincia').addEventListener('change', () => { limpiarFiltrosCascada('ayj','provincia'); cargarFiltrosAyj(); });
     document.getElementById('ayj-emaus').addEventListener('change', () => { limpiarFiltrosCascada('ayj','emaus'); cargarFiltrosAyj(); });
     document.getElementById('btn-ayj-filtrar').addEventListener('click', cargarAyjPreocupaciones);
+    document.getElementById('btn-ayj-export').addEventListener('click', exportarAyjPreocupaciones);
   }
   cargarAyjPreocupaciones();
+}
+
+async function exportarAyjPreocupaciones() {
+  const params = new URLSearchParams({ anio: document.getElementById('ayj-anio').value, semestre: document.getElementById('ayj-semestre').value });
+  appendMultiSelect(params, 'region', 'ayj-region');
+  appendMultiSelect(params, 'provincia', 'ayj-provincia');
+  appendMultiSelect(params, 'emaus_id', 'ayj-emaus');
+  appendMultiSelect(params, 'ee_id', 'ayj-ee');
+  try {
+    const filas = await api.get('/tablero/ayj-preocupaciones/export?' + params.toString());
+    descargarCSV(`tablero_ayj-preocupaciones_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosAyj() {
@@ -2975,8 +3240,26 @@ async function iniciarApoyoEscolar() {
       aeDatos = null;
       cargarApoyoEscolar();
     });
+    document.getElementById('btn-ae-export').addEventListener('click', exportarApoyoEscolar);
   }
   if (!aeDatos) cargarApoyoEscolar();
+}
+
+async function exportarApoyoEscolar() {
+  const params = new URLSearchParams({
+    anio: document.getElementById('ae-anio').value,
+    semestre: document.getElementById('ae-semestre').value,
+  });
+  appendMultiSelect(params, 'region', 'ae-region');
+  appendMultiSelect(params, 'provincia', 'ae-provincia');
+  appendMultiSelect(params, 'emaus_id', 'ae-emaus');
+  appendMultiSelect(params, 'ee_id', 'ae-ee');
+  try {
+    const filas = await api.get('/tablero/apoyo-escolar/export?' + params.toString());
+    descargarCSV(`tablero_apoyo-escolar_${params.get('anio')}_S${params.get('semestre')}.csv`, filas);
+  } catch (e) {
+    alert('Error al exportar: ' + e.message);
+  }
 }
 
 async function cargarFiltrosAe() {
