@@ -30,6 +30,16 @@ from app.routers.control import ANIO_ACTIVO, SEMESTRE_ACTIVO, emaus_ids_for_user
 router = APIRouter(prefix="/tablero", tags=["tablero"])
 
 
+def emaus_ids_for_tablero(user: Usuario, db: Session) -> Optional[List[int]]:
+    """Como emaus_ids_for_user, pero en el módulo Tablero los Responsables ven
+    todos los Emaús (a diferencia de Control, donde solo ven los propios).
+    La única excepción dentro de Tablero es la pestaña "Estado de carga",
+    que sigue usando emaus_ids_for_user directamente."""
+    if user.rol == "responsable":
+        return None
+    return emaus_ids_for_user(user, db)
+
+
 @router.get("/responsables")
 def listar_responsables(
     db: Session = Depends(get_db),
@@ -263,7 +273,7 @@ def acciones(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     # Base query: relevamiento_ee con filtros
     ree_query = (
@@ -390,7 +400,7 @@ def edilicias(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     # EEs que participaron en el período con filtros
     ee_query = (
@@ -547,7 +557,7 @@ def grupo_motor(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     ree_query = (
         db.query(RelevamientoEE.id, RelevamientoEE.grupo_motor_cantidad,
@@ -659,7 +669,7 @@ def itinerancia(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     ree_query = (
         db.query(RelevamientoEE.id, RelevamientoEE.itinerancia_realizo,
@@ -790,7 +800,7 @@ def btu(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     ree_query = (
         db.query(RelevamientoEE.id, RelevamientoEE.btu_regulares,
@@ -910,7 +920,7 @@ def btu_becarios(
     """Datos individuales de becarios BTU (scrapeados aparte, ver
     scripts/scraper_btu_becarios.py). Solo becarios activos — nunca se
     expone DNI ni nombre, solo agregados."""
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     query = (
         db.query(BtuBecario)
@@ -1053,7 +1063,7 @@ def ayj_preocupaciones(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     ree_query = (
         db.query(RelevamientoEE.id)
@@ -1142,7 +1152,7 @@ def becas_familiares(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     ree_query = (
         db.query(
@@ -1225,7 +1235,7 @@ def primera_infancia(
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     # PI es un dato por Emaús (no por EE): sin filtro de EE.
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     query = (
         db.query(PastoralPI, Diocesis.id)
@@ -1323,7 +1333,7 @@ def primera_infancia_acciones(
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     # PI es un dato por Emaús (no por EE): sin filtro de EE.
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     query = (
         db.query(PastoralPI.id, Diocesis.id)
@@ -1404,7 +1414,7 @@ def establecimientos_tab(
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
     # Establecimientos es un dato por Emaús (cargado directo en la app, no por EE ni scrapeado).
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     query = (
         db.query(EstablecimientoArticulado, EstablecimientoEstado)
@@ -1493,7 +1503,7 @@ def internet(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     q = (
         db.query(RelevamientoEE.internet_acceso, RelevamientoEE.internet_falta_motivo)
@@ -1563,7 +1573,7 @@ def apoyo_escolar(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     # Base query: relevamiento_ee del período con filtros
     ree_query = (
@@ -1667,7 +1677,7 @@ def participantes(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     query = (
         db.query(RelevamientoEE)
@@ -1805,7 +1815,7 @@ def talleres_tab(
     """Datos de la hoja Talleres (una fila por taller, ver scraper_control.py
     upsert_talleres). rubro_tematico y perfil_capacitador se clasifican por
     palabras clave a partir de texto libre — primer intento, se puede ajustar."""
-    allowed_ids = emaus_ids_for_user(current_user, db)
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
 
     query = (
         db.query(RelevamientoTaller)
