@@ -938,18 +938,36 @@ _CARRERA_RENOMBRES = {
 
 def _mejor_variante(variantes: List[str]) -> str:
     """Entre variantes que solo difieren en mayúsculas/acentos, prioriza la que
-    tenga acentos y una capitalización prolija (ni todo mayúsculas ni todo
-    minúsculas)."""
+    tenga acentos, no esté toda en mayúsculas/minúsculas, y se acerque más al
+    formato oración habitual del español (mayúscula solo al inicio) en vez
+    del estilo "Título En Inglés" con cada palabra capitalizada."""
     def score(s: str):
         acentos = sum(1 for c in unicodedata.normalize('NFKD', s) if unicodedata.combining(c))
-        return (acentos, 0 if s.isupper() else 1, 0 if s.islower() else 1, -len(s))
+        extra_mayus = sum(1 for c in s[1:] if c.isupper())
+        return (acentos, 0 if s.isupper() else 1, 0 if s.islower() else 1, -extra_mayus, -len(s))
     return max(variantes, key=score)
+
+
+def _capitalizar_carrera(s: str) -> str:
+    """Asegura que el nombre empiece con mayúscula. Si viene todo en
+    mayúsculas (ej. "PROFESORADO EN MUSICA Y TEATRO") lo pasa a formato
+    oración en vez de dejarlo gritado; si solo falta la inicial, la
+    corrige sin tocar el resto (para no romper mayúsculas internas que
+    puedan ser intencionales, ej. siglas o nombres propios)."""
+    if not s:
+        return s
+    if s.isupper():
+        s = s.capitalize()
+    elif s[0].islower():
+        s = s[0].upper() + s[1:]
+    return s
 
 
 def unificar_carreras(items: Dict[str, int]) -> Dict[str, int]:
     """Unifica variantes de una misma carrera: aplica renombres explícitos y
     agrupa lo que quede por mayúsculas/minúsculas/acentos, eligiendo como
-    nombre final la variante mejor escrita (con acentos y capitalizada)."""
+    nombre final la variante mejor escrita (con acentos y capitalizada) y
+    asegurando que siempre quede con mayúscula inicial."""
     renombradas: Dict[str, int] = {}
     for carrera, cantidad in items.items():
         nueva = _CARRERA_RENOMBRES.get(_normalizar_carrera(carrera), carrera)
@@ -961,8 +979,8 @@ def unificar_carreras(items: Dict[str, int]) -> Dict[str, int]:
 
     resultado: Dict[str, int] = {}
     for variantes in grupos.values():
-        canonica = _mejor_variante(variantes)
-        resultado[canonica] = sum(renombradas[v] for v in variantes)
+        canonica = _capitalizar_carrera(_mejor_variante(variantes))
+        resultado[canonica] = resultado.get(canonica, 0) + sum(renombradas[v] for v in variantes)
     return resultado
 
 
