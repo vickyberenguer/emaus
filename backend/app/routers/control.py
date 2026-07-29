@@ -336,13 +336,25 @@ def trigger_sync(
     semestre: str = SEMESTRE_ACTIVO,
     emaus_id: Optional[int] = None,
     force: bool = False,
-    current_user: Usuario = Depends(require_rol("admin")),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     """
     En Lambda: invoca la misma función de forma asíncrona (InvokeAsync) para
     que el scraper corra sin límite de timeout de API Gateway.
     En local: corre directamente (útil para desarrollo).
+
+    Los responsables solo pueden disparar el sync de uno de sus propios
+    Emaús (nunca un sync global) — el botón "Revisar" del cuadro de
+    validaciones usa este endpoint con su emaus_id.
     """
+    if current_user.rol == "responsable":
+        if not emaus_id:
+            raise HTTPException(status_code=403, detail="Los responsables solo pueden sincronizar un Emaús propio")
+        allowed_ids = emaus_ids_for_user(current_user, db)
+        if allowed_ids is not None and emaus_id not in allowed_ids:
+            raise HTTPException(status_code=403, detail="Sin acceso a este Emaús")
+
     import os, json
     folder_id = os.getenv("DRIVE_FOLDER_ID", "")
     if not folder_id:

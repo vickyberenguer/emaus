@@ -507,22 +507,75 @@ async function abrirDetalle(emausId) {
 
     // Botones de aprobar/rechazar en el modal
     const accs = document.getElementById('modal-acciones');
+    let accionesHtml = `
+      <button class="btn btn-outline-primary btn-sm" id="btn-revisar" onclick="revisarEmaus(${emausId})">
+        <i class="bi bi-arrow-repeat"></i> Revisar
+      </button>`;
     if (d.listo_para_aprobar && d.aprobacion?.estado !== 'aprobado') {
-      accs.innerHTML = `
+      accionesHtml += `
         <button class="btn btn-success btn-sm" onclick="iniciarAccion(${emausId},'aprobado')">
           <i class="bi bi-check-circle"></i> Aprobar
         </button>`;
     } else if (d.aprobacion?.estado === 'aprobado') {
-      accs.innerHTML = `
+      accionesHtml += `
         <button class="btn btn-outline-danger btn-sm" onclick="iniciarAccion(${emausId},'rechazado')">
           <i class="bi bi-x-circle"></i> Rechazar
         </button>`;
     }
+    accs.innerHTML = accionesHtml;
 
   } catch (e) {
     document.getElementById('modal-body').innerHTML =
       `<div class="alert alert-danger">Error al cargar: ${e.message}</div>`;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Revisar (sync forzado de un solo Emaús, desde el cuadro de validaciones)
+// ---------------------------------------------------------------------------
+let _pollTimerRevisar = null;
+
+async function revisarEmaus(emausId) {
+  const btn = document.getElementById('btn-revisar');
+  if (!btn) return;
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sincronizando...';
+
+  // Margen para tolerar diferencias de reloj/latencia al comparar iniciado_en
+  const antes = Date.now() - 5000;
+
+  try {
+    await api.post(`/control/sync?anio=${ANIO}&semestre=${SEMESTRE}&emaus_id=${emausId}&force=true`, {});
+  } catch (e) {
+    btn.disabled = false;
+    btn.innerHTML = original;
+    alert(`Error al iniciar la sincronización: ${e.message}`);
+    return;
+  }
+
+  if (_pollTimerRevisar) clearInterval(_pollTimerRevisar);
+  let intentos = 0;
+  _pollTimerRevisar = setInterval(async () => {
+    intentos++;
+    try {
+      const s = await api.get('/control/sync/estado');
+      const iniciadoTs = s.iniciado_en ? new Date(s.iniciado_en).getTime() : 0;
+      const esNuestro = iniciadoTs >= antes;
+      if (esNuestro && (s.estado === 'ok' || s.estado === 'error')) {
+        clearInterval(_pollTimerRevisar);
+        _pollTimerRevisar = null;
+        cargarDatos();
+        if (emausSeleccionado === emausId) abrirDetalle(emausId);
+      } else if (intentos >= 40) { // ~2 minutos de margen
+        clearInterval(_pollTimerRevisar);
+        _pollTimerRevisar = null;
+        btn.disabled = false;
+        btn.innerHTML = original;
+        alert('La sincronización está tardando más de lo esperado. Volvé a revisar en unos minutos.');
+      }
+    } catch (_) { /* reintenta en el próximo tick */ }
+  }, 3000);
 }
 
 // ---------------------------------------------------------------------------
