@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
@@ -179,9 +179,9 @@ def estado_carga(
 def filtros_participantes(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -210,16 +210,16 @@ def filtros_participantes(
 
     # Provincias filtradas por región si corresponde
     if region:
-        provincias = sorted({r[1] for r in base_all if r[0] == region and r[1]})
+        provincias = sorted({r[1] for r in base_all if r[0] in region and r[1]})
     else:
         provincias = sorted({r[1] for r in base_all if r[1]})
 
     # Emaús filtrados por región y/o provincia
     base_emaus = base_all
     if region:
-        base_emaus = [r for r in base_emaus if r[0] == region]
+        base_emaus = [r for r in base_emaus if r[0] in region]
     if provincia:
-        base_emaus = [r for r in base_emaus if r[1] == provincia]
+        base_emaus = [r for r in base_emaus if r[1] in provincia]
     emaus_list = {r[2]: r[3] for r in base_emaus}
 
     # EE filtrados por región, provincia y/o emaús
@@ -227,7 +227,7 @@ def filtros_participantes(
     # distintos Emaús y si no, no se puede distinguir a cuál pertenece cada uno.
     base_ee = base_emaus
     if emaus_id:
-        base_ee = [r for r in base_ee if r[2] == emaus_id]
+        base_ee = [r for r in base_ee if r[2] in emaus_id]
     ee_list = {r[4]: f"{r[3]} - {r[5]}" for r in base_ee}
 
     return {
@@ -266,10 +266,10 @@ def debug_periodos(
 def acciones(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
-    ee_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -293,13 +293,13 @@ def acciones(
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        ree_query = ree_query.filter(Diocesis.region == region)
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
     if provincia:
-        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
     if ee_id:
-        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
 
     ree_ids = [r[0] for r in ree_query.all()]
     total_ree = len(ree_ids)
@@ -393,10 +393,10 @@ def _sum(val):
 def edilicias(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
-    ee_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -423,13 +423,13 @@ def edilicias(
     if allowed_ids is not None:
         ee_query = ee_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        ee_query = ee_query.filter(Diocesis.region == region)
+        ee_query = ee_query.filter(Diocesis.region.in_(region))
     if provincia:
-        ee_query = ee_query.filter(Diocesis.provincia == provincia)
+        ee_query = ee_query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        ee_query = ee_query.filter(Relevamiento.emaus_id == emaus_id)
+        ee_query = ee_query.filter(Relevamiento.emaus_id.in_(emaus_id))
     if ee_id:
-        ee_query = ee_query.filter(EspacioEducativo.id == ee_id)
+        ee_query = ee_query.filter(EspacioEducativo.id.in_(ee_id))
 
     ee_rows = ee_query.all()
     ee_ids = [r[0] for r in ee_rows]
@@ -550,10 +550,10 @@ def edilicias(
 def grupo_motor(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
-    ee_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -577,13 +577,13 @@ def grupo_motor(
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        ree_query = ree_query.filter(Diocesis.region == region)
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
     if provincia:
-        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
     if ee_id:
-        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
 
     ree_rows = ree_query.all()
     ree_ids = [r[0] for r in ree_rows]
@@ -662,10 +662,10 @@ def grupo_motor(
 def itinerancia(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
-    ee_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -689,13 +689,13 @@ def itinerancia(
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        ree_query = ree_query.filter(Diocesis.region == region)
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
     if provincia:
-        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
     if ee_id:
-        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
 
     ree_rows = ree_query.all()
     total = len(ree_rows)
@@ -793,10 +793,10 @@ def itinerancia(
 def btu(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
-    ee_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -821,13 +821,13 @@ def btu(
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        ree_query = ree_query.filter(Diocesis.region == region)
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
     if provincia:
-        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
     if ee_id:
-        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
 
     ree_rows = ree_query.all()
     total = len(ree_rows)
@@ -911,9 +911,9 @@ def _btu_anio_a_entero(valor) -> Optional[int]:
 @router.get("/btu-becarios")
 def btu_becarios(
     anio: int = BTU_ANIO_DEFAULT,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -931,11 +931,11 @@ def btu_becarios(
     if allowed_ids is not None:
         query = query.filter(BtuBecario.emaus_id.in_(allowed_ids))
     if region:
-        query = query.filter(Diocesis.region == region)
+        query = query.filter(Diocesis.region.in_(region))
     if provincia:
-        query = query.filter(Diocesis.provincia == provincia)
+        query = query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        query = query.filter(BtuBecario.emaus_id == emaus_id)
+        query = query.filter(BtuBecario.emaus_id.in_(emaus_id))
 
     becarios = query.all()
     total = len(becarios)
@@ -1056,10 +1056,10 @@ def btu_becarios(
 def ayj_preocupaciones(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
-    ee_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -1082,13 +1082,13 @@ def ayj_preocupaciones(
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        ree_query = ree_query.filter(Diocesis.region == region)
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
     if provincia:
-        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
     if ee_id:
-        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
 
     ree_ids = [r[0] for r in ree_query.all()]
     total = len(ree_ids)
@@ -1145,10 +1145,10 @@ def ayj_preocupaciones(
 def becas_familiares(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
-    ee_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -1177,13 +1177,13 @@ def becas_familiares(
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        ree_query = ree_query.filter(Diocesis.region == region)
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
     if provincia:
-        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
     if ee_id:
-        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
 
     ree_rows = ree_query.all()
     total = len(ree_rows)
@@ -1228,9 +1228,9 @@ def becas_familiares(
 def primera_infancia(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -1247,11 +1247,11 @@ def primera_infancia(
     if allowed_ids is not None:
         query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        query = query.filter(Diocesis.region == region)
+        query = query.filter(Diocesis.region.in_(region))
     if provincia:
-        query = query.filter(Diocesis.provincia == provincia)
+        query = query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        query = query.filter(Relevamiento.emaus_id == emaus_id)
+        query = query.filter(Relevamiento.emaus_id.in_(emaus_id))
 
     rows = query.all()
     total = len(rows)
@@ -1326,9 +1326,9 @@ def primera_infancia(
 def primera_infancia_acciones(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -1345,11 +1345,11 @@ def primera_infancia_acciones(
     if allowed_ids is not None:
         query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        query = query.filter(Diocesis.region == region)
+        query = query.filter(Diocesis.region.in_(region))
     if provincia:
-        query = query.filter(Diocesis.provincia == provincia)
+        query = query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        query = query.filter(Relevamiento.emaus_id == emaus_id)
+        query = query.filter(Relevamiento.emaus_id.in_(emaus_id))
 
     rows = query.all()
     total = len(rows)
@@ -1407,9 +1407,9 @@ def primera_infancia_acciones(
 def establecimientos_tab(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -1427,11 +1427,11 @@ def establecimientos_tab(
     if allowed_ids is not None:
         query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        query = query.filter(Diocesis.region == region)
+        query = query.filter(Diocesis.region.in_(region))
     if provincia:
-        query = query.filter(Diocesis.provincia == provincia)
+        query = query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        query = query.filter(Relevamiento.emaus_id == emaus_id)
+        query = query.filter(Relevamiento.emaus_id.in_(emaus_id))
 
     rows = query.all()
     total = len(rows)
@@ -1496,10 +1496,10 @@ def establecimientos_tab(
 def internet(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
-    ee_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -1522,13 +1522,13 @@ def internet(
     if allowed_ids is not None:
         q = q.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        q = q.filter(Diocesis.region == region)
+        q = q.filter(Diocesis.region.in_(region))
     if provincia:
-        q = q.filter(Diocesis.provincia == provincia)
+        q = q.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        q = q.filter(Relevamiento.emaus_id == emaus_id)
+        q = q.filter(Relevamiento.emaus_id.in_(emaus_id))
     if ee_id:
-        q = q.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+        q = q.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
 
     rows = q.all()
     total = len(rows)
@@ -1566,10 +1566,10 @@ def internet(
 def apoyo_escolar(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
-    ee_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -1595,13 +1595,13 @@ def apoyo_escolar(
     if allowed_ids is not None:
         ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        ree_query = ree_query.filter(Diocesis.region == region)
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
     if provincia:
-        ree_query = ree_query.filter(Diocesis.provincia == provincia)
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        ree_query = ree_query.filter(Relevamiento.emaus_id == emaus_id)
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
     if ee_id:
-        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
 
     ree_rows = ree_query.all()
     ree_ids = [r[0] for r in ree_rows]
@@ -1670,10 +1670,10 @@ def apoyo_escolar(
 def participantes(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
-    ee_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -1697,13 +1697,13 @@ def participantes(
     if allowed_ids is not None:
         query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        query = query.filter(Diocesis.region == region)
+        query = query.filter(Diocesis.region.in_(region))
     if provincia:
-        query = query.filter(Diocesis.provincia == provincia)
+        query = query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        query = query.filter(Relevamiento.emaus_id == emaus_id)
+        query = query.filter(Relevamiento.emaus_id.in_(emaus_id))
     if ee_id:
-        query = query.filter(RelevamientoEE.espacio_educativo_id == ee_id)
+        query = query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
 
     rees = query.all()
     ee_count = len(rees)
@@ -1806,9 +1806,9 @@ def participantes(
 def talleres_tab(
     anio: int = ANIO_ACTIVO,
     semestre: str = SEMESTRE_ACTIVO,
-    region: Optional[str] = None,
-    provincia: Optional[str] = None,
-    emaus_id: Optional[int] = None,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
 ):
@@ -1827,11 +1827,11 @@ def talleres_tab(
     if allowed_ids is not None:
         query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
     if region:
-        query = query.filter(Diocesis.region == region)
+        query = query.filter(Diocesis.region.in_(region))
     if provincia:
-        query = query.filter(Diocesis.provincia == provincia)
+        query = query.filter(Diocesis.provincia.in_(provincia))
     if emaus_id:
-        query = query.filter(Relevamiento.emaus_id == emaus_id)
+        query = query.filter(Relevamiento.emaus_id.in_(emaus_id))
 
     talleres_rows = query.all()
     total = len(talleres_rows)

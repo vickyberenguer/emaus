@@ -60,6 +60,66 @@
       font-size: 13px;
       font-family: 'Space Grotesk', sans-serif;
     }
+
+    /* Multi-select con checkboxes (filtros de región/provincia/emaús/EE) */
+    .multisel { position: relative; display: inline-block; }
+    .multisel-btn {
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid #e2e5ed;
+      background: #f5f6fa;
+      font-size: 13px;
+      font-family: 'Space Grotesk', sans-serif;
+      color: #111827;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 190px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .multisel-btn::after { content: '▾'; font-size: 9px; color: #6b7280; flex-shrink: 0; }
+    .multisel-panel {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      z-index: 60;
+      background: #fff;
+      border: 1px solid #e2e5ed;
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.12);
+      min-width: 220px;
+      max-width: 300px;
+      padding: 8px;
+    }
+    .multisel-buscar {
+      width: 100%;
+      padding: 5px 8px;
+      border: 1px solid #e2e5ed;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 6px;
+      box-sizing: border-box;
+    }
+    .multisel-acciones { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; }
+    .multisel-acciones a { color: #2563eb; cursor: pointer; text-decoration: none; }
+    .multisel-acciones a:hover { text-decoration: underline; }
+    .multisel-opciones { max-height: 220px; overflow-y: auto; }
+    .multisel-opcion {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px;
+      font-size: 13px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 0;
+    }
+    .multisel-opcion:hover { background: #f5f6fa; }
+    .multisel-opcion input { margin: 0; cursor: pointer; }
+
     .badge-admin {
       background: #eff6ff;
       color: #2563eb;
@@ -427,10 +487,10 @@
       <option value="1">Sem. 1</option>
       <option value="2">Sem. 2</option>
     </select>
-    <select id="part-region"><option value="">Todas las regiones</option></select>
-    <select id="part-provincia"><option value="">Todas las provincias</option></select>
-    <select id="part-emaus"><option value="">Todos los Emaús</option></select>
-    <select id="part-ee"><option value="">Todos los EEs</option></select>
+    <div id="part-region" class="multisel" data-placeholder="Todas las regiones"></div>
+    <div id="part-provincia" class="multisel" data-placeholder="Todas las provincias"></div>
+    <div id="part-emaus" class="multisel" data-placeholder="Todos los Emaús"></div>
+    <div id="part-ee" class="multisel" data-placeholder="Todos los EEs"></div>
     <button onclick="partDatos=null;cargarParticipantes()" style="padding:5px 14px;border-radius:6px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:12px;cursor:pointer">Aplicar</button>
   </div>
   <div id="part-error" class="alert alert-danger mx-0 mb-3" style="display:none"></div>
@@ -547,13 +607,13 @@
       <option value="2">Semestre 2</option>
     </select>
     <label>Región</label>
-    <select id="acc-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="acc-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="acc-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="acc-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="acc-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="acc-emaus" class="multisel" data-placeholder="Todos"></div>
     <label>EE</label>
-    <select id="acc-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="acc-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-acc-filtrar">Filtrar</button>
   </div>
 
@@ -569,13 +629,13 @@
     <select id="ed-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
     <select id="ed-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
     <label>Región</label>
-    <select id="ed-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="ed-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="ed-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="ed-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="ed-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="ed-emaus" class="multisel" data-placeholder="Todos"></div>
     <label>EE</label>
-    <select id="ed-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="ed-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-ed-filtrar">Filtrar</button>
   </div>
   <div id="ed-contenido" style="padding:16px 24px">
@@ -590,13 +650,13 @@
     <select id="gm-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
     <select id="gm-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
     <label>Región</label>
-    <select id="gm-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="gm-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="gm-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="gm-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="gm-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="gm-emaus" class="multisel" data-placeholder="Todos"></div>
     <label>EE</label>
-    <select id="gm-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="gm-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-gm-filtrar">Filtrar</button>
   </div>
   <div id="gm-contenido" style="padding:16px 24px">
@@ -611,13 +671,13 @@
     <select id="it-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
     <select id="it-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
     <label>Región</label>
-    <select id="it-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="it-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="it-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="it-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="it-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="it-emaus" class="multisel" data-placeholder="Todos"></div>
     <label>EE</label>
-    <select id="it-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="it-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-it-filtrar">Filtrar</button>
   </div>
   <div id="it-contenido" style="padding:16px 24px">
@@ -632,13 +692,13 @@
     <select id="btu-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
     <select id="btu-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
     <label>Región</label>
-    <select id="btu-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="btu-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="btu-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="btu-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="btu-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="btu-emaus" class="multisel" data-placeholder="Todos"></div>
     <label>EE</label>
-    <select id="btu-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="btu-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-btu-filtrar">Filtrar</button>
   </div>
   <div id="btu-contenido" style="padding:16px 24px">
@@ -656,11 +716,11 @@
       <option value="2024">2024</option>
     </select>
     <label>Región</label>
-    <select id="bb-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="bb-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="bb-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="bb-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="bb-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="bb-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-bb-filtrar">Filtrar</button>
   </div>
   <div id="bb-contenido" style="padding:16px 24px">
@@ -675,13 +735,13 @@
     <select id="ayj-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
     <select id="ayj-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
     <label>Región</label>
-    <select id="ayj-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="ayj-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="ayj-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="ayj-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="ayj-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="ayj-emaus" class="multisel" data-placeholder="Todos"></div>
     <label>EE</label>
-    <select id="ayj-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="ayj-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-ayj-filtrar">Filtrar</button>
   </div>
   <div id="ayj-contenido" style="padding:16px 24px">
@@ -696,13 +756,13 @@
     <select id="bf-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
     <select id="bf-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
     <label>Región</label>
-    <select id="bf-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="bf-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="bf-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="bf-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="bf-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="bf-emaus" class="multisel" data-placeholder="Todos"></div>
     <label>EE</label>
-    <select id="bf-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="bf-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-bf-filtrar">Filtrar</button>
   </div>
   <div id="bf-contenido" style="padding:16px 24px">
@@ -717,11 +777,11 @@
     <select id="pi-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
     <select id="pi-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
     <label>Región</label>
-    <select id="pi-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="pi-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="pi-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="pi-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="pi-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="pi-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-pi-filtrar">Filtrar</button>
   </div>
   <div id="pi-contenido" style="padding:16px 24px">
@@ -736,11 +796,11 @@
     <select id="pia-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
     <select id="pia-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
     <label>Región</label>
-    <select id="pia-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="pia-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="pia-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="pia-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="pia-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="pia-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-pia-filtrar">Filtrar</button>
   </div>
   <div id="pia-contenido" style="padding:16px 24px">
@@ -755,11 +815,11 @@
     <select id="est-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
     <select id="est-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
     <label>Región</label>
-    <select id="est-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="est-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="est-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="est-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="est-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="est-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-est-filtrar">Filtrar</button>
   </div>
   <div id="est-contenido" style="padding:16px 24px">
@@ -774,11 +834,11 @@
     <select id="tll-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
     <select id="tll-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
     <label>Región</label>
-    <select id="tll-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="tll-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="tll-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="tll-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="tll-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="tll-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-tll-filtrar">Filtrar</button>
   </div>
   <div id="tll-contenido" style="padding:16px 24px">
@@ -793,13 +853,13 @@
     <select id="int-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
     <select id="int-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
     <label>Región</label>
-    <select id="int-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="int-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="int-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="int-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="int-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="int-emaus" class="multisel" data-placeholder="Todos"></div>
     <label>EE</label>
-    <select id="int-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="int-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-int-filtrar">Filtrar</button>
   </div>
   <div id="int-contenido" style="padding:16px 24px">
@@ -814,13 +874,13 @@
     <select id="ae-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
     <select id="ae-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
     <label>Región</label>
-    <select id="ae-region" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="ae-region" class="multisel" data-placeholder="Todas"></div>
     <label>Provincia</label>
-    <select id="ae-provincia" class="sel-filtro"><option value="">Todas</option></select>
+    <div id="ae-provincia" class="multisel" data-placeholder="Todas"></div>
     <label>Emaús</label>
-    <select id="ae-emaus" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="ae-emaus" class="multisel" data-placeholder="Todos"></div>
     <label>EE</label>
-    <select id="ae-ee" class="sel-filtro"><option value="">Todos</option></select>
+    <div id="ae-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-ae-filtrar">Filtrar</button>
   </div>
 
@@ -1106,14 +1166,10 @@ async function cargarParticipantes() {
     anio: document.getElementById('part-anio').value,
     semestre: document.getElementById('part-semestre').value,
   });
-  const region = document.getElementById('part-region').value;
-  const provincia = document.getElementById('part-provincia').value;
-  const emausId = document.getElementById('part-emaus').value;
-  const eeId = document.getElementById('part-ee').value;
-  if (region) params.append('region', region);
-  if (provincia) params.append('provincia', provincia);
-  if (emausId) params.append('emaus_id', emausId);
-  if (eeId) params.append('ee_id', eeId);
+  appendMultiSelect(params, 'region', 'part-region');
+  appendMultiSelect(params, 'provincia', 'part-provincia');
+  appendMultiSelect(params, 'emaus_id', 'part-emaus');
+  appendMultiSelect(params, 'ee_id', 'part-ee');
 
   try {
     partDatos = await api.get('/tablero/participantes?' + params.toString());
@@ -1124,29 +1180,117 @@ async function cargarParticipantes() {
   }
 }
 
-// Limpia los selects dependientes según cuál cambió
+// --- Multi-select con checkboxes para los filtros de región/provincia/emaús/EE ---
+// Cierra cualquier panel abierto al hacer clic afuera.
+document.addEventListener('click', () => {
+  document.querySelectorAll('.multisel-panel').forEach(p => p.style.display = 'none');
+});
+
+function initMultiSelect(id) {
+  const el = document.getElementById(id);
+  if (!el || el._msInit) return;
+  el._msInit = true;
+  const placeholder = el.dataset.placeholder || 'Todos';
+  el.classList.add('multisel');
+  el.innerHTML = `
+    <button type="button" class="multisel-btn">${placeholder}</button>
+    <div class="multisel-panel" style="display:none">
+      <input type="text" class="multisel-buscar" placeholder="Buscar...">
+      <div class="multisel-acciones"><a data-accion="todos">Seleccionar todo</a><a data-accion="ninguno">Limpiar</a></div>
+      <div class="multisel-opciones"></div>
+    </div>`;
+  const btn = el.querySelector('.multisel-btn');
+  const panel = el.querySelector('.multisel-panel');
+  const buscar = el.querySelector('.multisel-buscar');
+  const opciones = el.querySelector('.multisel-opciones');
+
+  const filtrarOpciones = () => {
+    const q = buscar.value.trim().toLowerCase();
+    opciones.querySelectorAll('.multisel-opcion').forEach(row => {
+      row.style.display = row.dataset.nombre.includes(q) ? '' : 'none';
+    });
+  };
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const abrir = panel.style.display === 'none';
+    document.querySelectorAll('.multisel-panel').forEach(p => p.style.display = 'none');
+    if (abrir) { panel.style.display = 'block'; buscar.value = ''; filtrarOpciones(); }
+  });
+  panel.addEventListener('click', e => e.stopPropagation());
+  buscar.addEventListener('input', filtrarOpciones);
+
+  el.querySelector('[data-accion="todos"]').addEventListener('click', () => {
+    opciones.querySelectorAll('.multisel-opcion').forEach(row => {
+      if (row.style.display !== 'none') row.querySelector('input').checked = true;
+    });
+    actualizarBotonMultiSelect(el);
+    el.dispatchEvent(new Event('change'));
+  });
+  el.querySelector('[data-accion="ninguno"]').addEventListener('click', () => {
+    opciones.querySelectorAll('input').forEach(cb => cb.checked = false);
+    actualizarBotonMultiSelect(el);
+    el.dispatchEvent(new Event('change'));
+  });
+}
+
+function actualizarBotonMultiSelect(el) {
+  const btn = el.querySelector('.multisel-btn');
+  const checked = el.querySelectorAll('.multisel-opciones input:checked');
+  if (checked.length === 0) btn.textContent = el.dataset.placeholder || 'Todos';
+  else if (checked.length === 1) btn.textContent = checked[0].closest('.multisel-opcion').querySelector('span').textContent;
+  else btn.textContent = checked.length + ' seleccionadas';
+}
+
+function getMultiSelectValues(id) {
+  const el = document.getElementById(id);
+  if (!el) return [];
+  return [...el.querySelectorAll('.multisel-opciones input:checked')].map(cb => cb.value);
+}
+
+function appendMultiSelect(params, key, id) {
+  getMultiSelectValues(id).forEach(v => params.append(key, v));
+}
+
+function limpiarMultiSelect(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.querySelectorAll('.multisel-opciones input').forEach(cb => cb.checked = false);
+  actualizarBotonMultiSelect(el);
+}
+
+// Limpia los filtros dependientes según cuál cambió
 // nivel: undefined=todos, 'region'=provincia+emaus+ee, 'provincia'=emaus+ee, 'emaus'=ee
 function limpiarFiltrosCascada(prefijo, nivel) {
   const orden = ['region', 'provincia', 'emaus', 'ee'];
   const desde = nivel ? orden.indexOf(nivel) + 1 : 0;
-  orden.slice(desde).forEach(n => {
-    const sel = document.getElementById(`${prefijo}-${n}`);
-    if (sel) sel.value = '';
-  });
+  orden.slice(desde).forEach(n => limpiarMultiSelect(`${prefijo}-${n}`));
 }
 
 function poblarSelectFiltro(id, items, keyId = 'id', keyNombre = 'nombre') {
-  const sel = document.getElementById(id);
-  if (!sel) return;
-  const current = sel.value;
-  while (sel.options.length > 1) sel.remove(1);
+  const el = document.getElementById(id);
+  if (!el) return;
+  initMultiSelect(el.id);
+  const opciones = el.querySelector('.multisel-opciones');
+  const seleccionActual = new Set(getMultiSelectValues(id));
+  opciones.innerHTML = '';
   items.forEach(item => {
-    const opt = document.createElement('option');
-    opt.value = item[keyId]; opt.textContent = item[keyNombre];
-    sel.appendChild(opt);
+    const val = String(item[keyId]);
+    const label = document.createElement('label');
+    label.className = 'multisel-opcion';
+    label.dataset.nombre = String(item[keyNombre]).toLowerCase();
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = val;
+    cb.checked = seleccionActual.has(val);
+    cb.addEventListener('change', () => actualizarBotonMultiSelect(el));
+    const span = document.createElement('span');
+    span.textContent = item[keyNombre];
+    label.appendChild(cb);
+    label.appendChild(span);
+    opciones.appendChild(label);
   });
-  // Mantener selección si sigue disponible
-  if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
+  actualizarBotonMultiSelect(el);
 }
 
 async function cargarFiltros() {
@@ -1154,12 +1298,9 @@ async function cargarFiltros() {
     anio:     document.getElementById('part-anio').value,
     semestre: document.getElementById('part-semestre').value,
   });
-  const region   = document.getElementById('part-region').value;
-  const provincia= document.getElementById('part-provincia').value;
-  const emausId  = document.getElementById('part-emaus').value;
-  if (region)    params.set('region', region);
-  if (provincia) params.set('provincia', provincia);
-  if (emausId)   params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'part-region');
+  appendMultiSelect(params, 'provincia', 'part-provincia');
+  appendMultiSelect(params, 'emaus_id', 'part-emaus');
 
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
@@ -1243,12 +1384,9 @@ async function cargarFiltrosAcciones() {
     anio:     document.getElementById('acc-anio').value,
     semestre: document.getElementById('acc-semestre').value,
   });
-  const region   = document.getElementById('acc-region').value;
-  const provincia= document.getElementById('acc-provincia').value;
-  const emausId  = document.getElementById('acc-emaus').value;
-  if (region)    params.set('region', region);
-  if (provincia) params.set('provincia', provincia);
-  if (emausId)   params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'acc-region');
+  appendMultiSelect(params, 'provincia', 'acc-provincia');
+  appendMultiSelect(params, 'emaus_id', 'acc-emaus');
 
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
@@ -1294,14 +1432,10 @@ async function cargarAcciones() {
     anio: document.getElementById('acc-anio').value,
     semestre: document.getElementById('acc-semestre').value,
   });
-  const region   = document.getElementById('acc-region').value;
-  const provincia= document.getElementById('acc-provincia').value;
-  const emausId  = document.getElementById('acc-emaus').value;
-  const eeId     = document.getElementById('acc-ee').value;
-  if (region)    params.append('region', region);
-  if (provincia) params.append('provincia', provincia);
-  if (emausId)   params.append('emaus_id', emausId);
-  if (eeId)      params.append('ee_id', eeId);
+  appendMultiSelect(params, 'region', 'acc-region');
+  appendMultiSelect(params, 'provincia', 'acc-provincia');
+  appendMultiSelect(params, 'emaus_id', 'acc-emaus');
+  appendMultiSelect(params, 'ee_id', 'acc-ee');
 
   try {
     const d = await api.get('/tablero/acciones?' + params.toString());
@@ -1404,12 +1538,9 @@ async function iniciarInternet() {
 
 async function cargarFiltrosInt() {
   const params = new URLSearchParams({ anio: document.getElementById('int-anio').value, semestre: document.getElementById('int-semestre').value });
-  const region = document.getElementById('int-region').value;
-  const prov   = document.getElementById('int-provincia').value;
-  const emausId= document.getElementById('int-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'int-region');
+  appendMultiSelect(params, 'provincia', 'int-provincia');
+  appendMultiSelect(params, 'emaus_id', 'int-emaus');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('int-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -1423,14 +1554,10 @@ async function cargarInternet() {
   const contenido = document.getElementById('int-contenido');
   contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
   const params = new URLSearchParams({ anio: document.getElementById('int-anio').value, semestre: document.getElementById('int-semestre').value });
-  const region = document.getElementById('int-region').value;
-  const prov   = document.getElementById('int-provincia').value;
-  const emausId= document.getElementById('int-emaus').value;
-  const eeId   = document.getElementById('int-ee').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
-  if (eeId)    params.set('ee_id', eeId);
+  appendMultiSelect(params, 'region', 'int-region');
+  appendMultiSelect(params, 'provincia', 'int-provincia');
+  appendMultiSelect(params, 'emaus_id', 'int-emaus');
+  appendMultiSelect(params, 'ee_id', 'int-ee');
   try {
     const d = await api.get('/tablero/internet?' + params.toString());
     if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
@@ -1490,12 +1617,9 @@ async function iniciarEdilicias() {
 
 async function cargarFiltrosEd() {
   const params = new URLSearchParams({ anio: document.getElementById('ed-anio').value, semestre: document.getElementById('ed-semestre').value });
-  const region = document.getElementById('ed-region').value;
-  const prov   = document.getElementById('ed-provincia').value;
-  const emausId= document.getElementById('ed-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'ed-region');
+  appendMultiSelect(params, 'provincia', 'ed-provincia');
+  appendMultiSelect(params, 'emaus_id', 'ed-emaus');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('ed-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -1522,14 +1646,10 @@ async function cargarEdilicias() {
   const contenido = document.getElementById('ed-contenido');
   contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
   const params = new URLSearchParams({ anio: document.getElementById('ed-anio').value, semestre: document.getElementById('ed-semestre').value });
-  const region = document.getElementById('ed-region').value;
-  const prov   = document.getElementById('ed-provincia').value;
-  const emausId= document.getElementById('ed-emaus').value;
-  const eeId   = document.getElementById('ed-ee').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
-  if (eeId)    params.set('ee_id', eeId);
+  appendMultiSelect(params, 'region', 'ed-region');
+  appendMultiSelect(params, 'provincia', 'ed-provincia');
+  appendMultiSelect(params, 'emaus_id', 'ed-emaus');
+  appendMultiSelect(params, 'ee_id', 'ed-ee');
   try {
     const d = await api.get('/tablero/edilicias?' + params.toString());
     if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
@@ -1638,12 +1758,9 @@ async function iniciarGrupoMotor() {
 
 async function cargarFiltrosGm() {
   const params = new URLSearchParams({ anio: document.getElementById('gm-anio').value, semestre: document.getElementById('gm-semestre').value });
-  const region = document.getElementById('gm-region').value;
-  const prov   = document.getElementById('gm-provincia').value;
-  const emausId= document.getElementById('gm-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'gm-region');
+  appendMultiSelect(params, 'provincia', 'gm-provincia');
+  appendMultiSelect(params, 'emaus_id', 'gm-emaus');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('gm-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -1657,14 +1774,10 @@ async function cargarGrupoMotor() {
   const contenido = document.getElementById('gm-contenido');
   contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
   const params = new URLSearchParams({ anio: document.getElementById('gm-anio').value, semestre: document.getElementById('gm-semestre').value });
-  const region = document.getElementById('gm-region').value;
-  const prov   = document.getElementById('gm-provincia').value;
-  const emausId= document.getElementById('gm-emaus').value;
-  const eeId   = document.getElementById('gm-ee').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
-  if (eeId)    params.set('ee_id', eeId);
+  appendMultiSelect(params, 'region', 'gm-region');
+  appendMultiSelect(params, 'provincia', 'gm-provincia');
+  appendMultiSelect(params, 'emaus_id', 'gm-emaus');
+  appendMultiSelect(params, 'ee_id', 'gm-ee');
   try {
     const d = await api.get('/tablero/grupo-motor?' + params.toString());
     if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
@@ -1830,12 +1943,9 @@ async function iniciarItinerancia() {
 
 async function cargarFiltrosIt() {
   const params = new URLSearchParams({ anio: document.getElementById('it-anio').value, semestre: document.getElementById('it-semestre').value });
-  const region = document.getElementById('it-region').value;
-  const prov   = document.getElementById('it-provincia').value;
-  const emausId= document.getElementById('it-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'it-region');
+  appendMultiSelect(params, 'provincia', 'it-provincia');
+  appendMultiSelect(params, 'emaus_id', 'it-emaus');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('it-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -1849,14 +1959,10 @@ async function cargarItinerancia() {
   const contenido = document.getElementById('it-contenido');
   contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
   const params = new URLSearchParams({ anio: document.getElementById('it-anio').value, semestre: document.getElementById('it-semestre').value });
-  const region = document.getElementById('it-region').value;
-  const prov   = document.getElementById('it-provincia').value;
-  const emausId= document.getElementById('it-emaus').value;
-  const eeId   = document.getElementById('it-ee').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
-  if (eeId)    params.set('ee_id', eeId);
+  appendMultiSelect(params, 'region', 'it-region');
+  appendMultiSelect(params, 'provincia', 'it-provincia');
+  appendMultiSelect(params, 'emaus_id', 'it-emaus');
+  appendMultiSelect(params, 'ee_id', 'it-ee');
   try {
     const d = await api.get('/tablero/itinerancia?' + params.toString());
     if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
@@ -1931,12 +2037,9 @@ async function iniciarBtu() {
 
 async function cargarFiltrosBtu() {
   const params = new URLSearchParams({ anio: document.getElementById('btu-anio').value, semestre: document.getElementById('btu-semestre').value });
-  const region = document.getElementById('btu-region').value;
-  const prov   = document.getElementById('btu-provincia').value;
-  const emausId= document.getElementById('btu-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'btu-region');
+  appendMultiSelect(params, 'provincia', 'btu-provincia');
+  appendMultiSelect(params, 'emaus_id', 'btu-emaus');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('btu-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -1950,14 +2053,10 @@ async function cargarBtu() {
   const contenido = document.getElementById('btu-contenido');
   contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
   const params = new URLSearchParams({ anio: document.getElementById('btu-anio').value, semestre: document.getElementById('btu-semestre').value });
-  const region = document.getElementById('btu-region').value;
-  const prov   = document.getElementById('btu-provincia').value;
-  const emausId= document.getElementById('btu-emaus').value;
-  const eeId   = document.getElementById('btu-ee').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
-  if (eeId)    params.set('ee_id', eeId);
+  appendMultiSelect(params, 'region', 'btu-region');
+  appendMultiSelect(params, 'provincia', 'btu-provincia');
+  appendMultiSelect(params, 'emaus_id', 'btu-emaus');
+  appendMultiSelect(params, 'ee_id', 'btu-ee');
   try {
     const d = await api.get('/tablero/btu?' + params.toString());
     if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
@@ -2016,10 +2115,8 @@ async function iniciarBtuBecarios() {
 
 async function cargarFiltrosBtuBecarios() {
   const params = new URLSearchParams({ anio: document.getElementById('bb-anio').value });
-  const region = document.getElementById('bb-region').value;
-  const prov   = document.getElementById('bb-provincia').value;
-  if (region) params.set('region', region);
-  if (prov)   params.set('provincia', prov);
+  appendMultiSelect(params, 'region', 'bb-region');
+  appendMultiSelect(params, 'provincia', 'bb-provincia');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('bb-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -2074,12 +2171,9 @@ async function cargarBtuBecarios() {
   const contenido = document.getElementById('bb-contenido');
   contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
   const params = new URLSearchParams({ anio: document.getElementById('bb-anio').value });
-  const region = document.getElementById('bb-region').value;
-  const prov   = document.getElementById('bb-provincia').value;
-  const emausId= document.getElementById('bb-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'bb-region');
+  appendMultiSelect(params, 'provincia', 'bb-provincia');
+  appendMultiSelect(params, 'emaus_id', 'bb-emaus');
   try {
     const d = await api.get('/tablero/btu-becarios?' + params.toString());
     if (!d.total_becarios) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
@@ -2213,12 +2307,9 @@ async function iniciarBecasFamiliares() {
 
 async function cargarFiltrosBf() {
   const params = new URLSearchParams({ anio: document.getElementById('bf-anio').value, semestre: document.getElementById('bf-semestre').value });
-  const region = document.getElementById('bf-region').value;
-  const prov   = document.getElementById('bf-provincia').value;
-  const emausId= document.getElementById('bf-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'bf-region');
+  appendMultiSelect(params, 'provincia', 'bf-provincia');
+  appendMultiSelect(params, 'emaus_id', 'bf-emaus');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('bf-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -2232,14 +2323,10 @@ async function cargarBecasFamiliares() {
   const contenido = document.getElementById('bf-contenido');
   contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
   const params = new URLSearchParams({ anio: document.getElementById('bf-anio').value, semestre: document.getElementById('bf-semestre').value });
-  const region = document.getElementById('bf-region').value;
-  const prov   = document.getElementById('bf-provincia').value;
-  const emausId= document.getElementById('bf-emaus').value;
-  const eeId   = document.getElementById('bf-ee').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
-  if (eeId)    params.set('ee_id', eeId);
+  appendMultiSelect(params, 'region', 'bf-region');
+  appendMultiSelect(params, 'provincia', 'bf-provincia');
+  appendMultiSelect(params, 'emaus_id', 'bf-emaus');
+  appendMultiSelect(params, 'ee_id', 'bf-ee');
   try {
     const d = await api.get('/tablero/becas-familiares?' + params.toString());
     if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
@@ -2305,10 +2392,8 @@ async function iniciarPrimeraInfancia() {
 
 async function cargarFiltrosPi() {
   const params = new URLSearchParams({ anio: document.getElementById('pi-anio').value, semestre: document.getElementById('pi-semestre').value });
-  const region = document.getElementById('pi-region').value;
-  const prov   = document.getElementById('pi-provincia').value;
-  if (region) params.set('region', region);
-  if (prov)   params.set('provincia', prov);
+  appendMultiSelect(params, 'region', 'pi-region');
+  appendMultiSelect(params, 'provincia', 'pi-provincia');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('pi-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -2347,12 +2432,9 @@ async function cargarPrimeraInfancia() {
   const contenido = document.getElementById('pi-contenido');
   contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
   const params = new URLSearchParams({ anio: document.getElementById('pi-anio').value, semestre: document.getElementById('pi-semestre').value });
-  const region = document.getElementById('pi-region').value;
-  const prov   = document.getElementById('pi-provincia').value;
-  const emausId= document.getElementById('pi-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'pi-region');
+  appendMultiSelect(params, 'provincia', 'pi-provincia');
+  appendMultiSelect(params, 'emaus_id', 'pi-emaus');
   try {
     const d = await api.get('/tablero/primera-infancia?' + params.toString());
     if (!d.total_emaus) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos de Primera Infancia para el período seleccionado.</p>'; return; }
@@ -2442,10 +2524,8 @@ async function iniciarPrimeraInfanciaAcciones() {
 
 async function cargarFiltrosPia() {
   const params = new URLSearchParams({ anio: document.getElementById('pia-anio').value, semestre: document.getElementById('pia-semestre').value });
-  const region = document.getElementById('pia-region').value;
-  const prov   = document.getElementById('pia-provincia').value;
-  if (region) params.set('region', region);
-  if (prov)   params.set('provincia', prov);
+  appendMultiSelect(params, 'region', 'pia-region');
+  appendMultiSelect(params, 'provincia', 'pia-provincia');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('pia-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -2458,12 +2538,9 @@ async function cargarPrimeraInfanciaAcciones() {
   const contenido = document.getElementById('pia-contenido');
   contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
   const params = new URLSearchParams({ anio: document.getElementById('pia-anio').value, semestre: document.getElementById('pia-semestre').value });
-  const region = document.getElementById('pia-region').value;
-  const prov   = document.getElementById('pia-provincia').value;
-  const emausId= document.getElementById('pia-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'pia-region');
+  appendMultiSelect(params, 'provincia', 'pia-provincia');
+  appendMultiSelect(params, 'emaus_id', 'pia-emaus');
   try {
     const d = await api.get('/tablero/primera-infancia-acciones?' + params.toString());
     if (!d.total_emaus) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos de Primera Infancia para el período seleccionado.</p>'; return; }
@@ -2530,10 +2607,8 @@ async function iniciarEstablecimientos() {
 
 async function cargarFiltrosEst() {
   const params = new URLSearchParams({ anio: document.getElementById('est-anio').value, semestre: document.getElementById('est-semestre').value });
-  const region = document.getElementById('est-region').value;
-  const prov   = document.getElementById('est-provincia').value;
-  if (region) params.set('region', region);
-  if (prov)   params.set('provincia', prov);
+  appendMultiSelect(params, 'region', 'est-region');
+  appendMultiSelect(params, 'provincia', 'est-provincia');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('est-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -2546,12 +2621,9 @@ async function cargarEstablecimientos() {
   const contenido = document.getElementById('est-contenido');
   contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
   const params = new URLSearchParams({ anio: document.getElementById('est-anio').value, semestre: document.getElementById('est-semestre').value });
-  const region = document.getElementById('est-region').value;
-  const prov   = document.getElementById('est-provincia').value;
-  const emausId= document.getElementById('est-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'est-region');
+  appendMultiSelect(params, 'provincia', 'est-provincia');
+  appendMultiSelect(params, 'emaus_id', 'est-emaus');
   try {
     const d = await api.get('/tablero/establecimientos?' + params.toString());
     if (!d.total_establecimientos) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
@@ -2615,10 +2687,8 @@ async function iniciarTalleres() {
 
 async function cargarFiltrosTalleres() {
   const params = new URLSearchParams({ anio: document.getElementById('tll-anio').value, semestre: document.getElementById('tll-semestre').value });
-  const region = document.getElementById('tll-region').value;
-  const prov   = document.getElementById('tll-provincia').value;
-  if (region) params.set('region', region);
-  if (prov)   params.set('provincia', prov);
+  appendMultiSelect(params, 'region', 'tll-region');
+  appendMultiSelect(params, 'provincia', 'tll-provincia');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('tll-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -2631,12 +2701,9 @@ async function cargarTalleres() {
   const contenido = document.getElementById('tll-contenido');
   contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
   const params = new URLSearchParams({ anio: document.getElementById('tll-anio').value, semestre: document.getElementById('tll-semestre').value });
-  const region = document.getElementById('tll-region').value;
-  const prov   = document.getElementById('tll-provincia').value;
-  const emausId= document.getElementById('tll-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'tll-region');
+  appendMultiSelect(params, 'provincia', 'tll-provincia');
+  appendMultiSelect(params, 'emaus_id', 'tll-emaus');
   try {
     const d = await api.get('/tablero/talleres?' + params.toString());
     if (!d.total_talleres) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
@@ -2709,12 +2776,9 @@ async function iniciarAyjPreocupaciones() {
 
 async function cargarFiltrosAyj() {
   const params = new URLSearchParams({ anio: document.getElementById('ayj-anio').value, semestre: document.getElementById('ayj-semestre').value });
-  const region = document.getElementById('ayj-region').value;
-  const prov   = document.getElementById('ayj-provincia').value;
-  const emausId= document.getElementById('ayj-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'ayj-region');
+  appendMultiSelect(params, 'provincia', 'ayj-provincia');
+  appendMultiSelect(params, 'emaus_id', 'ayj-emaus');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('ayj-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -2728,14 +2792,10 @@ async function cargarAyjPreocupaciones() {
   const contenido = document.getElementById('ayj-contenido');
   contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
   const params = new URLSearchParams({ anio: document.getElementById('ayj-anio').value, semestre: document.getElementById('ayj-semestre').value });
-  const region = document.getElementById('ayj-region').value;
-  const prov   = document.getElementById('ayj-provincia').value;
-  const emausId= document.getElementById('ayj-emaus').value;
-  const eeId   = document.getElementById('ayj-ee').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
-  if (eeId)    params.set('ee_id', eeId);
+  appendMultiSelect(params, 'region', 'ayj-region');
+  appendMultiSelect(params, 'provincia', 'ayj-provincia');
+  appendMultiSelect(params, 'emaus_id', 'ayj-emaus');
+  appendMultiSelect(params, 'ee_id', 'ayj-ee');
   try {
     const d = await api.get('/tablero/ayj-preocupaciones?' + params.toString());
     if (!d.total_con_ranking) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos de ranking para el período seleccionado.</p>'; return; }
@@ -2821,12 +2881,9 @@ async function cargarFiltrosAe() {
     anio: document.getElementById('ae-anio').value,
     semestre: document.getElementById('ae-semestre').value,
   });
-  const region  = document.getElementById('ae-region').value;
-  const prov    = document.getElementById('ae-provincia').value;
-  const emausId = document.getElementById('ae-emaus').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
+  appendMultiSelect(params, 'region', 'ae-region');
+  appendMultiSelect(params, 'provincia', 'ae-provincia');
+  appendMultiSelect(params, 'emaus_id', 'ae-emaus');
   try {
     const f = await api.get('/tablero/filtros?' + params.toString());
     poblarSelectFiltro('ae-region',   f.regiones.map(r => ({id: r, nombre: r})));
@@ -2843,14 +2900,10 @@ async function cargarApoyoEscolar() {
     anio:     document.getElementById('ae-anio').value,
     semestre: document.getElementById('ae-semestre').value,
   });
-  const region  = document.getElementById('ae-region').value;
-  const prov    = document.getElementById('ae-provincia').value;
-  const emausId = document.getElementById('ae-emaus').value;
-  const eeId    = document.getElementById('ae-ee').value;
-  if (region)  params.set('region', region);
-  if (prov)    params.set('provincia', prov);
-  if (emausId) params.set('emaus_id', emausId);
-  if (eeId)    params.set('ee_id', eeId);
+  appendMultiSelect(params, 'region', 'ae-region');
+  appendMultiSelect(params, 'provincia', 'ae-provincia');
+  appendMultiSelect(params, 'emaus_id', 'ae-emaus');
+  appendMultiSelect(params, 'ee_id', 'ae-ee');
   try {
     aeDatos = await api.get('/tablero/apoyo-escolar?' + params.toString());
     renderApoyoEscolar();
