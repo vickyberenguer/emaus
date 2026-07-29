@@ -772,7 +772,8 @@ def _parse_completion_from_values(values: List[List], diagonal: bool) -> bool:
 
 def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
                        anio: int, semestre: str, dry_run: bool, apply_reset: bool = False,
-                       hojas_inactivas: Optional[set] = None) -> Dict:
+                       hojas_inactivas: Optional[set] = None,
+                       ee_registrados: Optional[List[Dict]] = None) -> Dict:
     """
     Scrapa una planilla completa con el mínimo de llamadas API posible.
     Usa batchGet para leer completion + C16 de todas las hojas en una sola llamada.
@@ -780,6 +781,11 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
     hojas_inactivas: nombres de hoja (normalizados) de EE dados de baja — se excluyen
     del conteo aunque la hoja siga visible en Sheets (ej. si el ocultamiento falló o
     no se corrió todavía), para que Control refleje la baja sin depender de eso.
+
+    ee_registrados: EE activos en la DB para este Emaús (ver get_ee_registrados) —
+    se usa para avisar si aparece una hoja de EE que no matchea ningún registro
+    (alta manual sin avisar, o nombre cambiado) o si un EE registrado ya no tiene
+    hoja en la planilla (baja manual sin avisar).
     """
     all_titles = get_sheet_titles(sheets, spreadsheet_id)
 
@@ -896,6 +902,58 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
                     all_validation_errors.append({**e, "hoja_nombre": title, "fecha": now})
         else:
             ee_pendientes += 1
+
+    # --- Hojas de EE desalineadas con la DB (alta/baja/rename manual sin avisar) ---
+    # Se revisa en cada sync, sin importar si la hoja está "Completa" o no —
+    # por eso se marca "validada" siempre (hojas_validadas) para que, si se
+    # corrige, el aviso anterior se resuelva solo en el próximo sync.
+    ee_registrados = ee_registrados or []
+    ee_por_nombre_hoja = {e["nombre_hoja"]: e for e in ee_registrados if e["nombre_hoja"]}
+    ee_por_nombre_exacto = {e["nombre"]: e for e in ee_registrados}
+    ee_por_normalizado = {_normalize_ee_name(e["nombre"]): e for e in ee_registrados}
+
+    ee_ids_matcheados = set()
+    for title in ee_titles:
+        fv = ee_field_data.get(title, {})
+        nombre_c4 = str(fv.get("NombreEE") or "").strip()
+        match = (
+            ee_por_nombre_hoja.get(title)
+            or (nombre_c4 and ee_por_nombre_exacto.get(nombre_c4))
+            or (nombre_c4 and ee_por_normalizado.get(_normalize_ee_name(nombre_c4)))
+            or ee_por_normalizado.get(_normalize_ee_name(title))
+        )
+        hojas_validadas.append(title)
+        if match:
+            ee_ids_matcheados.add(match["id"])
+        else:
+            all_validation_errors.append({
+                "validacion_id": "ee_hoja_no_registrada",
+                "severity": "warning",
+                "hoja_nombre": title,
+                "mensaje": (
+                    f"Se encontró la hoja '{title}' en la planilla pero no está registrada "
+                    f"como EE en el sistema — avisar al administrador para dar de alta el EE "
+                    f"o corregir el nombre de la hoja si cambió."
+                ),
+                "fecha": now,
+            })
+
+    for e in ee_registrados:
+        if e["id"] in ee_ids_matcheados:
+            continue
+        hoja_esperada = e["nombre_hoja"] or e["nombre"]
+        hojas_validadas.append(hoja_esperada)
+        all_validation_errors.append({
+            "validacion_id": "ee_hoja_faltante",
+            "severity": "warning",
+            "hoja_nombre": hoja_esperada,
+            "mensaje": (
+                f"El EE '{e['nombre']}' está registrado en el sistema pero no se encontró "
+                f"su hoja ('{hoja_esperada}') en la planilla — avisar al administrador para "
+                f"darlo de baja o corregir el nombre de la hoja si cambió."
+            ),
+            "fecha": now,
+        })
 
     # --- PI ---
     pi_completa = False
@@ -2261,6 +2319,20 @@ def get_hojas_inactivas(engine, emaus_id: int) -> set:
     return {_normalize_ee_name(r[0]) for r in rows if r[0]}
 
 
+def get_ee_registrados(engine, emaus_id: int) -> List[Dict]:
+    """EE activos registrados en la DB para este Emaús — se usa para detectar
+    hojas de la planilla que no matchean ningún EE (alta manual sin avisar,
+    o nombre de hoja cambiado) y EE registrados cuya hoja ya no existe en la
+    planilla (baja manual sin avisar)."""
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text("SELECT id, nombre, nombre_hoja FROM espacio_educativo "
+                 "WHERE emaus_id = :eid AND activo = TRUE"),
+            {"eid": emaus_id},
+        ).fetchall()
+    return [{"id": r[0], "nombre": r[1], "nombre_hoja": r[2]} for r in rows]
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -2332,11 +2404,13 @@ def main():
         print(f"  [{emaus['id']}] {emaus['nombre']} ...", end=" ", flush=True)
         try:
             hojas_inactivas = get_hojas_inactivas(engine, emaus["id"])
+            ee_registrados = get_ee_registrados(engine, emaus["id"])
             metrics = scrape_spreadsheet(
                 sheets_svc, spreadsheet_id, spec,
                 args.anio, args.semestre, args.dry_run,
                 apply_reset=args.apply_reset,
                 hojas_inactivas=hojas_inactivas,
+                ee_registrados=ee_registrados,
             )
             metrics["_spreadsheet_id"] = spreadsheet_id
             n_err = len([e for e in metrics["validation_errors"] if e["severity"] == "error"])
@@ -2451,11 +2525,13 @@ def run_sync(folder_id: str, anio: int = ANIO_DEFAULT, semestre: str = SEMESTRE_
 
             try:
                 hojas_inactivas = get_hojas_inactivas(engine, emaus["id"])
+                ee_registrados = get_ee_registrados(engine, emaus["id"])
                 metrics = scrape_spreadsheet(
                     sheets_svc, spreadsheet_id, spec,
                     anio, semestre, dry_run,
                     apply_reset=apply_reset,
                     hojas_inactivas=hojas_inactivas,
+                    ee_registrados=ee_registrados,
                 )
                 metrics["_spreadsheet_id"] = spreadsheet_id
                 if not dry_run:
