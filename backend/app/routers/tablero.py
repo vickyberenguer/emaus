@@ -1,3 +1,4 @@
+import unicodedata
 from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, func
@@ -908,6 +909,63 @@ def _btu_anio_a_entero(valor) -> Optional[int]:
         return None
 
 
+def _normalizar_carrera(s: str) -> str:
+    """Clave para agrupar carreras que difieren solo en mayúsculas/minúsculas/acentos."""
+    sin_acentos = unicodedata.normalize('NFKD', s)
+    sin_acentos = ''.join(c for c in sin_acentos if not unicodedata.combining(c))
+    return ' '.join(sin_acentos.lower().split())
+
+
+# Renombres explícitos: variantes de redacción que en la práctica son la misma
+# carrera (además de las que solo difieren en mayúsculas/acentos, que se
+# unifican automáticamente en unificar_carreras()).
+_CARRERA_RENOMBRES = {
+    "profesorado de educacion secundaria de historia": "Profesorado de historia",
+    "profesorado de educacion secundaria de matematica": "Profesorado de matematica",
+    "educacion fisica": "Profesorado de educacion fisica",
+    # "Licenciatura en X" absorbe a "X" a secas, cuando ambas formas conviven
+    "trabajo social": "Licenciatura en trabajo social",
+    "enfermeria": "Licenciatura en Enfermeria",
+    "psicopedagogia": "Licenciatura en psicopedagogia",
+    "bioquimica": "Licenciatura en bioquimica",
+    "fonoaudiologia": "Licenciatura en Fonoaudiología",
+    "higiene y seguridad en el trabajo": "Licenciatura en higiene y seguridad en el trabajo",
+    "ciencias de la educacion": "Licenciatura en ciencias de la educacion",
+    "obstetricia": "Licenciatura en obstetricia",
+    "psicologia": "Licenciatura en psicologia",
+}
+
+
+def _mejor_variante(variantes: List[str]) -> str:
+    """Entre variantes que solo difieren en mayúsculas/acentos, prioriza la que
+    tenga acentos y una capitalización prolija (ni todo mayúsculas ni todo
+    minúsculas)."""
+    def score(s: str):
+        acentos = sum(1 for c in unicodedata.normalize('NFKD', s) if unicodedata.combining(c))
+        return (acentos, 0 if s.isupper() else 1, 0 if s.islower() else 1, -len(s))
+    return max(variantes, key=score)
+
+
+def unificar_carreras(items: Dict[str, int]) -> Dict[str, int]:
+    """Unifica variantes de una misma carrera: aplica renombres explícitos y
+    agrupa lo que quede por mayúsculas/minúsculas/acentos, eligiendo como
+    nombre final la variante mejor escrita (con acentos y capitalizada)."""
+    renombradas: Dict[str, int] = {}
+    for carrera, cantidad in items.items():
+        nueva = _CARRERA_RENOMBRES.get(_normalizar_carrera(carrera), carrera)
+        renombradas[nueva] = renombradas.get(nueva, 0) + cantidad
+
+    grupos: Dict[str, List[str]] = {}
+    for carrera in renombradas:
+        grupos.setdefault(_normalizar_carrera(carrera), []).append(carrera)
+
+    resultado: Dict[str, int] = {}
+    for variantes in grupos.values():
+        canonica = _mejor_variante(variantes)
+        resultado[canonica] = sum(renombradas[v] for v in variantes)
+    return resultado
+
+
 @router.get("/btu-becarios")
 def btu_becarios(
     anio: int = BTU_ANIO_DEFAULT,
@@ -998,6 +1056,7 @@ def btu_becarios(
     )
     for k, carreras in carreras_por_rama.items():
         total_rama = rama_counts.get(k) or 1
+        carreras = unificar_carreras(carreras)
         carreras_por_rama[k] = sorted(
             [{"carrera": c, "cantidad": v, "pct": round(v / total_rama * 100, 1)} for c, v in carreras.items()],
             key=lambda x: -x["cantidad"],
