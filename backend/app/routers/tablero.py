@@ -1,4 +1,5 @@
 import unicodedata
+from collections import defaultdict
 from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, func
@@ -39,6 +40,24 @@ def emaus_ids_for_tablero(user: Usuario, db: Session) -> Optional[List[int]]:
     if user.rol == "responsable":
         return None
     return emaus_ids_for_user(user, db)
+
+
+def _fila_base(diocesis, emaus, ee=None):
+    """Columnas de identidad comunes a todas las exportaciones CSV del tablero."""
+    fila = {"Región": diocesis.region, "Provincia": diocesis.provincia, "Emaús": emaus.nombre}
+    if ee is not None:
+        fila["Espacio Educativo"] = ee.nombre
+    return fila
+
+
+def _si_no(v):
+    if v is None:
+        return ""
+    return "Sí" if v else "No"
+
+
+def _concat(items, sep="; "):
+    return sep.join(str(x) for x in items if x)
 
 
 @router.get("/responsables")
@@ -386,6 +405,78 @@ def acciones(
     return {"total_ee": total_ree, "ejes": ejes}
 
 
+EJE_ORDER = [
+    "Primera infancia",
+    "Apoyo a las trayectorias educativas",
+    "Salud integral",
+    "Integración comunitaria",
+    "Nuevas tecnologías",
+]
+
+
+@router.get("/acciones/export")
+def acciones_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    """Fila por EE: identidad de Emaús/EE + una columna por eje con las
+    acciones que sí realiza (concatenadas)."""
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE.id, EspacioEducativo, Emaus, Diocesis)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
+
+    ree_rows = ree_query.all()
+    if not ree_rows:
+        return []
+
+    ree_ids = [r[0] for r in ree_rows]
+    accion_rows = (
+        db.query(RelevamientoEEAccion.relevamiento_ee_id, RelevamientoEEAccion.eje, RelevamientoEEAccion.accion)
+        .filter(RelevamientoEEAccion.relevamiento_ee_id.in_(ree_ids), RelevamientoEEAccion.tiene == True)
+        .all()
+    )
+    acciones_por_ree: Dict[int, Dict[str, list]] = defaultdict(lambda: defaultdict(list))
+    for ree_id, eje, accion in accion_rows:
+        acciones_por_ree[ree_id][eje].append(accion)
+
+    filas = []
+    for ree_id, ee, emaus, diocesis in ree_rows:
+        fila = _fila_base(diocesis, emaus, ee)
+        for eje in EJE_ORDER:
+            fila[f"Acciones — {eje}"] = _concat(acciones_por_ree[ree_id].get(eje, []))
+        filas.append(fila)
+    return filas
+
+
 def _sum(val):
     return val or 0
 
@@ -547,6 +638,101 @@ def edilicias(
     }
 
 
+_SERVICIOS_SI_NO = {
+    "Agua corriente", "Aljibe/Reservorio", "Agua fuera del terreno",
+    "Cloacas", "Luz de red", "Señal móvil",
+}
+_AFIRMATIVOS = {"true", "verdadero", "sí", "si", "1"}
+
+
+@router.get("/edilicias/export")
+def edilicias_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    ee_query = (
+        db.query(EspacioEducativo, Emaus, Diocesis)
+        .join(RelevamientoEE, RelevamientoEE.espacio_educativo_id == EspacioEducativo.id)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .filter(EspacioEducativo.activo == True)
+        .distinct()
+    )
+    if allowed_ids is not None:
+        ee_query = ee_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ee_query = ee_query.filter(Diocesis.region.in_(region))
+    if provincia:
+        ee_query = ee_query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        ee_query = ee_query.filter(Relevamiento.emaus_id.in_(emaus_id))
+    if ee_id:
+        ee_query = ee_query.filter(EspacioEducativo.id.in_(ee_id))
+
+    ee_rows = ee_query.all()
+    if not ee_rows:
+        return []
+
+    ee_ids = [ee.id for ee, _, _ in ee_rows]
+
+    zonas_por_ee = defaultdict(list)
+    for eeid, zona in db.query(EEZona.espacio_educativo_id, EEZona.zona).filter(EEZona.espacio_educativo_id.in_(ee_ids)).all():
+        zonas_por_ee[eeid].append(zona)
+
+    ambientes_por_ee = defaultdict(list)
+    for eeid, ambiente, tiene in db.query(EEAmbiente.espacio_educativo_id, EEAmbiente.ambiente, EEAmbiente.tiene).filter(EEAmbiente.espacio_educativo_id.in_(ee_ids)).all():
+        if tiene:
+            ambientes_por_ee[eeid].append(ambiente)
+
+    servicios_por_ee = defaultdict(list)
+    for eeid, servicio, valor in db.query(EEServicio.espacio_educativo_id, EEServicio.servicio, EEServicio.valor).filter(EEServicio.espacio_educativo_id.in_(ee_ids)).all():
+        if servicio in _SERVICIOS_SI_NO and (valor or "").strip().lower() not in _AFIRMATIVOS:
+            continue
+        etiqueta = servicio if (servicio in _SERVICIOS_SI_NO or not valor) else f"{servicio}: {valor}"
+        servicios_por_ee[eeid].append(etiqueta)
+
+    equipos_cocina_por_ee = defaultdict(list)
+    for eeid, equipo, tiene in db.query(EEEquipoCocina.espacio_educativo_id, EEEquipoCocina.equipo, EEEquipoCocina.tiene).filter(EEEquipoCocina.espacio_educativo_id.in_(ee_ids)).all():
+        if tiene:
+            equipos_cocina_por_ee[eeid].append(equipo)
+
+    equipos_info_por_ee = defaultdict(list)
+    for eeid, equipo, cantidad in db.query(EEEquipoInformatico.espacio_educativo_id, EEEquipoInformatico.equipo, EEEquipoInformatico.cantidad).filter(EEEquipoInformatico.espacio_educativo_id.in_(ee_ids)).all():
+        equipos_info_por_ee[eeid].append(f"{equipo} ({cantidad or 0})")
+
+    filas = []
+    for ee, emaus, diocesis in ee_rows:
+        fila = _fila_base(diocesis, emaus, ee)
+        fila.update({
+            "Titularidad": ee.titularidad or "",
+            "Nombre Titular": ee.nombre_titular or "",
+            "Material de Construcción": ee.construccion_material or "",
+            "Acceso Principal": ee.acceso_principal or "",
+            "Rampa de Acceso": _si_no(ee.rampa_acceso),
+            "Espacio de Recreación": ee.espacio_recreacion or "",
+            "Zonas": _concat(zonas_por_ee.get(ee.id, [])),
+            "Ambientes": _concat(ambientes_por_ee.get(ee.id, [])),
+            "Servicios": _concat(servicios_por_ee.get(ee.id, [])),
+            "Equipos de Cocina": _concat(equipos_cocina_por_ee.get(ee.id, [])),
+            "Equipos Informáticos": _concat(equipos_info_por_ee.get(ee.id, [])),
+        })
+        filas.append(fila)
+    return filas
+
+
 @router.get("/grupo-motor")
 def grupo_motor(
     anio: int = ANIO_ACTIVO,
@@ -657,6 +843,68 @@ def grupo_motor(
         "cantidad": {"promedio": promedio, "mediana": mediana, "rangos": rangos},
         "roles": roles,
     }
+
+
+@router.get("/grupo-motor/export")
+def grupo_motor_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE.id, RelevamientoEE.grupo_motor_cantidad,
+                 RelevamientoEE.grupo_motor_frecuencia, EspacioEducativo, Emaus, Diocesis)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
+
+    ree_rows = ree_query.all()
+    if not ree_rows:
+        return []
+
+    ree_ids = [r[0] for r in ree_rows]
+    roles_por_ree = defaultdict(list)
+    for ree_id, rol in db.query(RelevamientoEEGrupoMotorRol.relevamiento_ee_id, RelevamientoEEGrupoMotorRol.rol).filter(
+        RelevamientoEEGrupoMotorRol.relevamiento_ee_id.in_(ree_ids)
+    ).all():
+        roles_por_ree[ree_id].append(rol)
+
+    filas = []
+    for ree_id, cantidad, frecuencia, ee, emaus, diocesis in ree_rows:
+        fila = _fila_base(diocesis, emaus, ee)
+        fila.update({
+            "Cantidad Grupo Motor": cantidad if cantidad is not None else "",
+            "Frecuencia": frecuencia or "",
+            "Roles": _concat(roles_por_ree.get(ree_id, [])),
+        })
+        filas.append(fila)
+    return filas
 
 
 @router.get("/itinerancia")
@@ -790,6 +1038,83 @@ def itinerancia(
     }
 
 
+@router.get("/itinerancia/export")
+def itinerancia_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE.id, RelevamientoEE.itinerancia_realizo,
+                 RelevamientoEE.itinerancia_frecuencia, EspacioEducativo, Emaus, Diocesis)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
+
+    ree_rows = ree_query.all()
+    if not ree_rows:
+        return []
+
+    ree_ids = [r[0] for r in ree_rows]
+
+    actividades_por_ree = defaultdict(list)
+    for ree_id, actividad in db.query(
+        RelevamientoEEItineranciaActividad.relevamiento_ee_id, RelevamientoEEItineranciaActividad.actividad
+    ).filter(RelevamientoEEItineranciaActividad.relevamiento_ee_id.in_(ree_ids)).all():
+        actividades_por_ree[ree_id].append(actividad)
+
+    espacios_por_ree = defaultdict(list)
+    for ree_id, espacio in db.query(
+        RelevamientoEEItineranciaEspacio.relevamiento_ee_id, RelevamientoEEItineranciaEspacio.espacio
+    ).filter(RelevamientoEEItineranciaEspacio.relevamiento_ee_id.in_(ree_ids)).all():
+        espacios_por_ree[ree_id].append(espacio)
+
+    roles_por_ree = defaultdict(list)
+    for ree_id, rol in db.query(
+        RelevamientoEEItineranciaRol.relevamiento_ee_id, RelevamientoEEItineranciaRol.rol
+    ).filter(RelevamientoEEItineranciaRol.relevamiento_ee_id.in_(ree_ids)).all():
+        roles_por_ree[ree_id].append(rol)
+
+    filas = []
+    for ree_id, realizo, frecuencia, ee, emaus, diocesis in ree_rows:
+        fila = _fila_base(diocesis, emaus, ee)
+        fila.update({
+            "Realiza Itinerancia": _si_no(realizo),
+            "Frecuencia": frecuencia or "",
+            "Actividades": _concat(actividades_por_ree.get(ree_id, [])),
+            "Espacios": _concat(espacios_por_ree.get(ree_id, [])),
+            "Roles": _concat(roles_por_ree.get(ree_id, [])),
+        })
+        filas.append(fila)
+    return filas
+
+
 @router.get("/btu")
 def btu(
     anio: int = ANIO_ACTIVO,
@@ -874,6 +1199,75 @@ def btu(
         "total_con_motivo": total_con_motivo,
         "motivos": motivos,
     }
+
+
+@router.get("/btu/export")
+def btu_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE.id, RelevamientoEE.btu_regulares,
+                 RelevamientoEE.btu_abandonaron, RelevamientoEE.btu_egresados,
+                 EspacioEducativo, Emaus, Diocesis)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
+
+    ree_rows = ree_query.all()
+    if not ree_rows:
+        return []
+
+    ree_ids = [r[0] for r in ree_rows]
+    motivo_label = func.if_(
+        RelevamientoEEBTUAbandonoMotivo.motivo.like("Otro:%"),
+        "Otro",
+        RelevamientoEEBTUAbandonoMotivo.motivo,
+    )
+    motivos_por_ree = defaultdict(list)
+    for ree_id, motivo in db.query(RelevamientoEEBTUAbandonoMotivo.relevamiento_ee_id, motivo_label).filter(
+        RelevamientoEEBTUAbandonoMotivo.relevamiento_ee_id.in_(ree_ids)
+    ).all():
+        motivos_por_ree[ree_id].append(motivo)
+
+    filas = []
+    for ree_id, regulares, abandonaron, egresados, ee, emaus, diocesis in ree_rows:
+        fila = _fila_base(diocesis, emaus, ee)
+        fila.update({
+            "BTU Regulares": regulares or 0,
+            "BTU Egresados": egresados or 0,
+            "BTU Abandonaron": abandonaron or 0,
+            "Motivos de Abandono": _concat(motivos_por_ree.get(ree_id, [])),
+        })
+        filas.append(fila)
+    return filas
 
 
 BTU_ANIO_DEFAULT = 2026
@@ -1129,6 +1523,60 @@ def btu_becarios(
     }
 
 
+@router.get("/btu-becarios/export")
+def btu_becarios_export(
+    anio: int = BTU_ANIO_DEFAULT,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    """Una fila por becario. Nunca se expone DNI ni nombre (ver nota en
+    btu_becarios() más arriba) — el resto de los campos individuales sí."""
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    query = (
+        db.query(BtuBecario, Emaus, Diocesis)
+        .join(Emaus, and_(Emaus.id == BtuBecario.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .filter(BtuBecario.anio == anio, BtuBecario.activo == True)
+    )
+    if allowed_ids is not None:
+        query = query.filter(BtuBecario.emaus_id.in_(allowed_ids))
+    if region:
+        query = query.filter(Diocesis.region.in_(region))
+    if provincia:
+        query = query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        query = query.filter(BtuBecario.emaus_id.in_(emaus_id))
+
+    filas = []
+    for b, emaus, diocesis in query.all():
+        fila = _fila_base(diocesis, emaus)
+        fila.update({
+            "Sexo": b.sexo or "",
+            "Fecha de Nacimiento": b.fecha_nacimiento.isoformat() if b.fecha_nacimiento else "",
+            "Edad": b.edad if b.edad is not None else "",
+            "Percibe Progresar": _si_no(b.percibe_progresar),
+            "Institución": b.institucion or "",
+            "Nivel": b.nivel or "",
+            "Ámbito": b.ambito or "",
+            "Carrera": b.carrera or "",
+            "Rama": b.rama or "",
+            "Duración de la Carrera": b.duracion_carrera or "",
+            "Año Comienzo Carrera": b.anio_comienzo_carrera or "",
+            "Año Comienzo Beca": b.anio_comienzo_beca or "",
+            "Año Cursando": b.anio_cursando or "",
+            "Continúa Período Siguiente": _si_no(b.continua_periodo_siguiente),
+            "Motivo de Baja": b.motivo_baja or "",
+            "Mes Comienzo Beca": b.mes_comienzo_beca or "",
+            "Mes Fin Beca": b.mes_fin_beca or "",
+        })
+        filas.append(fila)
+    return filas
+
+
 @router.get("/ayj-preocupaciones")
 def ayj_preocupaciones(
     anio: int = ANIO_ACTIVO,
@@ -1218,6 +1666,72 @@ def ayj_preocupaciones(
     }
 
 
+@router.get("/ayj-preocupaciones/export")
+def ayj_preocupaciones_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE.id, EspacioEducativo, Emaus, Diocesis)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
+
+    ree_rows = ree_query.all()
+    if not ree_rows:
+        return []
+
+    ree_ids = [r[0] for r in ree_rows]
+    preocupaciones_por_ree = defaultdict(list)
+    rows = (
+        db.query(
+            RelevamientoEEPreocupacionJoven.relevamiento_ee_id,
+            RelevamientoEEPreocupacionJoven.preocupacion,
+            RelevamientoEEPreocupacionJoven.ranking,
+        )
+        .filter(RelevamientoEEPreocupacionJoven.relevamiento_ee_id.in_(ree_ids))
+        .order_by(RelevamientoEEPreocupacionJoven.ranking)
+        .all()
+    )
+    for ree_id, preo, rank in rows:
+        etiqueta = f"{preo} ({rank})" if rank is not None else preo
+        preocupaciones_por_ree[ree_id].append(etiqueta)
+
+    filas = []
+    for ree_id, ee, emaus, diocesis in ree_rows:
+        fila = _fila_base(diocesis, emaus, ee)
+        fila["Preocupaciones (ranking)"] = _concat(preocupaciones_por_ree.get(ree_id, []))
+        filas.append(fila)
+    return filas
+
+
 @router.get("/becas-familiares")
 def becas_familiares(
     anio: int = ANIO_ACTIVO,
@@ -1299,6 +1813,60 @@ def becas_familiares(
         "cud": cud,
         "pct_cud": round(cud / discapacidad * 100, 1) if discapacidad else 0,
     }
+
+
+@router.get("/becas-familiares/export")
+def becas_familiares_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE, EspacioEducativo, Emaus, Diocesis)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
+
+    filas = []
+    for ree, ee, emaus, diocesis in ree_query.all():
+        fila = _fila_base(diocesis, emaus, ee)
+        fila.update({
+            "BF Apoyo Escolar": ree.bf_apoyo_escolar or 0,
+            "BF Nivel Inicial": ree.bf_nivel_inicial or 0,
+            "BF Primaria": ree.bf_primaria or 0,
+            "BF Secundaria": ree.bf_secundaria or 0,
+            "BF Asignaciones": ree.bf_asignaciones or 0,
+            "BF Discapacidad": ree.bf_discapacidad or 0,
+            "BF CUD": ree.bf_cud or 0,
+        })
+        filas.append(fila)
+    return filas
 
 
 @router.get("/primera-infancia")
@@ -1399,6 +1967,80 @@ def primera_infancia(
     }
 
 
+@router.get("/primera-infancia/export")
+def primera_infancia_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    """Una fila por Emaús (PI es un dato por Emaús, no por EE)."""
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    query = (
+        db.query(PastoralPI, Emaus, Diocesis)
+        .join(Relevamiento, Relevamiento.id == PastoralPI.relevamiento_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .filter(Relevamiento.anio == anio, Relevamiento.semestre == semestre)
+    )
+    if allowed_ids is not None:
+        query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        query = query.filter(Diocesis.region.in_(region))
+    if provincia:
+        query = query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        query = query.filter(Relevamiento.emaus_id.in_(emaus_id))
+
+    rows = query.all()
+    if not rows:
+        return []
+
+    pi_ids = [pi.id for pi, _, _ in rows]
+
+    def enfermedades_por_pi(model, id_field):
+        m: Dict[int, list] = defaultdict(list)
+        for pi_id, enfermedad in db.query(id_field, model.enfermedad).filter(id_field.in_(pi_ids)).all():
+            m[pi_id].append(enfermedad)
+        return m
+
+    enf_ninos = enfermedades_por_pi(PastoralPIEnfermedadNinos, PastoralPIEnfermedadNinos.pastoral_pi_id)
+    enf_mujeres = enfermedades_por_pi(PastoralPIEnfermedadEmbarazadas, PastoralPIEnfermedadEmbarazadas.pastoral_pi_id)
+
+    filas = []
+    for pi, emaus, diocesis in rows:
+        fila = _fila_base(diocesis, emaus)
+        fila.update({
+            "Años de Desarrollo": pi.anios_desarrollo if pi.anios_desarrollo is not None else "",
+            "Comunidades Total": pi.comunidades_total or 0,
+            "Presentó Metodología a Otras Comunidades": _si_no(pi.presento_metodologia),
+            "Comunidades sin Pastoral": pi.comunidades_sin_pastoral or 0,
+            "Capacitadoras": pi.capacitadoras or 0,
+            "Líderes": pi.lideres or 0,
+            "Madres Embarazadas 12-18": pi.madres_embarazadas_12_18 or 0,
+            "Madres Embarazadas 19-29": pi.madres_embarazadas_19_29 or 0,
+            "Madres Embarazadas 30+": pi.madres_embarazadas_30_mas or 0,
+            "Madres No Embarazadas": pi.madres_no_embarazadas or 0,
+            "Niños 0-3": pi.ninos_0_3 or 0,
+            "Niños 4-6": pi.ninos_4_6 or 0,
+            "Familias": pi.familias or 0,
+            "Líderes Todas Alfabetizadas": _si_no(pi.lideres_todas_alfabetizadas),
+            "Líderes No Alfabetizadas (cantidad)": pi.lideres_no_alfabetizadas_cantidad if pi.lideres_no_alfabetizadas_cantidad is not None else "",
+            "Líderes en Alfabetización": _si_no(pi.lideres_en_alfabetizacion),
+            "Madres Todas Alfabetizadas": _si_no(pi.madres_todas_alfabetizadas),
+            "Madres No Alfabetizadas (cantidad)": pi.madres_no_alfabetizadas_cantidad if pi.madres_no_alfabetizadas_cantidad is not None else "",
+            "Madres en Alfabetización": _si_no(pi.madres_en_alfabetizacion),
+            "Enfermedades Niños": _concat(enf_ninos.get(pi.id, [])),
+            "Enfermedades Embarazadas": _concat(enf_mujeres.get(pi.id, [])),
+        })
+        filas.append(fila)
+    return filas
+
+
 @router.get("/primera-infancia-acciones")
 def primera_infancia_acciones(
     anio: int = ANIO_ACTIVO,
@@ -1478,6 +2120,81 @@ def primera_infancia_acciones(
         }
 
     return {"total_emaus": total, "acciones": resultado}
+
+
+_PI_ACCIONES = [
+    ("celebracion_vida",     "Celebración de la vida"),
+    ("visita_domiciliaria",  "Visita domiciliaria"),
+    ("reunion_evaluacion",   "Reunión de evaluación"),
+]
+
+
+@router.get("/primera-infancia-acciones/export")
+def primera_infancia_acciones_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    """Una fila por Emaús. Para cada una de las 3 acciones fijas de líderes de
+    PI, resume si la realiza, con qué frecuencia y cuántas veces en el semestre."""
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    query = (
+        db.query(PastoralPI.id, Emaus, Diocesis)
+        .join(Relevamiento, Relevamiento.id == PastoralPI.relevamiento_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .filter(Relevamiento.anio == anio, Relevamiento.semestre == semestre)
+    )
+    if allowed_ids is not None:
+        query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        query = query.filter(Diocesis.region.in_(region))
+    if provincia:
+        query = query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        query = query.filter(Relevamiento.emaus_id.in_(emaus_id))
+
+    rows = query.all()
+    if not rows:
+        return []
+
+    pi_ids = [pi_id for pi_id, _, _ in rows]
+    accion_rows = (
+        db.query(
+            PastoralPIAccionLider.pastoral_pi_id,
+            PastoralPIAccionLider.accion,
+            PastoralPIAccionLider.frecuencia,
+            PastoralPIAccionLider.cantidad_semestre,
+        )
+        .filter(PastoralPIAccionLider.pastoral_pi_id.in_(pi_ids), PastoralPIAccionLider.realiza == True)
+        .all()
+    )
+    acciones_por_pi: Dict[int, Dict[str, tuple]] = defaultdict(dict)
+    for pi_id, accion, frecuencia, cantidad in accion_rows:
+        acciones_por_pi[pi_id][accion] = (frecuencia, cantidad)
+
+    filas = []
+    for pi_id, emaus, diocesis in rows:
+        fila = _fila_base(diocesis, emaus)
+        for clave, label in _PI_ACCIONES:
+            datos = acciones_por_pi[pi_id].get(clave)
+            if datos is None:
+                fila[label] = "No"
+            else:
+                frecuencia, cantidad = datos
+                partes = ["Sí"]
+                if frecuencia:
+                    partes.append(frecuencia)
+                if cantidad is not None:
+                    partes.append(f"{cantidad}/semestre")
+                fila[label] = " — ".join(partes)
+        filas.append(fila)
+    return filas
 
 
 @router.get("/articulaciones")
@@ -1578,6 +2295,69 @@ def articulaciones_tab(
     }
 
 
+@router.get("/articulaciones/export")
+def articulaciones_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE, EspacioEducativo, Emaus, Diocesis)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
+
+    ree_rows = ree_query.all()
+    if not ree_rows:
+        return []
+
+    ree_ids = [ree.id for ree, _, _, _ in ree_rows]
+    instituciones_por_ree = defaultdict(list)
+    for ree_id, nombre, tipo in db.query(
+        RelevamientoEENivelSuperior.relevamiento_ee_id,
+        RelevamientoEENivelSuperior.nombre_institucion,
+        RelevamientoEENivelSuperior.tipo_acciones,
+    ).filter(RelevamientoEENivelSuperior.relevamiento_ee_id.in_(ree_ids)).all():
+        instituciones_por_ree[ree_id].append(f"{nombre} ({tipo})" if tipo else nombre)
+
+    filas = []
+    for ree, ee, emaus, diocesis in ree_rows:
+        fila = _fila_base(diocesis, emaus, ee)
+        fila.update({
+            "Articula con Nivel Superior": _si_no(ree.articula_nivel_superior),
+            "Cantidad Instituciones": ree.nivel_superior_cantidad if ree.nivel_superior_cantidad is not None else "",
+            "Instituciones / Acciones": _concat(instituciones_por_ree.get(ree.id, [])),
+        })
+        filas.append(fila)
+    return filas
+
+
 @router.get("/establecimientos")
 def establecimientos_tab(
     anio: int = ANIO_ACTIVO,
@@ -1667,6 +2447,71 @@ def establecimientos_tab(
     }
 
 
+@router.get("/establecimientos/export")
+def establecimientos_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    """Una fila por establecimiento articulado (sin agrupar)."""
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    query = (
+        db.query(EstablecimientoArticulado, EstablecimientoEstado, Emaus, Diocesis)
+        .join(Relevamiento, Relevamiento.id == EstablecimientoArticulado.relevamiento_id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .outerjoin(EstablecimientoEstado, EstablecimientoEstado.id == EstablecimientoArticulado.establecimiento_id)
+        .filter(Relevamiento.anio == anio, Relevamiento.semestre == semestre)
+    )
+    if allowed_ids is not None:
+        query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        query = query.filter(Diocesis.region.in_(region))
+    if provincia:
+        query = query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        query = query.filter(Relevamiento.emaus_id.in_(emaus_id))
+
+    filas = []
+    for art, est, emaus, diocesis in query.all():
+        fila = _fila_base(diocesis, emaus)
+        niveles = []
+        if est:
+            if est.primario: niveles.append("Primario")
+            if est.secundario: niveles.append("Secundario")
+            if est.adultos: niveles.append("Adultos")
+            if est.formacion_profesional: niveles.append("Formación Profesional")
+            if est.alfabetizacion: niveles.append("Alfabetización")
+            if est.nivel_inicial_maternal: niveles.append("Nivel Inicial - Jardín Maternal")
+            if est.nivel_inicial_infantes: niveles.append("Nivel Inicial - Jardín de Infantes")
+        acciones = []
+        if art.accion_institucion: acciones.append("Institución")
+        if art.accion_articulacion_alfa: acciones.append("Alfabetización")
+        if art.accion_seguimiento: acciones.append("Seguimiento")
+        if art.accion_intercambio: acciones.append("Intercambio")
+        if art.accion_otros: acciones.append("Otras")
+        fila.update({
+            "Nombre Establecimiento": (est.nombre if est else "") or "",
+            "CUE/Anexo": (est.cueanexo if est else "") or "",
+            "Jurisdicción": (est.jurisdiccion if est else "") or "",
+            "Sector": (est.sector if est else "") or "",
+            "Ámbito": (est.ambito if est else "") or "",
+            "Departamento": (est.departamento if est else "") or "",
+            "Localidad": (est.localidad if est else "") or "",
+            "Domicilio": (est.domicilio if est else "") or "",
+            "Niveles": _concat(niveles),
+            "Acciones de Articulación": _concat(acciones),
+            "Detalle Otros": art.detalle_otros or "",
+        })
+        filas.append(fila)
+    return filas
+
+
 @router.get("/internet")
 def internet(
     anio: int = ANIO_ACTIVO,
@@ -1735,6 +2580,58 @@ def internet(
         ],
         "motivos": motivos,
     }
+
+
+@router.get("/internet/export")
+def internet_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    q = (
+        db.query(RelevamientoEE, EspacioEducativo, Emaus, Diocesis)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
+    )
+    if allowed_ids is not None:
+        q = q.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        q = q.filter(Diocesis.region.in_(region))
+    if provincia:
+        q = q.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        q = q.filter(Relevamiento.emaus_id.in_(emaus_id))
+    if ee_id:
+        q = q.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
+
+    filas = []
+    for ree, ee, emaus, diocesis in q.all():
+        fila = _fila_base(diocesis, emaus, ee)
+        fila.update({
+            "Acceso a Internet": _si_no(ree.internet_acceso),
+            "Motivo de Falta de Internet": ree.internet_falta_motivo or "",
+            "Uso Social": _si_no(ree.internet_uso_social),
+            "Uso para Estudio": _si_no(ree.internet_uso_estudio),
+            "Jornadas de Formación Digital": _si_no(ree.jornadas_formacion_digital),
+        })
+        filas.append(fila)
+    return filas
 
 
 @router.get("/apoyo-escolar")
@@ -1839,6 +2736,76 @@ def apoyo_escolar(
         "primaria":   build_nivel(1, RelevamientoEEApoyoPrimarioContenido),
         "secundaria": build_nivel(2, RelevamientoEEApoyoSecundarioContenido),
     }
+
+
+@router.get("/apoyo-escolar/export")
+def apoyo_escolar_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE, EspacioEducativo, Emaus, Diocesis)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
+
+    ree_rows = ree_query.all()
+    if not ree_rows:
+        return []
+
+    ree_ids = [ree.id for ree, _, _, _ in ree_rows]
+    contenidos_primario = defaultdict(list)
+    for ree_id, contenido in db.query(
+        RelevamientoEEApoyoPrimarioContenido.relevamiento_ee_id, RelevamientoEEApoyoPrimarioContenido.contenido
+    ).filter(RelevamientoEEApoyoPrimarioContenido.relevamiento_ee_id.in_(ree_ids)).all():
+        contenidos_primario[ree_id].append(contenido)
+
+    contenidos_secundario = defaultdict(list)
+    for ree_id, contenido in db.query(
+        RelevamientoEEApoyoSecundarioContenido.relevamiento_ee_id, RelevamientoEEApoyoSecundarioContenido.contenido
+    ).filter(RelevamientoEEApoyoSecundarioContenido.relevamiento_ee_id.in_(ree_ids)).all():
+        contenidos_secundario[ree_id].append(contenido)
+
+    filas = []
+    for ree, ee, emaus, diocesis in ree_rows:
+        fila = _fila_base(diocesis, emaus, ee)
+        fila.update({
+            "Apoyo Primario (niños)": ree.apoyo_primario_ninos if ree.apoyo_primario_ninos is not None else "",
+            "Frecuencia Apoyo Primario": ree.apoyo_primario_frecuencia or "",
+            "Contenidos Apoyo Primario": _concat(contenidos_primario.get(ree.id, [])),
+            "Apoyo Secundario (adolescentes)": ree.apoyo_secundario_adolescentes if ree.apoyo_secundario_adolescentes is not None else "",
+            "Frecuencia Apoyo Secundario": ree.apoyo_secundario_frecuencia or "",
+            "Contenidos Apoyo Secundario": _concat(contenidos_secundario.get(ree.id, [])),
+        })
+        filas.append(fila)
+    return filas
 
 
 @router.get("/participantes")
@@ -1977,6 +2944,99 @@ def participantes(
     }
 
 
+@router.get("/participantes/export")
+def participantes_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    """Exportación "maestra": una fila por EE con prácticamente todas las
+    columnas numéricas del relevamiento de ese período."""
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    query = (
+        db.query(RelevamientoEE, EspacioEducativo, Emaus, Diocesis)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
+    )
+    if allowed_ids is not None:
+        query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        query = query.filter(Diocesis.region.in_(region))
+    if provincia:
+        query = query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        query = query.filter(Relevamiento.emaus_id.in_(emaus_id))
+    if ee_id:
+        query = query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
+
+    filas = []
+    for ree, ee, emaus, diocesis in query.all():
+        fila = _fila_base(diocesis, emaus, ee)
+        fila.update({
+            "Asistentes 0-6": ree.asistentes_0_6 or 0,
+            "Asistentes 7-14": ree.asistentes_7_14 or 0,
+            "Asistentes 15-24": ree.asistentes_15_24 or 0,
+            "Asistentes 25-35": ree.asistentes_25_35 or 0,
+            "Asistentes 35-50": ree.asistentes_35_50 or 0,
+            "Asistentes +50": ree.asistentes_mas_50 or 0,
+            "Grupo Motor (cantidad)": ree.grupo_motor_cantidad if ree.grupo_motor_cantidad is not None else "",
+            "Grupo Motor (frecuencia)": ree.grupo_motor_frecuencia or "",
+            "Adolescentes Referentes": ree.adolescentes_referentes if ree.adolescentes_referentes is not None else "",
+            "Adolescentes Referentes (frecuencia)": ree.adolescentes_frecuencia or "",
+            "Itinerancia (realiza)": _si_no(ree.itinerancia_realizo),
+            "Itinerancia (frecuencia)": ree.itinerancia_frecuencia or "",
+            "Acceso a Internet": _si_no(ree.internet_acceso),
+            "Motivo Falta de Internet": ree.internet_falta_motivo or "",
+            "Articula con Nivel Superior": _si_no(ree.articula_nivel_superior),
+            "Cantidad Instituciones Nivel Superior": ree.nivel_superior_cantidad if ree.nivel_superior_cantidad is not None else "",
+            "BF Apoyo Escolar": ree.bf_apoyo_escolar or 0,
+            "BF Nivel Inicial": ree.bf_nivel_inicial or 0,
+            "BF Primaria": ree.bf_primaria or 0,
+            "BF Secundaria": ree.bf_secundaria or 0,
+            "BF Asignaciones": ree.bf_asignaciones or 0,
+            "BF Discapacidad": ree.bf_discapacidad or 0,
+            "BF CUD": ree.bf_cud or 0,
+            "BTU Regulares": ree.btu_regulares or 0,
+            "BTU Egresados": ree.btu_egresados or 0,
+            "BTU Abandonaron": ree.btu_abandonaron or 0,
+            "Apoyo Escolar Primario (niños)": ree.apoyo_primario_ninos if ree.apoyo_primario_ninos is not None else "",
+            "Apoyo Escolar Primario (frecuencia)": ree.apoyo_primario_frecuencia or "",
+            "Apoyo Escolar Secundario (adolescentes)": ree.apoyo_secundario_adolescentes if ree.apoyo_secundario_adolescentes is not None else "",
+            "Apoyo Escolar Secundario (frecuencia)": ree.apoyo_secundario_frecuencia or "",
+            "Alfabetización Total": ree.alfa_total or 0,
+            "Alfabetización 6-9": ree.alfa_6_9 or 0,
+            "Alfabetización 10-14": ree.alfa_10_14 or 0,
+            "Alfabetización 15-24": ree.alfa_15_24 or 0,
+            "Alfabetización 25+": ree.alfa_25_mas or 0,
+            "Alfabetizadores": ree.alfa_alfabetizadores or 0,
+            "Alfabetización (frecuencia)": ree.alfa_frecuencia or "",
+            "DALE Total": ree.dale_total or 0,
+            "DALE 6-9": ree.dale_6_9 or 0,
+            "DALE 10-14": ree.dale_10_14 or 0,
+            "DALE 15-24": ree.dale_15_24 or 0,
+            "DALE 25+": ree.dale_25_mas or 0,
+            "Educadores DALE": ree.dale_educadores or 0,
+            "DALE (frecuencia)": ree.dale_frecuencia_dias or "",
+        })
+        filas.append(fila)
+    return filas
+
+
 @router.get("/talleres")
 def talleres_tab(
     anio: int = ANIO_ACTIVO,
@@ -2057,3 +3117,61 @@ def talleres_tab(
         "rubro_tematico": rubro_tematico,
         "perfil_capacitador": perfil_capacitador,
     }
+
+
+@router.get("/talleres/export")
+def talleres_export(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    """Una fila por taller (sin agrupar)."""
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    query = (
+        db.query(RelevamientoTaller, Emaus, Diocesis)
+        .join(Relevamiento, RelevamientoTaller.relevamiento_id == Relevamiento.id)
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .filter(Relevamiento.anio == anio, Relevamiento.semestre == semestre)
+    )
+    if allowed_ids is not None:
+        query = query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        query = query.filter(Diocesis.region.in_(region))
+    if provincia:
+        query = query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        query = query.filter(Relevamiento.emaus_id.in_(emaus_id))
+
+    rows = query.all()
+    if not rows:
+        return []
+
+    taller_ids = [t.id for t, _, _ in rows]
+    perfiles_por_taller = defaultdict(list)
+    for taller_id, perfil in db.query(
+        RelevamientoTallerPerfil.taller_id, RelevamientoTallerPerfil.perfil
+    ).filter(RelevamientoTallerPerfil.taller_id.in_(taller_ids)).all():
+        perfiles_por_taller[taller_id].append(perfil)
+
+    filas = []
+    for t, emaus, diocesis in rows:
+        fila = _fila_base(diocesis, emaus)
+        fila.update({
+            "Eje": t.eje or "",
+            "Temática": t.tematica or "",
+            "Rubro Temático": t.rubro_tematico or "",
+            "Cantidad Participantes": t.cantidad_participantes or 0,
+            "Cantidad Espacios Educativos": t.cantidad_espacios_educativos or 0,
+            "Cantidad Comunidades PI": t.cantidad_comunidades_pi or 0,
+            "Otras Instituciones": t.otras_instituciones or 0,
+            "Perfil Capacitadores (texto)": t.perfil_capacitadores_texto or "",
+            "Perfiles": _concat(perfiles_por_taller.get(t.id, [])),
+        })
+        filas.append(fila)
+    return filas
