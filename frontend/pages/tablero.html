@@ -2600,16 +2600,6 @@ const TLL_EJE_COLORS = {
   'Nuevas tecnologías': '#22c55e',
   'Otro': '#3b82f6',
 };
-const TLL_PALETTE = ['#2563eb','#0d9488','#dc2626','#d97706','#7c3aed','#db2777','#16a34a','#0ea5e9',
-  '#ca8a04','#9333ea','#e11d48','#059669','#f59e0b','#3b82f6','#ec4899','#65a30d','#6366f1','#f97316',
-  '#14b8a6','#a855f7','#84cc16','#f43f5e'];
-
-function tllPaletaMapa(items) {
-  const map = {};
-  (items || []).forEach((it, i) => { map[it.valor] = TLL_PALETTE[i % TLL_PALETTE.length]; });
-  return map;
-}
-
 async function iniciarTalleres() {
   if (!tllIniciado) {
     tllIniciado = true;
@@ -2652,8 +2642,9 @@ async function cargarTalleres() {
     if (!d.total_talleres) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
 
     const ejeDonut = itDonut(d.eje, TLL_EJE_COLORS, 'Talleres', d.total_talleres);
-    const rubroDonut = itDonut(d.rubro_tematico, tllPaletaMapa(d.rubro_tematico), 'Talleres', d.total_talleres);
-    const perfilDonut = itDonut(d.perfil_capacitador, tllPaletaMapa(d.perfil_capacitador), 'Talleres', d.total_talleres);
+    const TLL_LABEL_WIDTH = 210;
+    const rubroBars = itBarras(d.rubro_tematico, 'valor', '#0ea5e9', TLL_LABEL_WIDTH);
+    const perfilBars = itBarras(d.perfil_capacitador, 'valor', '#7c3aed', TLL_LABEL_WIDTH);
 
     contenido.innerHTML = `
       <div class="kpi-grid kpi-grid-center" style="margin-bottom:32px">
@@ -2675,21 +2666,20 @@ async function cargarTalleres() {
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px">
+      <div style="max-width:340px;margin:0 auto 32px">
+        <div class="ae-bars-title" style="text-align:center">Eje</div>
+        <div class="ae-donut-wrap">${ejeDonut.svg}</div>
+        <div class="ae-legend">${ejeDonut.legend}</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
         <div>
-          <div class="ae-bars-title" style="text-align:center">Eje</div>
-          <div class="ae-donut-wrap">${ejeDonut.svg}</div>
-          <div class="ae-legend">${ejeDonut.legend}</div>
+          <div class="ae-bars-title">Rubro Temático</div>
+          ${rubroBars}
         </div>
         <div>
-          <div class="ae-bars-title" style="text-align:center">Rubro Temático</div>
-          <div class="ae-donut-wrap">${rubroDonut.svg}</div>
-          <div class="ae-legend">${rubroDonut.legend}</div>
-        </div>
-        <div>
-          <div class="ae-bars-title" style="text-align:center">Perfil Capacitador <span style="font-weight:400;color:#6b7280;font-size:13px">(un taller puede tener varios)</span></div>
-          <div class="ae-donut-wrap">${perfilDonut.svg}</div>
-          <div class="ae-legend">${perfilDonut.legend}</div>
+          <div class="ae-bars-title">Perfil Capacitador <span style="font-weight:400;color:#6b7280;font-size:13px">(un taller puede tener varios)</span></div>
+          ${perfilBars}
         </div>
       </div>
     `;
