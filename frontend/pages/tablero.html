@@ -11,6 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/main.css">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <style>
     body { background: #f5f6fa; }
 
@@ -495,9 +497,12 @@
     <div id="part-ee" class="multisel" data-placeholder="Todos los EEs"></div>
     <button onclick="partDatos=null;cargarParticipantes()" style="padding:5px 14px;border-radius:6px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:12px;cursor:pointer">Aplicar</button>
     <button class="btn btn-sm btn-outline-secondary" onclick="exportarParticipantes()"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-part-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-part-pdf-completo"><i class="bi bi-file-earmark-pdf-fill"></i> Exportar PDF completo</button>
   </div>
   <div id="part-error" class="alert alert-danger mx-0 mb-3" style="display:none"></div>
 
+  <div id="part-contenido">
   <!-- Fila 1: cobertura -->
   <div class="part-progs" style="margin-bottom:18px">
     <div class="prog-card">
@@ -595,6 +600,7 @@
     </div>
 
   </div>
+  </div>
 </div>
 
 <!-- Tab EE - Acciones -->
@@ -619,6 +625,7 @@
     <div id="acc-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-acc-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-acc-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-acc-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
 
   <div id="acc-contenido" style="padding:16px">
@@ -642,6 +649,7 @@
     <div id="ed-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-ed-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-ed-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-ed-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="ed-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -664,6 +672,7 @@
     <div id="gm-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-gm-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-gm-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-gm-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="gm-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -686,6 +695,7 @@
     <div id="it-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-it-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-it-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-it-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="it-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -708,6 +718,7 @@
     <div id="btu-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-btu-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-btu-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-btu-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="btu-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -731,6 +742,7 @@
     <div id="bb-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-bb-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-bb-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-bb-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="bb-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -753,6 +765,7 @@
     <div id="ayj-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-ayj-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-ayj-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-ayj-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="ayj-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -775,6 +788,7 @@
     <div id="bf-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-bf-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-bf-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-bf-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="bf-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -795,6 +809,7 @@
     <div id="pi-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-pi-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-pi-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-pi-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="pi-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -815,6 +830,7 @@
     <div id="pia-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-pia-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-pia-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-pia-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="pia-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -837,6 +853,7 @@
     <div id="art-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-art-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-art-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-art-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="art-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -857,6 +874,7 @@
     <div id="est-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-est-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-est-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-est-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="est-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -877,6 +895,7 @@
     <div id="tll-emaus" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-tll-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-tll-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-tll-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="tll-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -899,6 +918,7 @@
     <div id="int-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-int-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-int-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-int-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
   <div id="int-contenido" style="padding:16px 24px">
     <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
@@ -921,6 +941,7 @@
     <div id="ae-ee" class="multisel" data-placeholder="Todos"></div>
     <button class="btn btn-sm btn-primary" id="btn-ae-filtrar">Filtrar</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-ae-export"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-ae-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
   </div>
 
   <div id="ae-contenido" style="padding:16px 24px">
@@ -1011,6 +1032,8 @@ async function init() {
     limpiarFiltrosCascada('part', 'emaus');
     cargarFiltros();
   });
+  document.getElementById('btn-part-pdf').addEventListener('click', () => exportarPDF('part', 'Participantes', true));
+  document.getElementById('btn-part-pdf-completo').addEventListener('click', exportarPDFCompleto);
 }
 
 function actualizarFiltroBar(target) {
@@ -1170,31 +1193,38 @@ function renderizar(d) {
 init();
 
 // ── Tab switching ──
+function mostrarPestaña(target) {
+  document.querySelectorAll('.tablero-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === target));
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById('tab-' + target).style.display = 'block';
+  actualizarFiltroBar(target);
+}
+
+async function iniciarPestaña(target) {
+    if (target === 'participantes' && !partDatos) await cargarParticipantes();
+    if (target === 'acciones') await iniciarAcciones();
+    if (target === 'apoyo-escolar') await iniciarApoyoEscolar();
+    if (target === 'internet') await iniciarInternet();
+    if (target === 'edilicias') await iniciarEdilicias();
+    if (target === 'grupo-motor') await iniciarGrupoMotor();
+    if (target === 'itinerancia') await iniciarItinerancia();
+    if (target === 'btu') await iniciarBtu();
+    if (target === 'btu-becarios') await iniciarBtuBecarios();
+    if (target === 'ayj-preocupaciones') await iniciarAyjPreocupaciones();
+    if (target === 'becas-familiares') await iniciarBecasFamiliares();
+    if (target === 'primera-infancia') await iniciarPrimeraInfancia();
+    if (target === 'primera-infancia-acciones') await iniciarPrimeraInfanciaAcciones();
+    if (target === 'articulaciones') await iniciarArticulaciones();
+    if (target === 'establecimientos') await iniciarEstablecimientos();
+    if (target === 'talleres') await iniciarTalleres();
+}
+
 document.querySelectorAll('.tablero-tab').forEach(tab => {
   tab.addEventListener('click', e => {
     e.preventDefault();
-    document.querySelectorAll('.tablero-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
     const target = tab.dataset.tab;
-    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-    document.getElementById('tab-' + target).style.display = 'block';
-    actualizarFiltroBar(target);
-    if (target === 'participantes' && !partDatos) cargarParticipantes();
-    if (target === 'acciones') iniciarAcciones();
-    if (target === 'apoyo-escolar') iniciarApoyoEscolar();
-    if (target === 'internet') iniciarInternet();
-    if (target === 'edilicias') iniciarEdilicias();
-    if (target === 'grupo-motor') iniciarGrupoMotor();
-    if (target === 'itinerancia') iniciarItinerancia();
-    if (target === 'btu') iniciarBtu();
-    if (target === 'btu-becarios') iniciarBtuBecarios();
-    if (target === 'ayj-preocupaciones') iniciarAyjPreocupaciones();
-    if (target === 'becas-familiares') iniciarBecasFamiliares();
-    if (target === 'primera-infancia') iniciarPrimeraInfancia();
-    if (target === 'primera-infancia-acciones') iniciarPrimeraInfanciaAcciones();
-    if (target === 'articulaciones') iniciarArticulaciones();
-    if (target === 'establecimientos') iniciarEstablecimientos();
-    if (target === 'talleres') iniciarTalleres();
+    mostrarPestaña(target);
+    iniciarPestaña(target);
   });
 });
 
@@ -1307,6 +1337,229 @@ function getMultiSelectValues(id) {
 
 function appendMultiSelect(params, key, id) {
   getMultiSelectValues(id).forEach(v => params.append(key, v));
+}
+
+// Igual que getMultiSelectValues pero devuelve el texto visible (nombre) en
+// vez del value crudo — value es un id numérico para emaús/EE, no sirve para
+// mostrarlo en el encabezado del PDF.
+function getMultiSelectLabels(id) {
+  const el = document.getElementById(id);
+  if (!el) return [];
+  return [...el.querySelectorAll('.multisel-opciones input:checked')]
+    .map(cb => cb.closest('.multisel-opcion').querySelector('span').textContent);
+}
+
+// Texto de "Filtros aplicados" para el encabezado del PDF — vacío si no hay
+// ningún filtro tildado (para no mostrar la línea).
+function resumenFiltrosTexto(prefix, incluyeEE) {
+  const partes = [];
+  const region = getMultiSelectLabels(`${prefix}-region`);
+  if (region.length) partes.push(`Región: ${region.join(', ')}`);
+  const provincia = getMultiSelectLabels(`${prefix}-provincia`);
+  if (provincia.length) partes.push(`Provincia: ${provincia.join(', ')}`);
+  const emaus = getMultiSelectLabels(`${prefix}-emaus`);
+  if (emaus.length) partes.push(`Emaús: ${emaus.join(', ')}`);
+  if (incluyeEE) {
+    const ee = getMultiSelectLabels(`${prefix}-ee`);
+    if (ee.length) partes.push(`EE: ${ee.join(', ')}`);
+  }
+  return partes.join('  ·  ');
+}
+
+// "Semestre 1 de 2026" o, para pestañas sin semestre (ej. BTU - Becados), "Año 2026".
+function periodoTexto(prefix) {
+  const anioEl = document.getElementById(`${prefix}-anio`);
+  const semEl = document.getElementById(`${prefix}-semestre`);
+  const anio = anioEl ? anioEl.value : '';
+  return semEl ? `Semestre ${semEl.value} de ${anio}` : `Año ${anio}`;
+}
+
+// Corta un canvas alto en "rebanadas" del alto de una página A4 y las va
+// agregando al PDF (con página nueva entre rebanada y rebanada). yInicial es
+// donde ya se dibujó el encabezado en la página actual.
+function agregarImagenPaginada(doc, canvas, margin, yInicial) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const imgWidthPt = pageWidth - margin * 2;
+  const escala = imgWidthPt / canvas.width; // pt por px de canvas
+  const altoPaginaPx = (pageHeight - margin * 2) / escala;
+  const altoPrimeraPaginaPx = Math.max(50, (pageHeight - yInicial - margin) / escala);
+
+  let renderizadoPx = 0;
+  let esPrimera = true;
+  while (renderizadoPx < canvas.height) {
+    const altoTrozoPx = Math.min(esPrimera ? altoPrimeraPaginaPx : altoPaginaPx, canvas.height - renderizadoPx);
+    const trozo = document.createElement('canvas');
+    trozo.width = canvas.width;
+    trozo.height = altoTrozoPx;
+    trozo.getContext('2d').drawImage(
+      canvas, 0, renderizadoPx, canvas.width, altoTrozoPx,
+      0, 0, canvas.width, altoTrozoPx,
+    );
+    const y = esPrimera ? yInicial : margin;
+    doc.addImage(trozo.toDataURL('image/jpeg', 0.92), 'JPEG', margin, y, imgWidthPt, altoTrozoPx * escala);
+    renderizadoPx += altoTrozoPx;
+    esPrimera = false;
+    if (renderizadoPx < canvas.height) doc.addPage();
+  }
+}
+
+// Dibuja el encabezado (título, período, filtros) de una sección del informe
+// en la posición actual del doc y devuelve el nuevo valor de y.
+function dibujarEncabezadoPDF(doc, margin, y, opciones) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  if (opciones.titulo) {
+    doc.setFontSize(16); doc.setFont(undefined, 'bold');
+    doc.text('Informe Relevamiento Emaús', margin, y); y += 22;
+    doc.setFontSize(12); doc.setFont(undefined, 'normal');
+    doc.text(opciones.periodo, margin, y); y += 20;
+  }
+  if (opciones.seccion) {
+    doc.setFontSize(13); doc.setFont(undefined, 'bold');
+    doc.text(opciones.seccion, margin, y); y += 18;
+  }
+  if (opciones.filtros) {
+    doc.setFontSize(10); doc.setFont(undefined, 'normal');
+    doc.setTextColor(90);
+    const lineas = doc.splitTextToSize(`Filtros aplicados: ${opciones.filtros}`, pageWidth - margin * 2);
+    doc.text(lineas, margin, y);
+    y += lineas.length * 13;
+    doc.setTextColor(0);
+  }
+  return y + 10;
+}
+
+// Exporta a PDF el contenido ya renderizado de una sola pestaña.
+async function exportarPDF(prefix, nombrePestaña, incluyeEE) {
+  const btn = document.getElementById(`btn-${prefix}-pdf`);
+  const original = btn ? btn.innerHTML : null;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generando...';
+  }
+  try {
+    const contenido = document.getElementById(`${prefix}-contenido`);
+    if (!contenido || !contenido.children.length) {
+      alert('No hay datos para exportar con los filtros actuales.');
+      return;
+    }
+    const canvas = await html2canvas(contenido, { scale: 2, backgroundColor: '#ffffff' });
+    if (!canvas.width || !canvas.height) {
+      alert('No hay datos para exportar con los filtros actuales.');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+    const margin = 40;
+    let y = dibujarEncabezadoPDF(doc, margin, margin, {
+      titulo: true,
+      periodo: periodoTexto(prefix),
+      seccion: nombrePestaña,
+      filtros: resumenFiltrosTexto(prefix, incluyeEE),
+    });
+    agregarImagenPaginada(doc, canvas, margin, y);
+
+    const anio = document.getElementById(`${prefix}-anio`)?.value || '';
+    const sem = document.getElementById(`${prefix}-semestre`)?.value;
+    doc.save(`informe_${prefix}_${anio}${sem ? '_S' + sem : ''}.pdf`);
+  } catch (e) {
+    alert('Error al generar el PDF: ' + e.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  }
+}
+
+// Pestañas incluidas en el PDF completo, en el mismo orden que la navegación
+// (Estado de carga queda afuera, igual que en la exportación a CSV).
+// cargar: la función que efectivamente trae los datos y renderiza — se llama
+// explícitamente (y se espera) porque iniciarX() dispara su propio cargarX()
+// interno SIN esperarlo (fire-and-forget, pensado para un click de usuario),
+// así que no alcanza como señal de "ya terminó de pintar" para la captura.
+const PESTAÑAS_PDF_COMPLETO = [
+  { tab: 'participantes',              prefix: 'part', nombre: 'Participantes',                          incluyeEE: true,  cargar: () => cargarParticipantes() },
+  { tab: 'acciones',                   prefix: 'acc',  nombre: 'EE - Acciones',                           incluyeEE: true,  cargar: () => cargarAcciones() },
+  { tab: 'apoyo-escolar',              prefix: 'ae',   nombre: 'EE - Apoyo Escolar',                      incluyeEE: true,  cargar: () => cargarApoyoEscolar() },
+  { tab: 'internet',                   prefix: 'int',  nombre: 'EE - Internet',                           incluyeEE: true,  cargar: () => cargarInternet() },
+  { tab: 'edilicias',                  prefix: 'ed',   nombre: 'EE - Características edilicias',          incluyeEE: true,  cargar: () => cargarEdilicias() },
+  { tab: 'grupo-motor',                prefix: 'gm',   nombre: 'Grupo Motor',                             incluyeEE: true,  cargar: () => cargarGrupoMotor() },
+  { tab: 'itinerancia',                prefix: 'it',   nombre: 'Itinerancia',                             incluyeEE: true,  cargar: () => cargarItinerancia() },
+  { tab: 'btu',                        prefix: 'btu',  nombre: 'BTU',                                     incluyeEE: true,  cargar: () => cargarBtu() },
+  { tab: 'btu-becarios',               prefix: 'bb',   nombre: 'BTU - Becados',                           incluyeEE: false, cargar: () => cargarBtuBecarios() },
+  { tab: 'ayj-preocupaciones',         prefix: 'ayj',  nombre: 'AyJ - Situaciones Preocupantes',           incluyeEE: true,  cargar: () => cargarAyjPreocupaciones() },
+  { tab: 'becas-familiares',           prefix: 'bf',   nombre: 'Becas Familiares',                        incluyeEE: true,  cargar: () => cargarBecasFamiliares() },
+  { tab: 'primera-infancia',           prefix: 'pi',   nombre: 'Primera Infancia',                        incluyeEE: false, cargar: () => cargarPrimeraInfancia() },
+  { tab: 'primera-infancia-acciones',  prefix: 'pia',  nombre: 'Primera Infancia - Líderes/Acciones',      incluyeEE: false, cargar: () => cargarPrimeraInfanciaAcciones() },
+  { tab: 'articulaciones',             prefix: 'art',  nombre: 'Articulaciones',                          incluyeEE: true,  cargar: () => cargarArticulaciones() },
+  { tab: 'establecimientos',           prefix: 'est',  nombre: 'Establecimientos Educativos',              incluyeEE: false, cargar: () => cargarEstablecimientos() },
+  { tab: 'talleres',                   prefix: 'tll',  nombre: 'Talleres',                                incluyeEE: false, cargar: () => cargarTalleres() },
+];
+
+// Exporta un único PDF con todas las pestañas (salvo Estado de carga), cada
+// una en su propia sección con su propio período/filtros. Recorre las
+// pestañas de a una (mostrándolas para que html2canvas pueda capturarlas) y
+// al final vuelve a dejar la pestaña que estaba activa antes de arrancar. Si
+// una sección falla, se salta (con aviso en consola) y se sigue con el resto
+// en vez de abortar todo el informe.
+async function exportarPDFCompleto() {
+  const btn = document.getElementById('btn-part-pdf-completo');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  const tabActivoOriginal = document.querySelector('.tablero-tab.active')?.dataset.tab || 'participantes';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+    const margin = 40;
+    let primeraSeccion = true;
+
+    for (const s of PESTAÑAS_PDF_COMPLETO) {
+      btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Generando: ${s.nombre}...`;
+      try {
+        mostrarPestaña(s.tab);
+        await iniciarPestaña(s.tab);
+        await s.cargar(); // asegura que el contenido ya esté pintado antes de capturar
+        // Pequeño respiro para que el navegador termine de aplicar el último reflow.
+        await new Promise(r => setTimeout(r, 50));
+
+        const contenido = document.getElementById(`${s.prefix}-contenido`);
+        if (!contenido || !contenido.children.length) {
+          console.warn(`PDF completo: "${s.nombre}" sin contenido, se omite.`);
+          continue;
+        }
+        const canvas = await html2canvas(contenido, { scale: 2, backgroundColor: '#ffffff' });
+        if (!canvas.width || !canvas.height) {
+          console.warn(`PDF completo: "${s.nombre}" generó un canvas vacío, se omite.`);
+          continue;
+        }
+
+        if (!primeraSeccion) doc.addPage();
+        const y = dibujarEncabezadoPDF(doc, margin, margin, {
+          titulo: primeraSeccion,
+          periodo: periodoTexto(s.prefix),
+          seccion: s.nombre,
+          filtros: resumenFiltrosTexto(s.prefix, s.incluyeEE),
+        });
+        agregarImagenPaginada(doc, canvas, margin, y);
+        primeraSeccion = false;
+      } catch (eSeccion) {
+        console.warn(`PDF completo: falló la sección "${s.nombre}", se omite.`, eSeccion);
+      }
+    }
+
+    const anio = document.getElementById('part-anio')?.value || '';
+    const sem = document.getElementById('part-semestre')?.value || '';
+    doc.save(`informe_completo_${anio}_S${sem}.pdf`);
+  } catch (e) {
+    alert('Error al generar el PDF completo: ' + e.message);
+  } finally {
+    mostrarPestaña(tabActivoOriginal);
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
 }
 
 // Convierte una lista de objetos planos (misma forma en todas las filas) a CSV
@@ -1503,6 +1756,7 @@ async function iniciarAcciones() {
     });
     document.getElementById('btn-acc-filtrar').addEventListener('click', cargarAcciones);
     document.getElementById('btn-acc-export').addEventListener('click', exportarAcciones);
+    document.getElementById('btn-acc-pdf').addEventListener('click', () => exportarPDF('acc', 'EE - Acciones', true));
   }
   cargarAcciones();
 }
@@ -1632,6 +1886,7 @@ async function iniciarInternet() {
     document.getElementById('int-emaus').addEventListener('change', () => { limpiarFiltrosCascada('int','emaus'); cargarFiltrosInt(); });
     document.getElementById('btn-int-filtrar').addEventListener('click', cargarInternet);
     document.getElementById('btn-int-export').addEventListener('click', exportarInternet);
+    document.getElementById('btn-int-pdf').addEventListener('click', () => exportarPDF('int', 'EE - Internet', true));
   }
   cargarInternet();
 }
@@ -1726,6 +1981,7 @@ async function iniciarEdilicias() {
     document.getElementById('ed-emaus').addEventListener('change', () => { limpiarFiltrosCascada('ed','emaus'); cargarFiltrosEd(); });
     document.getElementById('btn-ed-filtrar').addEventListener('click', cargarEdilicias);
     document.getElementById('btn-ed-export').addEventListener('click', exportarEdilicias);
+    document.getElementById('btn-ed-pdf').addEventListener('click', () => exportarPDF('ed', 'EE - Características edilicias', true));
   }
   cargarEdilicias();
 }
@@ -1882,6 +2138,7 @@ async function iniciarGrupoMotor() {
     document.getElementById('gm-emaus').addEventListener('change', () => { limpiarFiltrosCascada('gm','emaus'); cargarFiltrosGm(); });
     document.getElementById('btn-gm-filtrar').addEventListener('click', cargarGrupoMotor);
     document.getElementById('btn-gm-export').addEventListener('click', exportarGrupoMotor);
+    document.getElementById('btn-gm-pdf').addEventListener('click', () => exportarPDF('gm', 'Grupo Motor', true));
   }
   cargarGrupoMotor();
 }
@@ -2082,6 +2339,7 @@ async function iniciarItinerancia() {
     document.getElementById('it-emaus').addEventListener('change', () => { limpiarFiltrosCascada('it','emaus'); cargarFiltrosIt(); });
     document.getElementById('btn-it-filtrar').addEventListener('click', cargarItinerancia);
     document.getElementById('btn-it-export').addEventListener('click', exportarItinerancia);
+    document.getElementById('btn-it-pdf').addEventListener('click', () => exportarPDF('it', 'Itinerancia', true));
   }
   cargarItinerancia();
 }
@@ -2191,6 +2449,7 @@ async function iniciarBtu() {
     document.getElementById('btu-emaus').addEventListener('change', () => { limpiarFiltrosCascada('btu','emaus'); cargarFiltrosBtu(); });
     document.getElementById('btn-btu-filtrar').addEventListener('click', cargarBtu);
     document.getElementById('btn-btu-export').addEventListener('click', exportarBtu);
+    document.getElementById('btn-btu-pdf').addEventListener('click', () => exportarPDF('btu', 'BTU', true));
   }
   cargarBtu();
 }
@@ -2284,6 +2543,7 @@ async function iniciarBtuBecarios() {
     document.getElementById('bb-provincia').addEventListener('change', () => { limpiarFiltrosCascada('bb','provincia'); cargarFiltrosBtuBecarios(); });
     document.getElementById('btn-bb-filtrar').addEventListener('click', cargarBtuBecarios);
     document.getElementById('btn-bb-export').addEventListener('click', exportarBtuBecarios);
+    document.getElementById('btn-bb-pdf').addEventListener('click', () => exportarPDF('bb', 'BTU - Becados', false));
   }
   cargarBtuBecarios();
 }
@@ -2490,6 +2750,7 @@ async function iniciarBecasFamiliares() {
     document.getElementById('bf-emaus').addEventListener('change', () => { limpiarFiltrosCascada('bf','emaus'); cargarFiltrosBf(); });
     document.getElementById('btn-bf-filtrar').addEventListener('click', cargarBecasFamiliares);
     document.getElementById('btn-bf-export').addEventListener('click', exportarBecasFamiliares);
+    document.getElementById('btn-bf-pdf').addEventListener('click', () => exportarPDF('bf', 'Becas Familiares', true));
   }
   cargarBecasFamiliares();
 }
@@ -2590,6 +2851,7 @@ async function iniciarPrimeraInfancia() {
     document.getElementById('pi-provincia').addEventListener('change', () => { limpiarFiltrosCascada('pi','provincia'); cargarFiltrosPi(); });
     document.getElementById('btn-pi-filtrar').addEventListener('click', cargarPrimeraInfancia);
     document.getElementById('btn-pi-export').addEventListener('click', exportarPrimeraInfancia);
+    document.getElementById('btn-pi-pdf').addEventListener('click', () => exportarPDF('pi', 'Primera Infancia', false));
   }
   cargarPrimeraInfancia();
 }
@@ -2736,6 +2998,7 @@ async function iniciarPrimeraInfanciaAcciones() {
     document.getElementById('pia-provincia').addEventListener('change', () => { limpiarFiltrosCascada('pia','provincia'); cargarFiltrosPia(); });
     document.getElementById('btn-pia-filtrar').addEventListener('click', cargarPrimeraInfanciaAcciones);
     document.getElementById('btn-pia-export').addEventListener('click', exportarPrimeraInfanciaAcciones);
+    document.getElementById('btn-pia-pdf').addEventListener('click', () => exportarPDF('pia', 'Primera Infancia - Líderes/Acciones', false));
   }
   cargarPrimeraInfanciaAcciones();
 }
@@ -2835,6 +3098,7 @@ async function iniciarArticulaciones() {
     document.getElementById('art-emaus').addEventListener('change', () => { limpiarFiltrosCascada('art','emaus'); cargarFiltrosArticulaciones(); });
     document.getElementById('btn-art-filtrar').addEventListener('click', cargarArticulaciones);
     document.getElementById('btn-art-export').addEventListener('click', exportarArticulaciones);
+    document.getElementById('btn-art-pdf').addEventListener('click', () => exportarPDF('art', 'Articulaciones', true));
   }
   cargarArticulaciones();
 }
@@ -2927,6 +3191,7 @@ async function iniciarEstablecimientos() {
     document.getElementById('est-provincia').addEventListener('change', () => { limpiarFiltrosCascada('est','provincia'); cargarFiltrosEst(); });
     document.getElementById('btn-est-filtrar').addEventListener('click', cargarEstablecimientos);
     document.getElementById('btn-est-export').addEventListener('click', exportarEstablecimientos);
+    document.getElementById('btn-est-pdf').addEventListener('click', () => exportarPDF('est', 'Establecimientos Educativos', false));
   }
   cargarEstablecimientos();
 }
@@ -3021,6 +3286,7 @@ async function iniciarTalleres() {
     document.getElementById('tll-provincia').addEventListener('change', () => { limpiarFiltrosCascada('tll','provincia'); cargarFiltrosTalleres(); });
     document.getElementById('btn-tll-filtrar').addEventListener('click', cargarTalleres);
     document.getElementById('btn-tll-export').addEventListener('click', exportarTalleres);
+    document.getElementById('btn-tll-pdf').addEventListener('click', () => exportarPDF('tll', 'Talleres', false));
   }
   cargarTalleres();
 }
@@ -3124,6 +3390,7 @@ async function iniciarAyjPreocupaciones() {
     document.getElementById('ayj-emaus').addEventListener('change', () => { limpiarFiltrosCascada('ayj','emaus'); cargarFiltrosAyj(); });
     document.getElementById('btn-ayj-filtrar').addEventListener('click', cargarAyjPreocupaciones);
     document.getElementById('btn-ayj-export').addEventListener('click', exportarAyjPreocupaciones);
+    document.getElementById('btn-ayj-pdf').addEventListener('click', () => exportarPDF('ayj', 'AyJ - Situaciones Preocupantes', true));
   }
   cargarAyjPreocupaciones();
 }
@@ -3241,6 +3508,7 @@ async function iniciarApoyoEscolar() {
       cargarApoyoEscolar();
     });
     document.getElementById('btn-ae-export').addEventListener('click', exportarApoyoEscolar);
+    document.getElementById('btn-ae-pdf').addEventListener('click', () => exportarPDF('ae', 'EE - Apoyo Escolar', true));
   }
   if (!aeDatos) cargarApoyoEscolar();
 }
