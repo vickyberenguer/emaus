@@ -609,18 +609,23 @@ def cell_numeric(val) -> float:
         return 0.0
 
 
+_RE_BUCKET_RANGO = re.compile(r"(\d+)\s*a\s*(\d+)", re.IGNORECASE)
 _RE_BUCKET_MINIMO = re.compile(r"^\s*(\d+)\s*(?:\+|o\s*m[aá]s)", re.IGNORECASE)
 
 
-def cell_numeric_o_minimo(val) -> Tuple[float, bool]:
-    """Como cell_numeric, pero además reconoce opciones tipo '10 o más de 10'
-    (dropdowns con un último casillero abierto 'N o más'). Devuelve
-    (valor, es_minimo) — es_minimo=True indica que el valor real puede ser
-    mayor y hay que comparar con >= en vez de ==."""
-    m = _RE_BUCKET_MINIMO.match(str(val or ""))
+def cell_numeric_o_rango(val) -> Tuple[float, Optional[float]]:
+    """Como cell_numeric, pero además reconoce dropdowns con casilleros por
+    rango en vez de un número exacto (ej. GM_RC_Nro / C175: 'de 1 a 5',
+    '6 a 9', '10 o más de 10'). Devuelve (mínimo, máximo) — máximo=None
+    indica un casillero abierto ('N o más'), sin techo."""
+    s = str(val or "")
+    m = _RE_BUCKET_RANGO.search(s)
     if m:
-        return float(m.group(1)), True
-    return cell_numeric(val), False
+        return float(m.group(1)), float(m.group(2))
+    m = _RE_BUCKET_MINIMO.match(s)
+    if m:
+        return float(m.group(1)), None
+    return cell_numeric(val), cell_numeric(val)
 
 
 def read_sheet_fields(sheets, spreadsheet_id: str, sheet_title: str,
@@ -684,12 +689,11 @@ def eval_condition(condition: Dict, field_values: Dict[str, Any]) -> bool:
     if "sum_of" in condition:
         total = sum(cell_numeric(field_values.get(f)) for f in condition["sum_of"])
         if "equals_field" in condition:
-            # El campo de comparación puede ser un dropdown con un casillero
-            # abierto tipo "10 o más de 10" — en ese caso la suma debe ser
-            # >= 10, no exactamente 10 (si no, cualquier suma >10 dispara una
-            # alerta falsa de "no coincide").
-            valor, es_minimo = cell_numeric_o_minimo(field_values.get(condition["equals_field"]))
-            return total >= valor if es_minimo else total == valor
+            # El campo de comparación puede ser un dropdown por rango
+            # ("de 1 a 5", "6 a 9", "10 o más de 10") en vez de un número
+            # exacto — la suma es válida si cae dentro del rango declarado.
+            minimo, maximo = cell_numeric_o_rango(field_values.get(condition["equals_field"]))
+            return total >= minimo and (maximo is None or total <= maximo)
         if "equals" in condition:
             return total == float(condition["equals"])
         if "at_most_sum_of" in condition:
