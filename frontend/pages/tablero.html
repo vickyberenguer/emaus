@@ -350,6 +350,7 @@
   <a href="#" class="tablero-tab" data-tab="becas-familiares">Becas Familiares</a>
   <a href="#" class="tablero-tab" data-tab="primera-infancia">Primera Infancia</a>
   <a href="#" class="tablero-tab" data-tab="primera-infancia-acciones">Primera Infancia - Líderes/Acciones</a>
+  <a href="#" class="tablero-tab" data-tab="articulaciones">Articulaciones</a>
   <a href="#" class="tablero-tab" data-tab="establecimientos">Establecimientos Educativos</a>
   <a href="#" class="tablero-tab" data-tab="talleres">Talleres</a>
 </div>
@@ -808,6 +809,27 @@
   </div>
 </div>
 
+<!-- Tab Articulaciones -->
+<div id="tab-articulaciones" class="tab-content" style="display:none">
+  <div class="part-filters">
+    <label class="lbl-periodo">Período</label>
+    <select id="art-anio" class="sel-periodo"><option value="2026">2026</option><option value="2025">2025</option></select>
+    <select id="art-semestre" class="sel-periodo"><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select>
+    <label>Región</label>
+    <div id="art-region" class="multisel" data-placeholder="Todas"></div>
+    <label>Provincia</label>
+    <div id="art-provincia" class="multisel" data-placeholder="Todas"></div>
+    <label>Emaús</label>
+    <div id="art-emaus" class="multisel" data-placeholder="Todos"></div>
+    <label>EE</label>
+    <div id="art-ee" class="multisel" data-placeholder="Todos"></div>
+    <button class="btn btn-sm btn-primary" id="btn-art-filtrar">Filtrar</button>
+  </div>
+  <div id="art-contenido" style="padding:16px 24px">
+    <p class="text-muted">Seleccioná un período y hacé clic en Filtrar.</p>
+  </div>
+</div>
+
 <!-- Tab Establecimientos Educativos -->
 <div id="tab-establecimientos" class="tab-content" style="display:none">
   <div class="part-filters">
@@ -1153,6 +1175,7 @@ document.querySelectorAll('.tablero-tab').forEach(tab => {
     if (target === 'becas-familiares') iniciarBecasFamiliares();
     if (target === 'primera-infancia') iniciarPrimeraInfancia();
     if (target === 'primera-infancia-acciones') iniciarPrimeraInfanciaAcciones();
+    if (target === 'articulaciones') iniciarArticulaciones();
     if (target === 'establecimientos') iniciarEstablecimientos();
     if (target === 'talleres') iniciarTalleres();
   });
@@ -2581,6 +2604,85 @@ async function cargarPrimeraInfanciaAcciones() {
     contenido.innerHTML = `
       <p class="ae-info">${d.total_emaus} Emaús con Primera Infancia cargada</p>
       ${secciones}
+    `;
+  } catch(e) {
+    contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+  }
+}
+
+// ── Tab Articulaciones ──
+let artIniciado = false;
+
+const ART_ARTICULA_COLORS = { 'Sí': '#22c55e', 'No': '#ec4899', 'Sin dato': '#9ca3af' };
+const ART_CANTIDAD_COLORS = { '1': '#7c3aed', '2': '#f59e0b', '3': '#0ea5e9', '4': '#f97316', '5': '#ec4899', 'Sin dato': '#9ca3af' };
+
+async function iniciarArticulaciones() {
+  if (!artIniciado) {
+    artIniciado = true;
+    await cargarFiltrosArticulaciones();
+    ['art-anio','art-semestre'].forEach(id =>
+      document.getElementById(id).addEventListener('change', () => { limpiarFiltrosCascada('art'); cargarFiltrosArticulaciones(); }));
+    document.getElementById('art-region').addEventListener('change', () => { limpiarFiltrosCascada('art','region'); cargarFiltrosArticulaciones(); });
+    document.getElementById('art-provincia').addEventListener('change', () => { limpiarFiltrosCascada('art','provincia'); cargarFiltrosArticulaciones(); });
+    document.getElementById('art-emaus').addEventListener('change', () => { limpiarFiltrosCascada('art','emaus'); cargarFiltrosArticulaciones(); });
+    document.getElementById('btn-art-filtrar').addEventListener('click', cargarArticulaciones);
+  }
+  cargarArticulaciones();
+}
+
+async function cargarFiltrosArticulaciones() {
+  const params = new URLSearchParams({ anio: document.getElementById('art-anio').value, semestre: document.getElementById('art-semestre').value });
+  appendMultiSelect(params, 'region', 'art-region');
+  appendMultiSelect(params, 'provincia', 'art-provincia');
+  appendMultiSelect(params, 'emaus_id', 'art-emaus');
+  try {
+    const f = await api.get('/tablero/filtros?' + params.toString());
+    poblarSelectFiltro('art-region',   f.regiones.map(r => ({id: r, nombre: r})));
+    poblarSelectFiltro('art-provincia',f.provincias.map(p => ({id: p, nombre: p})));
+    poblarSelectFiltro('art-emaus',    f.emaus);
+    poblarSelectFiltro('art-ee',       f.ee);
+  } catch(e) { console.warn('filtros art', e); }
+}
+
+async function cargarArticulaciones() {
+  const contenido = document.getElementById('art-contenido');
+  contenido.innerHTML = '<p class="text-muted">Cargando...</p>';
+  const params = new URLSearchParams({ anio: document.getElementById('art-anio').value, semestre: document.getElementById('art-semestre').value });
+  appendMultiSelect(params, 'region', 'art-region');
+  appendMultiSelect(params, 'provincia', 'art-provincia');
+  appendMultiSelect(params, 'emaus_id', 'art-emaus');
+  appendMultiSelect(params, 'ee_id', 'art-ee');
+  try {
+    const d = await api.get('/tablero/articulaciones?' + params.toString());
+    if (!d.total_ee) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos para el período seleccionado.</p>'; return; }
+
+    const totalArticulaSi = d.cantidad_instituciones.reduce((s,x) => s + x.cantidad, 0);
+    const articulaDonut = itDonut(d.articula, ART_ARTICULA_COLORS, 'EE relevados', d.total_ee);
+    const cantidadDonut = itDonut(d.cantidad_instituciones, ART_CANTIDAD_COLORS, 'Con articulación', totalArticulaSi);
+
+    contenido.innerHTML = `
+      <div class="kpi-grid kpi-grid-center" style="margin-bottom:32px">
+        <div class="kpi-card kpi-red">
+          <div class="kpi-label">Diócesis con Articulación</div>
+          <div class="kpi-value">${d.diocesis_con_articulacion}</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px">
+        <div>
+          <div class="ae-bars-title" style="text-align:center">Articula</div>
+          <div class="ae-donut-wrap">${articulaDonut.svg}</div>
+          <div class="ae-legend">${articulaDonut.legend}</div>
+        </div>
+        <div>
+          <div class="ae-bars-title" style="text-align:center">Cantidad Instituciones</div>
+          <div class="ae-donut-wrap">${cantidadDonut.svg}</div>
+          <div class="ae-legend">${cantidadDonut.legend}</div>
+        </div>
+      </div>
+
+      <div class="ae-bars-title">Acciones</div>
+      <div style="max-width:620px;margin:0 auto">${itBarras(d.acciones, 'valor', '#2563eb', 280)}</div>
     `;
   } catch(e) {
     contenido.innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;

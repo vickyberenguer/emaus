@@ -22,7 +22,7 @@ from app.models.espacio_educativo import (
     EEAmbiente, EEServicio, EEEquipoCocina, EEEquipoInformatico, EEZona,
     RelevamientoEEGrupoMotorRol, RelevamientoEEItineranciaActividad,
     RelevamientoEEItineranciaEspacio, RelevamientoEEBTUAbandonoMotivo,
-    RelevamientoEEPreocupacionJoven,
+    RelevamientoEEPreocupacionJoven, RelevamientoEENivelSuperior,
 )
 from app.routers.auth import get_current_user, require_rol
 from app.routers.control import ANIO_ACTIVO, SEMESTRE_ACTIVO, emaus_ids_for_user
@@ -1401,6 +1401,104 @@ def primera_infancia_acciones(
         }
 
     return {"total_emaus": total, "acciones": resultado}
+
+
+@router.get("/articulaciones")
+def articulaciones_tab(
+    anio: int = ANIO_ACTIVO,
+    semestre: str = SEMESTRE_ACTIVO,
+    region: Optional[List[str]] = Query(None),
+    provincia: Optional[List[str]] = Query(None),
+    emaus_id: Optional[List[int]] = Query(None),
+    ee_id: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+):
+    """Articulación con instituciones educativas de Nivel Superior
+    (Terciario/Universitario) — campos C238-C251 de la hoja EE."""
+    allowed_ids = emaus_ids_for_tablero(current_user, db)
+
+    ree_query = (
+        db.query(RelevamientoEE, Diocesis.id)
+        .join(Relevamiento, and_(
+            Relevamiento.id == RelevamientoEE.relevamiento_id,
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+        ))
+        .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+        .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        .join(EspacioEducativo, and_(
+            EspacioEducativo.id == RelevamientoEE.espacio_educativo_id,
+            EspacioEducativo.activo == True,
+        ))
+    )
+    if allowed_ids is not None:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(allowed_ids))
+    if region:
+        ree_query = ree_query.filter(Diocesis.region.in_(region))
+    if provincia:
+        ree_query = ree_query.filter(Diocesis.provincia.in_(provincia))
+    if emaus_id:
+        ree_query = ree_query.filter(Relevamiento.emaus_id.in_(emaus_id))
+    if ee_id:
+        ree_query = ree_query.filter(RelevamientoEE.espacio_educativo_id.in_(ee_id))
+
+    ree_rows = ree_query.all()
+    total = len(ree_rows)
+    if not total:
+        return {"total_ee": 0}
+
+    def pct(n, sobre):
+        return round(n / sobre * 100, 1) if sobre else 0
+
+    diocesis_con_articulacion = len({
+        diocesis_id for ree, diocesis_id in ree_rows if ree.articula_nivel_superior is True
+    })
+
+    articula_counts = {"Sí": 0, "No": 0, "Sin dato": 0}
+    for ree, _ in ree_rows:
+        if ree.articula_nivel_superior is True:
+            articula_counts["Sí"] += 1
+        elif ree.articula_nivel_superior is False:
+            articula_counts["No"] += 1
+        else:
+            articula_counts["Sin dato"] += 1
+    articula = sorted(
+        [{"valor": k, "cantidad": v, "pct": pct(v, total)} for k, v in articula_counts.items() if v > 0],
+        key=lambda x: -x["cantidad"],
+    )
+
+    ree_articula_si = [ree for ree, _ in ree_rows if ree.articula_nivel_superior is True]
+    total_articula_si = len(ree_articula_si)
+    cantidad_counts: Dict[str, int] = {}
+    for ree in ree_articula_si:
+        k = str(ree.nivel_superior_cantidad) if ree.nivel_superior_cantidad else "Sin dato"
+        cantidad_counts[k] = cantidad_counts.get(k, 0) + 1
+    cantidad_instituciones = sorted(
+        [{"valor": k, "cantidad": v, "pct": pct(v, total_articula_si)} for k, v in cantidad_counts.items()],
+        key=lambda x: (x["valor"] == "Sin dato", int(x["valor"]) if x["valor"] != "Sin dato" else 0),
+    )
+
+    ree_ids = [ree.id for ree, _ in ree_rows]
+    acciones_rows = (
+        db.query(RelevamientoEENivelSuperior.tipo_acciones, func.count())
+        .filter(RelevamientoEENivelSuperior.relevamiento_ee_id.in_(ree_ids))
+        .group_by(RelevamientoEENivelSuperior.tipo_acciones)
+        .all()
+    ) if ree_ids else []
+    total_acciones = sum(c for _, c in acciones_rows)
+    acciones = sorted(
+        [{"valor": (t or "Sin dato"), "cantidad": c, "pct": pct(c, total_acciones)} for t, c in acciones_rows],
+        key=lambda x: -x["cantidad"],
+    )
+
+    return {
+        "total_ee": total,
+        "diocesis_con_articulacion": diocesis_con_articulacion,
+        "articula": articula,
+        "cantidad_instituciones": cantidad_instituciones,
+        "acciones": acciones,
+    }
 
 
 @router.get("/establecimientos")
