@@ -296,9 +296,11 @@
     padding:10px 16px;
     background:#f1f5f9; border-bottom:1px solid #e2e8f0;
     font-weight:600; font-size:13px;
+    transition: background-color .15s;
   }
+  .acc-eje-header:hover { background:#e2e8f0; }
   .acc-eje-nombre { color:#1e293b; }
-  .acc-eje-chevron { display:inline-block; margin-right:6px; color:#64748b; font-size:11px; transition:transform .2s; }
+  .acc-eje-chevron { display:inline-block; margin-right:6px; color:#2563eb; font-size:13px; transition:transform .2s; }
   .acc-eje-detalle { max-height:0; overflow:hidden; transition:max-height .25s ease; }
   .acc-eje-detalle.abierto { max-height:600px; overflow-y:auto; }
 
@@ -1840,6 +1842,7 @@ function renderAcciones(d) {
       <span class="acc-dot acc-no"></span> No &nbsp;
       <span class="acc-dot acc-sd"></span> Sin dato &nbsp;
       <span class="text-muted small ms-2">${d.total_ee} EEs relevados</span>
+      <span class="text-muted small ms-2"><i class="bi bi-chevron-right"></i> Clic en cada eje para ver el detalle</span>
     </div>`;
 
   d.ejes.forEach((eje, idx) => {
@@ -2715,7 +2718,7 @@ async function cargarBtuBecarios() {
       </div>
 
       <div style="margin-bottom:32px">
-        <div class="ae-bars-title">Ranking de rama <span style="font-weight:400;color:#6b7280;font-size:13px">(clic para ver las carreras de cada rama)</span></div>
+        <div class="ae-bars-title">Ranking de rama <span style="font-weight:400;color:#6b7280;font-size:13px"><i class="bi bi-chevron-right"></i> Clic en cada rama para ver las carreras</span></div>
         ${ramaHtml}
       </div>
 
