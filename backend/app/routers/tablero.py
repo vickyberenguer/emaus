@@ -1796,7 +1796,6 @@ def becas_familiares(
         ("Nivel Inicial", nivel_inicial),
         ("Escuela Primaria", primaria),
         ("Escuela Secundaria", secundaria),
-        ("Apoyo Escolar", apoyo_escolar),
     ]
     max_val = max((v for _, v in niveles_raw), default=0) or 1
     niveles = sorted(
@@ -1808,6 +1807,7 @@ def becas_familiares(
         "total_ee": total,
         "diocesis_con_bf": diocesis_con_bf,
         "niveles": niveles,
+        "apoyo_escolar": apoyo_escolar,
         "asignaciones": asignaciones,
         "discapacidad": discapacidad,
         "cud": cud,
