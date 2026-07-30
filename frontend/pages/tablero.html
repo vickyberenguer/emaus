@@ -2719,15 +2719,16 @@ async function cargarBtuBecarios() {
         ${ramaHtml}
       </div>
 
-      <div style="margin-bottom:32px;max-width:640px">
-        <div class="ae-bars-title">Por rama y sexo</div>
-        ${ramaSexoHtml}
-      </div>
-
-      <div style="max-width:340px;margin:0 auto">
-        <div class="ae-bars-title" style="text-align:center">Instancia de la carrera</div>
-        <div class="ae-donut-wrap">${instanciaDonut.svg}</div>
-        <div class="ae-legend">${instanciaDonut.legend}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+        <div>
+          <div class="ae-bars-title">Por rama y sexo</div>
+          ${ramaSexoHtml}
+        </div>
+        <div style="max-width:340px;margin:0 auto">
+          <div class="ae-bars-title" style="text-align:center">Instancia de la carrera</div>
+          <div class="ae-donut-wrap">${instanciaDonut.svg}</div>
+          <div class="ae-legend">${instanciaDonut.legend}</div>
+        </div>
       </div>
     `;
   } catch(e) {
