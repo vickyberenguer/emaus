@@ -490,7 +490,19 @@ def upsert_becario(conn, emaus_id: int, anio: int, diocesis_nombre_hoja: str, b:
             {"dni": row["dni"], "anio": anio},
         ).fetchone()
     else:
-        existente = None
+        # Sin DNI, el UNIQUE(dni, anio) no sirve para detectar que ya existe
+        # (NULL nunca es igual a NULL) — cada corrida insertaba de nuevo al
+        # mismo becario en vez de actualizarlo. Como respaldo, matchear por
+        # emaus_id + anio + apellido_nombres (no por nro: a veces tampoco
+        # está cargado).
+        existente = conn.execute(
+            text("""
+                SELECT id FROM btu_becario
+                WHERE emaus_id = :emaus_id AND anio = :anio
+                  AND apellido_nombres = :apellido_nombres
+            """),
+            {"emaus_id": emaus_id, "anio": anio, "apellido_nombres": row["apellido_nombres"]},
+        ).fetchone()
 
     cols = [k for k in row.keys()]
     if existente:
