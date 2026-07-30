@@ -423,7 +423,7 @@ def acciones_export(
     emaus_id: Optional[List[int]] = Query(None),
     ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     """Fila por EE: identidad de Emaús/EE + una columna por eje con las
     acciones que sí realiza (concatenadas)."""
@@ -654,7 +654,7 @@ def edilicias_export(
     emaus_id: Optional[List[int]] = Query(None),
     ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     allowed_ids = emaus_ids_for_tablero(current_user, db)
 
@@ -854,7 +854,7 @@ def grupo_motor_export(
     emaus_id: Optional[List[int]] = Query(None),
     ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     allowed_ids = emaus_ids_for_tablero(current_user, db)
 
@@ -1047,7 +1047,7 @@ def itinerancia_export(
     emaus_id: Optional[List[int]] = Query(None),
     ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     allowed_ids = emaus_ids_for_tablero(current_user, db)
 
@@ -1210,7 +1210,7 @@ def btu_export(
     emaus_id: Optional[List[int]] = Query(None),
     ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     allowed_ids = emaus_ids_for_tablero(current_user, db)
 
@@ -1530,7 +1530,7 @@ def btu_becarios_export(
     provincia: Optional[List[str]] = Query(None),
     emaus_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     """Una fila por becario. Nunca se expone DNI ni nombre (ver nota en
     btu_becarios() más arriba) — el resto de los campos individuales sí."""
@@ -1675,7 +1675,7 @@ def ayj_preocupaciones_export(
     emaus_id: Optional[List[int]] = Query(None),
     ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     allowed_ids = emaus_ids_for_tablero(current_user, db)
 
@@ -1824,7 +1824,7 @@ def becas_familiares_export(
     emaus_id: Optional[List[int]] = Query(None),
     ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     allowed_ids = emaus_ids_for_tablero(current_user, db)
 
@@ -1975,7 +1975,7 @@ def primera_infancia_export(
     provincia: Optional[List[str]] = Query(None),
     emaus_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     """Una fila por Emaús (PI es un dato por Emaús, no por EE)."""
     allowed_ids = emaus_ids_for_tablero(current_user, db)
@@ -2137,7 +2137,7 @@ def primera_infancia_acciones_export(
     provincia: Optional[List[str]] = Query(None),
     emaus_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     """Una fila por Emaús. Para cada una de las 3 acciones fijas de líderes de
     PI, resume si la realiza, con qué frecuencia y cuántas veces en el semestre."""
@@ -2304,7 +2304,7 @@ def articulaciones_export(
     emaus_id: Optional[List[int]] = Query(None),
     ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     allowed_ids = emaus_ids_for_tablero(current_user, db)
 
@@ -2455,7 +2455,7 @@ def establecimientos_export(
     provincia: Optional[List[str]] = Query(None),
     emaus_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     """Una fila por establecimiento articulado (sin agrupar)."""
     allowed_ids = emaus_ids_for_tablero(current_user, db)
@@ -2591,7 +2591,7 @@ def internet_export(
     emaus_id: Optional[List[int]] = Query(None),
     ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     allowed_ids = emaus_ids_for_tablero(current_user, db)
 
@@ -2747,7 +2747,7 @@ def apoyo_escolar_export(
     emaus_id: Optional[List[int]] = Query(None),
     ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     allowed_ids = emaus_ids_for_tablero(current_user, db)
 
@@ -2953,7 +2953,7 @@ def participantes_export(
     emaus_id: Optional[List[int]] = Query(None),
     ee_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     """Exportación "maestra": una fila por EE con prácticamente todas las
     columnas numéricas del relevamiento de ese período."""
@@ -3127,7 +3127,7 @@ def talleres_export(
     provincia: Optional[List[str]] = Query(None),
     emaus_id: Optional[List[int]] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_rol("admin", "responsable", "tablero")),
+    current_user: Usuario = Depends(require_rol("admin", "responsable")),
 ):
     """Una fila por taller (sin agrupar)."""
     allowed_ids = emaus_ids_for_tablero(current_user, db)

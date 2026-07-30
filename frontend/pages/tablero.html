@@ -496,7 +496,7 @@
     <div id="part-emaus" class="multisel" data-placeholder="Todos los Emaús"></div>
     <div id="part-ee" class="multisel" data-placeholder="Todos los EEs"></div>
     <button onclick="partDatos=null;cargarParticipantes()" style="padding:5px 14px;border-radius:6px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:12px;cursor:pointer">Aplicar</button>
-    <button class="btn btn-sm btn-outline-secondary" onclick="exportarParticipantes()"><i class="bi bi-download"></i> Exportar a CSV</button>
+    <button class="btn btn-sm btn-outline-secondary" id="btn-part-export" onclick="exportarParticipantes()"><i class="bi bi-download"></i> Exportar a CSV</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-part-pdf"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>
     <button class="btn btn-sm btn-outline-secondary" id="btn-part-pdf-completo"><i class="bi bi-file-earmark-pdf-fill"></i> Exportar PDF completo</button>
   </div>
@@ -984,6 +984,12 @@ async function init() {
 
   if (!esAdmin) document.getElementById('link-admin').style.display = 'none';
   if (soloTablero) document.getElementById('link-control').style.display = 'none';
+
+  // Exportar a CSV / PDF / PDF completo: solo admin y responsable.
+  if (soloTablero) {
+    document.querySelectorAll('[id$="-export"], [id$="-pdf"], #btn-part-pdf-completo')
+      .forEach(b => b.style.display = 'none');
+  }
 
   if (esAdmin) {
     actualizarFiltroBar('estado-carga');
