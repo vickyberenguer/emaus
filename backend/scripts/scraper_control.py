@@ -1229,7 +1229,7 @@ _BTU_ABANDONO_MOTIVOS = [
     ("BTU_abandono_cambiodomic",             "Cambio de domicilio"),
     ("BTU_abandono_costotransporte",         "Costo del transporte"),
     ("BTU_abandono_faltatiempo",             "Falta de tiempo"),
-    ("BTU_abandono_horarios",                "Horarios"),
+    ("BTU_abandono_horarios",                "Incompatibilidad horaria entre cursada y las responsabilidades laborales"),
 ]
 
 # Prioridades de infraestructura (si/no) → relevamiento_ee_necesidad_infra
