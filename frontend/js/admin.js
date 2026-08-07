@@ -495,8 +495,16 @@ async function descargarInformesCualitativos() {
   btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Descargando...';
   resultado.innerHTML = '';
   try {
-    await api.downloadFile(path, 'informes_cualitativos.zip');
-    resultado.innerHTML = '<span class="text-success">✓ Descarga completa.</span>';
+    // El backend arma el ZIP, lo sube a S3 (Lambda no puede devolver
+    // respuestas de más de 6MB) y acá solo llega un link temporal — no un
+    // blob — así que se dispara la descarga navegando a esa URL.
+    const data = await api.get(path);
+    const a = document.createElement('a');
+    a.href = data.download_url;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    resultado.innerHTML = '<span class="text-success">✓ Descarga iniciada.</span>';
   } catch (e) {
     resultado.innerHTML = `<span class="text-danger">Error: ${e.message || e}</span>`;
   } finally {

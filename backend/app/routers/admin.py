@@ -6,6 +6,7 @@ from datetime import datetime, date
 import io
 import os
 import re
+import threading
 import unicodedata
 
 from openpyxl import load_workbook
@@ -592,17 +593,54 @@ def _buscar_informes_word(folder_id: str):
 _FECHA_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
+_SOFFICE_EXTRACT_LOCK = threading.Lock()
+_LO_TAR_BR = "/opt/lo.tar.br"  # así viene la Layer pública "libreoffice-brotli" de shelfio
+_LO_EXTRACTED_DIR = "/tmp/lo_libreoffice"
+_LO_EXTRACTED_BIN = f"{_LO_EXTRACTED_DIR}/instdir/program/soffice.bin"
+
+
+def _extraer_libreoffice_si_hace_falta() -> None:
+    """
+    La Layer pública "libreoffice-brotli" no trae el binario ya extraído:
+    trae un único archivo /opt/lo.tar.br (tar comprimido con brotli, ~96MB
+    -> ~370MB descomprimido) — Lambda no permite escribir en /opt, así que
+    hay que descomprimirlo a /tmp una vez por contenedor. Se hace bajo un
+    lock porque varios hilos de conversión pueden llamar a _soffice_bin()
+    al mismo tiempo (paralelizado). Se cachea en /tmp: en una invocación
+    "warm" (mismo contenedor reusado) no vuelve a descomprimir. Costo medido
+    localmente: ~1.7s la primera vez.
+    """
+    if os.path.exists(_LO_EXTRACTED_BIN):
+        return
+    with _SOFFICE_EXTRACT_LOCK:
+        if os.path.exists(_LO_EXTRACTED_BIN):  # doble chequeo: otro hilo pudo terminar mientras esperábamos el lock
+            return
+        import brotli
+        import tarfile
+
+        with open(_LO_TAR_BR, "rb") as f:
+            datos = brotli.decompress(f.read())
+        with tarfile.open(fileobj=io.BytesIO(datos)) as tf:
+            tf.extractall(_LO_EXTRACTED_DIR)
+        os.chmod(_LO_EXTRACTED_BIN, 0o755)
+
+
 def _soffice_bin() -> str:
     """
     Ruta del binario de LibreOffice usado para convertir .docx a PDF.
     - Local (dev): "soffice" en el PATH (instalado con Homebrew/instalador oficial).
-    - Lambda: se espera una Layer de LibreOffice montada en /opt — la ruta
-      exacta depende de cómo se armó esa Layer, por eso se puede overridear
+    - Lambda con la Layer pública "libreoffice-brotli": /opt/lo.tar.br, hay
+      que descomprimirla a /tmp (ver _extraer_libreoffice_si_hace_falta()).
+    - Cualquier otra Layer: si ya deja el binario extraído en /opt, se usa
+      directo; si la ruta no es /opt/instdir/program/soffice.bin, overridear
       con la variable de entorno SOFFICE_BIN sin tocar código.
     """
     override = os.getenv("SOFFICE_BIN")
     if override:
         return override
+    if os.path.exists(_LO_TAR_BR):
+        _extraer_libreoffice_si_hace_falta()
+        return _LO_EXTRACTED_BIN
     layer_bin = "/opt/instdir/program/soffice.bin"
     if os.path.exists(layer_bin):
         return layer_bin
@@ -617,6 +655,7 @@ def _convertir_docx_a_pdf_batch(rutas: list, outdir: str) -> str | None:
     perfil de usuario temporal para poder correr varios lotes en paralelo
     sin que se pisen entre sí. Devuelve un mensaje de error o None si salió bien.
     """
+    import shutil
     import subprocess
     import tempfile
 
@@ -637,6 +676,11 @@ def _convertir_docx_a_pdf_batch(rutas: list, outdir: str) -> str | None:
         return None
     except Exception as e:
         return str(e)
+    finally:
+        # Si no se limpia, estos perfiles de LibreOffice se acumulan en /tmp
+        # durante toda la vida del contenedor de Lambda (se reutiliza entre
+        # invocaciones) hasta agotar el espacio efímero disponible.
+        shutil.rmtree(perfil, ignore_errors=True)
 
 
 def _convertir_docx_a_pdf_paralelo(items: list, outdir: str):
@@ -729,6 +773,11 @@ def descargar_informes_cualitativos(
     formato Word: tanto los .docx ya subidos como los Documentos de Google
     (se convierten a .docx al vuelo vía la API de exportación de Drive).
 
+    El ZIP no se devuelve directo en la respuesta: Lambda tiene un límite
+    duro de 6MB para respuestas síncronas, muy por debajo de lo que pesa
+    este ZIP. Se sube a S3 (bucket en S3_BUCKET_DESCARGAS) y se devuelve
+    un JSON con una URL prefirmada de descarga (vence en 10 minutos).
+
     Solo se incluyen archivos cuya carpeta contenedora inmediata coincide
     con el nombre de un Emaús real (excluye archivos sueltos en la raíz de
     Drive y carpetas de agrupación que no son Emaús).
@@ -757,7 +806,6 @@ def descargar_informes_cualitativos(
     import tempfile
     import zipfile
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    from fastapi.responses import StreamingResponse
     from scripts.scraper_control import build_services
 
     if modificados_desde and not _FECHA_RE.match(modificados_desde):
@@ -947,14 +995,48 @@ def descargar_informes_cualitativos(
     finally:
         tmpdir_ctx.cleanup()
 
-    buffer.seek(0)
     hoy = datetime.now().strftime("%Y%m%d")
     if modificados_desde:
         nombre_zip = f"informes_cualitativos_{hoy}_modificados_{modificados_desde.replace('-', '')}.zip"
     else:
         nombre_zip = f"informes_cualitativos_{hoy}.zip"
-    return StreamingResponse(
-        buffer,
-        media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{nombre_zip}"'},
+
+    # Lambda no puede devolver más de 6MB en una respuesta síncrona (límite
+    # duro, no configurable) — con ~44 informes el ZIP supera eso by lejos.
+    # Por eso se sube a S3 y se devuelve un link temporal en vez del archivo.
+    s3_bucket = os.getenv("S3_BUCKET_DESCARGAS", "")
+    if not s3_bucket:
+        raise HTTPException(status_code=500, detail="S3_BUCKET_DESCARGAS no configurado")
+
+    import uuid
+    import boto3
+    from botocore.client import Config
+
+    # signature_version explícito: sin esto, boto3 firma con el formato
+    # viejo (SigV2) en us-east-1 por compatibilidad histórica — muchas
+    # cuentas de AWS lo tienen deshabilitado y S3 rechaza la URL con 403
+    # (el navegador termina "descargando" ese error XML chico en vez del ZIP).
+    s3 = boto3.client(
+        "s3",
+        region_name=os.getenv("AWS_REGION", "us-east-1"),
+        config=Config(signature_version="s3v4"),
     )
+    key = f"informes-cualitativos/{uuid.uuid4().hex}.zip"
+    buffer.seek(0)
+    s3.put_object(
+        Bucket=s3_bucket,
+        Key=key,
+        Body=buffer.getvalue(),
+        ContentType="application/zip",
+    )
+    url = s3.generate_presigned_url(
+        "get_object",
+        Params={
+            "Bucket": s3_bucket,
+            "Key": key,
+            "ResponseContentDisposition": f'attachment; filename="{nombre_zip}"',
+            "ResponseContentType": "application/zip",
+        },
+        ExpiresIn=600,  # 10 minutos — el bucket también autoborra el objeto a 1 día
+    )
+    return {"download_url": url, "filename": nombre_zip}
