@@ -4,6 +4,8 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from pydantic import BaseModel
 from datetime import datetime, date
 import io
+import os
+import re
 import unicodedata
 
 from openpyxl import load_workbook
@@ -499,3 +501,460 @@ def registrar_importacion(
     db.add(registro)
     db.commit()
     return {"ok": True}
+
+
+# ============================================================
+# Descargas — informes cualitativos (Word) de Drive
+# ============================================================
+
+_DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+_GDOC_MIME = "application/vnd.google-apps.document"
+_FOLDER_MIME = "application/vnd.google-apps.folder"
+
+_INVALID_FILENAME_CHARS = str.maketrans('\\/:*?"<>|', "-" * 9)
+
+
+def _sanitize_filename(name: str) -> str:
+    return name.translate(_INVALID_FILENAME_CHARS).strip()
+
+
+def _nombre_con_prefijo(carpeta_padre: str, base: str) -> str:
+    """
+    Antepone el nombre de la carpeta contenedora al nombre del archivo para
+    poder identificarlo sin ambigüedad, salvo que el archivo ya empiece con
+    ese mismo nombre (frecuente: muchos EE ya suben el Word con su propio
+    nombre adelante) — en ese caso no lo duplica.
+    """
+    if not carpeta_padre:
+        return base.strip()
+    if _normalizar(base).startswith(_normalizar(carpeta_padre)):
+        return base.strip()
+    return f"{carpeta_padre} - {base.strip()}"
+
+
+def _listar_una_carpeta(args):
+    """Lista el contenido directo de una carpeta con un cliente de Drive propio del hilo."""
+    from scripts.scraper_control import build_services
+
+    folder_id, carpeta_padre = args
+    _, drive_hilo = build_services()
+    archivos = []
+    subcarpetas = []
+    page_token = None
+    while True:
+        resp = drive_hilo.files().list(
+            q=f"'{folder_id}' in parents and trashed = false",
+            fields="nextPageToken, files(id, name, mimeType, modifiedTime)",
+            includeItemsFromAllDrives=True,
+            supportsAllDrives=True,
+            pageToken=page_token,
+            corpora="allDrives",
+            pageSize=200,
+        ).execute()
+        for item in resp.get("files", []):
+            if item["mimeType"] == _FOLDER_MIME:
+                subcarpetas.append((item["id"], item["name"]))
+            elif item["mimeType"] in (_DOCX_MIME, _GDOC_MIME):
+                archivos.append((carpeta_padre, item["id"], item["name"], item["mimeType"], item.get("modifiedTime", "")))
+        page_token = resp.get("nextPageToken")
+        if not page_token:
+            break
+    return archivos, subcarpetas
+
+
+def _buscar_informes_word(folder_id: str):
+    """
+    Recorre recursivamente la carpeta (carpetas y subcarpetas, sin límite de
+    profundidad) y devuelve todos los .docx y Documentos de Google que
+    encuentra, junto con el nombre de la carpeta contenedora inmediata
+    (puede ser una Diócesis, un Emaús, o vacío si el archivo está en la raíz)
+    y su fecha de última modificación (RFC3339 UTC).
+
+    Lista las carpetas de cada nivel en paralelo (cada carpeta = 1 llamada a
+    la API de Drive; con ~50 Emaús hacerlo secuencial tarda ~20s) — cada
+    hilo arma su propio cliente porque httplib2 no es thread-safe.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    encontrados = []
+    frontera = [(folder_id, "")]
+    with ThreadPoolExecutor(max_workers=15) as ex:
+        while frontera:
+            resultados = list(ex.map(_listar_una_carpeta, frontera))
+            siguiente = []
+            for archivos, subcarpetas in resultados:
+                encontrados.extend(archivos)
+                siguiente.extend(subcarpetas)
+            frontera = siguiente
+    return encontrados
+
+
+_FECHA_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _soffice_bin() -> str:
+    """
+    Ruta del binario de LibreOffice usado para convertir .docx a PDF.
+    - Local (dev): "soffice" en el PATH (instalado con Homebrew/instalador oficial).
+    - Lambda: se espera una Layer de LibreOffice montada en /opt — la ruta
+      exacta depende de cómo se armó esa Layer, por eso se puede overridear
+      con la variable de entorno SOFFICE_BIN sin tocar código.
+    """
+    override = os.getenv("SOFFICE_BIN")
+    if override:
+        return override
+    layer_bin = "/opt/instdir/program/soffice.bin"
+    if os.path.exists(layer_bin):
+        return layer_bin
+    return "soffice"
+
+
+def _convertir_docx_a_pdf_batch(rutas: list, outdir: str) -> str | None:
+    """
+    Convierte un lote de .docx a PDF en un solo proceso de LibreOffice (el
+    arranque de soffice tiene un costo fijo de ~5-10s; convertir de a uno
+    por archivo sería carísimo con ~20 archivos). Cada lote usa su propio
+    perfil de usuario temporal para poder correr varios lotes en paralelo
+    sin que se pisen entre sí. Devuelve un mensaje de error o None si salió bien.
+    """
+    import subprocess
+    import tempfile
+
+    perfil = tempfile.mkdtemp(prefix="lo_profile_")
+    try:
+        resultado = subprocess.run(
+            [
+                _soffice_bin(),
+                f"-env:UserInstallation=file://{perfil}",
+                "--headless", "--norestore",
+                "--convert-to", "pdf",
+                "--outdir", outdir,
+            ] + rutas,
+            capture_output=True, text=True, timeout=120,
+        )
+        if resultado.returncode != 0:
+            return resultado.stderr[-500:] or "soffice terminó con error sin detalle"
+        return None
+    except Exception as e:
+        return str(e)
+
+
+def _convertir_docx_a_pdf_paralelo(items: list, outdir: str):
+    """
+    items: lista de (clave, ruta_docx). Divide en lotes y corre varios
+    procesos de soffice en paralelo (cada uno con su perfil propio).
+    Devuelve (resultado, errores_lotes): resultado es {clave: ruta_pdf o
+    None si falló} y errores_lotes es la lista de stderr de los lotes que
+    fallaron (para diagnóstico, un lote agrupa varios archivos).
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    if not items:
+        return {}, []
+
+    n_lotes = min(6, max(1, len(items) // 4 or 1))
+    lotes = [items[i::n_lotes] for i in range(n_lotes)]
+    lotes = [l for l in lotes if l]
+
+    def _procesar_lote(lote):
+        rutas = [ruta for _clave, ruta in lote]
+        error = _convertir_docx_a_pdf_batch(rutas, outdir)
+        salida = {}
+        for clave, ruta in lote:
+            pdf_path = os.path.splitext(ruta)[0] + ".pdf"
+            salida[clave] = pdf_path if (error is None and os.path.exists(pdf_path)) else None
+        return salida, error
+
+    resultado = {}
+    errores_lotes = []
+    with ThreadPoolExecutor(max_workers=n_lotes) as ex:
+        for salida, error in ex.map(_procesar_lote, lotes):
+            resultado.update(salida)
+            if error:
+                errores_lotes.append(error)
+    return resultado, errores_lotes
+
+
+def _generar_pagina_divisoria(nombre_emaus: str) -> bytes:
+    """
+    Página simple con el nombre del Emaús en grande, para intercalar antes
+    de cada informe en el PDF combinado. No depende de si el título interno
+    del documento original menciona o no el Emaús — se aplica igual a todos.
+    """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm
+    from reportlab.pdfgen import canvas
+
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    width, height = A4
+    c.setFont("Helvetica-Bold", 28)
+    c.drawCentredString(width / 2, height / 2, nombre_emaus)
+    c.setFont("Helvetica", 12)
+    c.drawCentredString(width / 2, height / 2 - 1.2 * cm, "Informe cualitativo — Medio Término 2026")
+    c.showPage()
+    c.save()
+    return buf.getvalue()
+
+
+def _merge_pdfs(items: list) -> bytes:
+    """
+    items: lista de (nombre_emaus, ruta_o_bytes_del_pdf). Antepone una
+    página divisoria con el nombre del Emaús antes de las páginas de cada
+    informe.
+    """
+    from pypdf import PdfWriter
+
+    writer = PdfWriter()
+    for nombre_emaus, fuente in items:
+        writer.append(io.BytesIO(_generar_pagina_divisoria(nombre_emaus)))
+        if isinstance(fuente, (bytes, bytearray)):
+            writer.append(io.BytesIO(fuente))
+        else:
+            writer.append(fuente)
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
+@router.get("/informes-cualitativos/zip")
+def descargar_informes_cualitativos(
+    modificados_desde: str | None = None,
+    incluir_pdf_combinado: bool = False,
+    db: Session = Depends(get_db),
+):
+    """
+    Recorre la carpeta DRIVE_FOLDER_ID (carpetas y subcarpetas de Diócesis/
+    Emaús) y arma un único ZIP con todos los informes cualitativos en
+    formato Word: tanto los .docx ya subidos como los Documentos de Google
+    (se convierten a .docx al vuelo vía la API de exportación de Drive).
+
+    Solo se incluyen archivos cuya carpeta contenedora inmediata coincide
+    con el nombre de un Emaús real (excluye archivos sueltos en la raíz de
+    Drive y carpetas de agrupación que no son Emaús).
+
+    Si se pasa `modificados_desde` (fecha YYYY-MM-DD), solo se incluyen los
+    archivos modificados en o después de esa fecha (inclusive).
+
+    Cada archivo se nombra "<carpeta contenedora> - <nombre original>.docx"
+    para poder identificarlos sin ambigüedad, ya que los nombres no son
+    consistentes entre carpetas (salvo que el nombre ya empiece con el de
+    la carpeta, para no duplicarlo).
+
+    Si `incluir_pdf_combinado=True`, además arma un PDF único con todas las
+    páginas de todos los informes (en el mismo orden que aparecen en el
+    ZIP) y lo agrega como archivo adicional dentro del ZIP. Los Documentos
+    de Google se exportan a PDF directo vía Drive; los .docx reales se
+    convierten con LibreOffice (requiere el binario disponible — ver
+    _soffice_bin()). Es opt-in porque agrega ~15-20s extra a la respuesta.
+
+    Las descargas se hacen en paralelo (cada hilo arma su propio cliente de
+    Drive — httplib2, usado por la librería de Google, no es thread-safe si
+    se comparte una sola instancia entre hilos) para que ~45 archivos no
+    tarden más de un minuto y arriesguen el timeout de API Gateway; medido:
+    ~80s en secuencial vs ~10s en paralelo con 10 workers.
+    """
+    import tempfile
+    import zipfile
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from fastapi.responses import StreamingResponse
+    from scripts.scraper_control import build_services
+
+    if modificados_desde and not _FECHA_RE.match(modificados_desde):
+        raise HTTPException(status_code=400, detail="modificados_desde debe tener formato YYYY-MM-DD")
+
+    folder_id = os.getenv("DRIVE_FOLDER_ID", "")
+    if not folder_id:
+        raise HTTPException(status_code=500, detail="DRIVE_FOLDER_ID no configurado")
+
+    # La consulta de Emaús corre en paralelo con el recorrido de Drive (son
+    # independientes) — usa su propia sesión de DB porque `db` es la sesión
+    # inyectada por request y SQLAlchemy no permite compartir una sesión
+    # entre hilos.
+    def _cargar_nombres_emaus():
+        from app.database import SessionLocal
+        db_hilo = SessionLocal()
+        try:
+            return {_normalizar(e.nombre) for e in db_hilo.query(Emaus).all()}
+        finally:
+            db_hilo.close()
+
+    with ThreadPoolExecutor(max_workers=2) as setup_ex:
+        fut_nombres = setup_ex.submit(_cargar_nombres_emaus)
+        fut_encontrados = setup_ex.submit(_buscar_informes_word, folder_id)
+        nombres_emaus = fut_nombres.result()
+        encontrados = fut_encontrados.result()
+
+    # Solo carpetas que son Emaús reales — descarta la raíz y carpetas de agrupación
+    encontrados = [f for f in encontrados if f[0] and _normalizar(f[0]) in nombres_emaus]
+
+    # Filtro opcional por fecha de modificación (inclusive) — comparación de
+    # strings RFC3339 UTC, válida porque el formato es de ancho fijo
+    if modificados_desde:
+        desde_ts = f"{modificados_desde}T00:00:00"
+        encontrados = [f for f in encontrados if f[4] and f[4] >= desde_ts]
+
+    if not encontrados:
+        raise HTTPException(status_code=404, detail="No se encontraron informes Word con esos filtros")
+
+    # Se procesan en dos carriles independientes que corren en paralelo entre
+    # sí (no solo cada uno internamente): los .docx reales necesitan pasar
+    # por LibreOffice (lento), los Documentos de Google exportan a PDF
+    # directo por Drive (rápido). Separarlos evita que la conversión con
+    # LibreOffice espere a que terminen de bajar los Documentos de Google,
+    # ganando ~8-10s medidos contra Drive real — necesario para no arriesgar
+    # el timeout de API Gateway cuando incluir_pdf_combinado=True.
+    docx_items = [it for it in encontrados if it[3] == _DOCX_MIME]
+    gdoc_items = [it for it in encontrados if it[3] != _DOCX_MIME]
+
+    def _descargar_docx_raw(item):
+        carpeta_padre, file_id, nombre, mime_type, _modified = item
+        try:
+            _, drive_hilo = build_services()
+            contenido = drive_hilo.files().get_media(fileId=file_id, supportsAllDrives=True).execute()
+            base = nombre if nombre.lower().endswith(".docx") else f"{nombre}.docx"
+            return {
+                "carpeta_padre": carpeta_padre, "base": base, "contenido": contenido,
+                "mime_type": mime_type, "pdf_bytes": None, "error": None,
+            }
+        except Exception as e:
+            return {
+                "carpeta_padre": carpeta_padre, "base": nombre, "contenido": None,
+                "mime_type": mime_type, "pdf_bytes": None, "error": str(e),
+            }
+
+    def _descargar_gdoc(item):
+        carpeta_padre, file_id, nombre, mime_type, _modified = item
+        try:
+            _, drive_hilo = build_services()
+            contenido = drive_hilo.files().export_media(fileId=file_id, mimeType=_DOCX_MIME).execute()
+        except Exception as e:
+            return {
+                "carpeta_padre": carpeta_padre, "base": nombre, "contenido": None,
+                "mime_type": mime_type, "pdf_bytes": None, "error": str(e),
+            }
+
+        pdf_bytes = None
+        pdf_error = None
+        if incluir_pdf_combinado:
+            try:
+                _, drive_hilo2 = build_services()
+                pdf_bytes = drive_hilo2.files().export_media(fileId=file_id, mimeType="application/pdf").execute()
+            except Exception as e:
+                # El .docx ya se descargó bien — que falle solo el export a PDF
+                # no debe sacar el archivo del ZIP, solo del PDF combinado.
+                pdf_error = str(e)
+
+        return {
+            "carpeta_padre": carpeta_padre, "base": f"{nombre}.docx", "contenido": contenido,
+            "mime_type": mime_type, "pdf_bytes": pdf_bytes, "error": None, "pdf_error": pdf_error,
+        }
+
+    errores = []
+    tmpdir_ctx = tempfile.TemporaryDirectory(prefix="informes_pdf_")
+    try:
+        tmpdir = tmpdir_ctx.name
+
+        def _carril_docx():
+            """Baja los .docx reales y, si corresponde, los convierte a PDF con LibreOffice."""
+            locales = []
+            with ThreadPoolExecutor(max_workers=10) as ex:
+                for r in ex.map(_descargar_docx_raw, docx_items):
+                    locales.append(r)
+
+            errores_conversion = []
+            if incluir_pdf_combinado:
+                pendientes = []
+                for idx, r in enumerate(locales):
+                    if r["error"]:
+                        continue
+                    ruta = os.path.join(tmpdir, f"docx_{idx}.docx")
+                    with open(ruta, "wb") as f:
+                        f.write(r["contenido"])
+                    pendientes.append((idx, ruta))
+
+                rutas_pdf_por_idx, errores_conversion = _convertir_docx_a_pdf_paralelo(pendientes, tmpdir)
+                for idx, ruta_pdf in rutas_pdf_por_idx.items():
+                    if ruta_pdf:
+                        locales[idx]["pdf_ruta"] = ruta_pdf
+                    else:
+                        errores_conversion.append(f"{locales[idx]['carpeta_padre']} / {locales[idx]['base']}: no se pudo convertir a PDF")
+            return locales, errores_conversion
+
+        def _carril_gdocs():
+            """Exporta los Documentos de Google a .docx (y a PDF directo si corresponde)."""
+            locales = []
+            with ThreadPoolExecutor(max_workers=15) as ex:
+                for r in ex.map(_descargar_gdoc, gdoc_items):
+                    locales.append(r)
+            return locales
+
+        with ThreadPoolExecutor(max_workers=2) as carriles_ex:
+            fut_docx = carriles_ex.submit(_carril_docx)
+            fut_gdocs = carriles_ex.submit(_carril_gdocs)
+            resultados_docx, errores_conversion = fut_docx.result()
+            resultados_gdocs = fut_gdocs.result()
+
+        resultados = resultados_docx + resultados_gdocs
+        errores.extend(errores_conversion)
+
+        buffer = io.BytesIO()
+        usados = set()
+
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            entradas_ordenadas = []
+            for r in resultados:
+                if r["error"]:
+                    errores.append(f"{r['carpeta_padre'] or '(raíz)'} / {r['base']}: {r['error']}")
+                    continue
+                zip_name = _sanitize_filename(_nombre_con_prefijo(r["carpeta_padre"], r["base"]))
+                final_name = zip_name
+                i = 2
+                while final_name in usados:
+                    stem, ext = os.path.splitext(zip_name)
+                    final_name = f"{stem} ({i}){ext}"
+                    i += 1
+                usados.add(final_name)
+                zf.writestr(final_name, r["contenido"])
+                entradas_ordenadas.append((final_name, r))
+
+            if incluir_pdf_combinado:
+                # Mismo orden que los archivos individuales, para que el PDF
+                # combinado se lea en el mismo orden en que aparecen en el ZIP
+                entradas_ordenadas.sort(key=lambda t: t[0])
+                fuentes_pdf = []
+                for _final_name, r in entradas_ordenadas:
+                    if r.get("pdf_bytes"):
+                        fuentes_pdf.append((r["carpeta_padre"], r["pdf_bytes"]))
+                    elif r.get("pdf_ruta"):
+                        fuentes_pdf.append((r["carpeta_padre"], r["pdf_ruta"]))
+                    elif r.get("pdf_error"):
+                        errores.append(f"{r['carpeta_padre']} / {r['base']}: no se pudo exportar a PDF para el combinado ({r['pdf_error']}) — sí está en el ZIP")
+                if fuentes_pdf:
+                    try:
+                        pdf_combinado = _merge_pdfs(fuentes_pdf)
+                        hoy_nombre = datetime.now().strftime("%Y%m%d")
+                        sufijo = f"_modificados_{modificados_desde.replace('-', '')}" if modificados_desde else ""
+                        zf.writestr(f"TODOS_LOS_INFORMES_{hoy_nombre}{sufijo}.pdf", pdf_combinado)
+                    except Exception as e:
+                        errores.append(f"No se pudo armar el PDF combinado: {e}")
+
+            if errores:
+                zf.writestr(
+                    "_ERRORES.txt",
+                    "No se pudieron descargar/convertir los siguientes archivos:\n\n" + "\n".join(errores),
+                )
+    finally:
+        tmpdir_ctx.cleanup()
+
+    buffer.seek(0)
+    hoy = datetime.now().strftime("%Y%m%d")
+    if modificados_desde:
+        nombre_zip = f"informes_cualitativos_{hoy}_modificados_{modificados_desde.replace('-', '')}.zip"
+    else:
+        nombre_zip = f"informes_cualitativos_{hoy}.zip"
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{nombre_zip}"'},
+    )

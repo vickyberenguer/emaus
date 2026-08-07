@@ -64,6 +64,39 @@ const api = {
     return res.json();
   },
 
+  // Descarga un archivo binario (ej. ZIP) del backend y dispara la descarga
+  // en el navegador. A diferencia de api.get(), no asume respuesta JSON.
+  async downloadFile(path, nombreSugerido) {
+    const token = sessionStorage.getItem('token');
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    if (res.status === 401) {
+      sessionStorage.clear();
+      window.location.href = '/index.html';
+      return;
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Error al descargar el archivo' }));
+      throw new Error(err.detail || 'Error al descargar el archivo');
+    }
+
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const nombreArchivo = match ? match[1] : nombreSugerido;
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombreArchivo;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+
   async login(email, password) {
     // Login usa form-urlencoded (OAuth2PasswordRequestForm)
     const res = await fetch(`${API_BASE}/auth/login`, {

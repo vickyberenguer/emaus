@@ -463,6 +463,49 @@ document.getElementById('ee-filtro-emaus').addEventListener('change', async () =
 document.getElementById('ee-mostrar-inactivos').addEventListener('change', renderTablaEE);
 
 // ============================================================
+// Descargas
+// ============================================================
+
+function toggleDescargasFecha() {
+  const esFecha = document.getElementById('descargas-modo-fecha').checked;
+  document.getElementById('descargas-fecha-wrapper').style.display = esFecha ? '' : 'none';
+}
+
+async function descargarInformesCualitativos() {
+  const btn = document.getElementById('btn-descargar-informes');
+  const resultado = document.getElementById('descargas-resultado');
+
+  const params = new URLSearchParams();
+  if (document.getElementById('descargas-modo-fecha').checked) {
+    const fecha = document.getElementById('descargas-fecha-desde').value;
+    if (!fecha) {
+      resultado.innerHTML = '<span class="text-danger">Elegí una fecha desde.</span>';
+      return;
+    }
+    params.set('modificados_desde', fecha);
+  }
+  if (document.getElementById('descargas-pdf-combinado').checked) {
+    params.set('incluir_pdf_combinado', 'true');
+  }
+  const query = params.toString();
+  const path = '/admin/informes-cualitativos/zip' + (query ? `?${query}` : '');
+
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Descargando...';
+  resultado.innerHTML = '';
+  try {
+    await api.downloadFile(path, 'informes_cualitativos.zip');
+    resultado.innerHTML = '<span class="text-success">✓ Descarga completa.</span>';
+  } catch (e) {
+    resultado.innerHTML = `<span class="text-danger">Error: ${e.message || e}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
+}
+
+// ============================================================
 // Init
 // ============================================================
 
