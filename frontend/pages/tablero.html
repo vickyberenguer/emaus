@@ -972,7 +972,7 @@
 <script src="/js/session.js"></script>
 <script>
 const ANIO = 2026;
-const SEMESTRE = '1';
+const SEMESTRE = '2';
 
 let esAdmin = false;
 let soloTablero = false;
@@ -1674,12 +1674,12 @@ function renderParticipantes(d) {
     d.asistentes['25_35'], d.asistentes['35_50'], d.asistentes['mas_50'], 1);
 
   document.getElementById('part-age-bars').innerHTML = `
-    <div class="prog-row"><span class="prog-lbl">0 a 6 años</span>${progBar(d.asistentes['0_6'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['0_6'])}</span></div>
-    <div class="prog-row"><span class="prog-lbl">7 a 14 años</span>${progBar(d.asistentes['7_14'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['7_14'])}</span></div>
-    <div class="prog-row"><span class="prog-lbl">15 a 24 años</span>${progBar(d.asistentes['15_24'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['15_24'])}</span></div>
-    <div class="prog-row"><span class="prog-lbl">25 a 34 años</span>${progBar(d.asistentes['25_35'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['25_35'])}</span></div>
-    <div class="prog-row"><span class="prog-lbl">35 a 50 años</span>${progBar(d.asistentes['35_50'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['35_50'])}</span></div>
-    <div class="prog-row"><span class="prog-lbl">Más de 50</span>${progBar(d.asistentes['mas_50'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['mas_50'])}</span></div>`;
+    <div class="prog-row"><span class="prog-lbl">0 a 6 años</span>${progBar(d.asistentes['0_6'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['0_6'])}</span><span class="prog-val" style="color:#be185d;font-size:.75rem;width:auto;min-width:44px;margin-left:6px" title="De ellas, mujeres">♀ ${n((d.asistentes_mujeres||{})['0_6']||0)}</span></div>
+    <div class="prog-row"><span class="prog-lbl">7 a 14 años</span>${progBar(d.asistentes['7_14'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['7_14'])}</span><span class="prog-val" style="color:#be185d;font-size:.75rem;width:auto;min-width:44px;margin-left:6px" title="De ellas, mujeres">♀ ${n((d.asistentes_mujeres||{})['7_14']||0)}</span></div>
+    <div class="prog-row"><span class="prog-lbl">15 a 24 años</span>${progBar(d.asistentes['15_24'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['15_24'])}</span><span class="prog-val" style="color:#be185d;font-size:.75rem;width:auto;min-width:44px;margin-left:6px" title="De ellas, mujeres">♀ ${n((d.asistentes_mujeres||{})['15_24']||0)}</span></div>
+    <div class="prog-row"><span class="prog-lbl">25 a 34 años</span>${progBar(d.asistentes['25_35'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['25_35'])}</span><span class="prog-val" style="color:#be185d;font-size:.75rem;width:auto;min-width:44px;margin-left:6px" title="De ellas, mujeres">♀ ${n((d.asistentes_mujeres||{})['25_35']||0)}</span></div>
+    <div class="prog-row"><span class="prog-lbl">35 a 50 años</span>${progBar(d.asistentes['35_50'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['35_50'])}</span><span class="prog-val" style="color:#be185d;font-size:.75rem;width:auto;min-width:44px;margin-left:6px" title="De ellas, mujeres">♀ ${n((d.asistentes_mujeres||{})['35_50']||0)}</span></div>
+    <div class="prog-row"><span class="prog-lbl">Más de 50</span>${progBar(d.asistentes['mas_50'], maxAge,'#93c5fd')}<span class="prog-val" style="color:#1e40af">${n(d.asistentes['mas_50'])}</span><span class="prog-val" style="color:#be185d;font-size:.75rem;width:auto;min-width:44px;margin-left:6px" title="De ellas, mujeres">♀ ${n((d.asistentes_mujeres||{})['mas_50']||0)}</span></div>`;
 
   const maxColab = Math.max(d.colaboradores.grupo_motor, d.colaboradores.itinerancia, 1);
   document.getElementById('part-colab-bars').innerHTML = `

@@ -449,7 +449,7 @@ document.getElementById('form-ee-alta').addEventListener('submit', async (e) => 
     const data = await api.post('/admin/ee', body);
     res.innerHTML = `<span class="text-success">✓ EE creado (id=${data.id}). Sheets: ${data.sheets}</span>`;
     e.target.reset();
-    await cargarTodosLosEE();
+    await cargarEEDeEmaus(body.emaus_id);
   } catch (err) {
     res.innerHTML = `<span class="text-danger">Error: ${err.message || err}</span>`;
   }
