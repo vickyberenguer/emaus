@@ -463,37 +463,7 @@ sheets:
         cell: C126
         type: texto
 
-      - name: AyJ_rank_suicidio
-        cell: C254
-        type: numerico
-
-      - name: AyJ_rank_faltaproyecto
-        cell: C255
-        type: numerico
-
-      - name: AyJ_rank_consumo
-        cell: C256
-        type: numerico
-
-      - name: AyJ_rank_apuestas
-        cell: C257
-        type: numerico
-
-      - name: AyJ_rank_saludmental
-        cell: C258
-        type: numerico
-
-      - name: AyJ_rank_violencia
-        cell: C259
-        type: numerico
-
-      - name: AyJ_rank_violenciadigital
-        cell: C260
-        type: numerico
-
-      - name: AyJ_rank_desvinculacion
-        cell: C261
-        type: numerico
+      # (Semestre 2: se eliminó el ranking de situaciones preocupantes de AyJ, filas 253-261)
 
       # --- Itinerancia ---
       - name: Itinerancia_Activ
@@ -1753,22 +1723,6 @@ validations:
       - field: AyJ_Nro
         greater_than: 0
     message: "Se respondió que se realizan actividades con Adolescentes y Jóvenes pero falta la cantidad (C125)"
-
-  - id: ayj_ranking_sin_repetidos
-    sheet: ee
-    description: "Los valores del ranking de situaciones de AyJ deben ser todos diferentes (sin repetidos)"
-    severity: warning
-    require_all:
-      - all_unique:
-          - AyJ_rank_suicidio
-          - AyJ_rank_faltaproyecto
-          - AyJ_rank_consumo
-          - AyJ_rank_apuestas
-          - AyJ_rank_saludmental
-          - AyJ_rank_violencia
-          - AyJ_rank_violenciadigital
-          - AyJ_rank_desvinculacion
-    message: "El ranking de situaciones preocupantes (C254 a C261) tiene números repetidos. Cada situación debe tener un número diferente del 1 al 8"
 
   - id: ayj_con_participantes_requiere_freq
     sheet: ee

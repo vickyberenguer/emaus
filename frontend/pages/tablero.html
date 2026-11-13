@@ -3447,7 +3447,13 @@ async function cargarAyjPreocupaciones() {
   appendMultiSelect(params, 'ee_id', 'ayj-ee');
   try {
     const d = await api.get('/tablero/ayj-preocupaciones?' + params.toString());
-    if (!d.total_con_ranking) { contenido.innerHTML = '<p class="text-muted text-center py-4">Sin datos de ranking para el período seleccionado.</p>'; return; }
+    if (!d.total_con_ranking) {
+      const esS2_2026 = params.get('anio') === '2026' && params.get('semestre') === '2';
+      contenido.innerHTML = '<p class="text-muted text-center py-4">' + (esS2_2026
+        ? 'Esta sección no se relevó en el Semestre 2 de 2026. Para ver los datos más recientes, elegí Semestre 1.'
+        : 'Sin datos de ranking para el período seleccionado.') + '</p>';
+      return;
+    }
 
     const rows = d.situaciones.map((s, i) => {
       const color = AYJ_COLORS[i] || '#94a3b8';
