@@ -23,7 +23,7 @@ def handler(event, context):
         if not folder_id:
             return {"ok": False, "error": "DRIVE_FOLDER_ID no configurado"}
         anio = event.get("anio", int(os.getenv("ANIO_ACTIVO", "2026")))
-        semestre = event.get("semestre", os.getenv("SEMESTRE_ACTIVO", "1"))
+        semestre = event.get("semestre", os.getenv("SEMESTRE_ACTIVO", "2"))
         emaus_id = event.get("emaus_id", None)
         apply_reset = event.get("apply_reset", True)
         force = event.get("force", False)

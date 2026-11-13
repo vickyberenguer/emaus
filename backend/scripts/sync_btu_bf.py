@@ -28,7 +28,7 @@ from scripts.scraper_control import (
 )
 
 ANIO_DEFAULT    = 2026
-SEMESTRE_DEFAULT = "1"
+SEMESTRE_DEFAULT = "2"
 
 
 def main():

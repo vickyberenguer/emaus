@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
@@ -16,8 +17,10 @@ from app.routers.auth import get_current_user, require_rol
 
 router = APIRouter(prefix="/control", tags=["control"])
 
-ANIO_ACTIVO = 2026
-SEMESTRE_ACTIVO = "1"
+# Período activo: se puede fijar por variable de entorno en Lambda (ANIO_ACTIVO / SEMESTRE_ACTIVO).
+# Por defecto: 2026, semestre 2 (relevamiento de fin de término).
+ANIO_ACTIVO = int(os.getenv("ANIO_ACTIVO", "2026"))
+SEMESTRE_ACTIVO = os.getenv("SEMESTRE_ACTIVO", "2")
 
 
 # ---------------------------------------------------------------------------

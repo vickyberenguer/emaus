@@ -101,6 +101,12 @@ class RelevamientoEE(Base):
     asistentes_25_35 = Column(Integer)
     asistentes_35_50 = Column(Integer)
     asistentes_mas_50 = Column(Integer)
+    asistentes_mujeres_0_6 = Column(Integer)
+    asistentes_mujeres_7_14 = Column(Integer)
+    asistentes_mujeres_15_24 = Column(Integer)
+    asistentes_mujeres_25_35 = Column(Integer)
+    asistentes_mujeres_35_50 = Column(Integer)
+    asistentes_mujeres_mas_50 = Column(Integer)
 
     grupo_motor_cantidad = Column(Integer)
     grupo_motor_frecuencia = Column(String(100))

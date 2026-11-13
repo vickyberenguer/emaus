@@ -58,11 +58,13 @@ FOLDER_MIME = "application/vnd.google-apps.folder"
 
 EXCLUDED_SHEETS = {"Pastoral Primera Infancia", "Talleres", "Establecimientos",
                    "Modelo EE", "EstablecimientosModelo", "Talleres enero-junio 2026",
+                   "Talleres julio-diciembre 2026",
                    "Establecimientos_aux"}
 
 PI_SHEET_TITLE = "Pastoral Primera Infancia"
 TALLERES_SHEET = "Talleres"
 TALLERES_SHEET_ALT = "Talleres enero-junio 2026"
+TALLERES_SHEET_ALT2 = "Talleres julio-diciembre 2026"
 ESTABLECIMIENTOS_SHEET = "Establecimientos"
 
 # ---------------------------------------------------------------------------
@@ -343,9 +345,9 @@ CLIENT_SECRET_PATH = Path(os.getenv("GOOGLE_CLIENT_SECRET_PATH", str(SCRIPT_DIR.
     "Informes Emaus" / "2026_Mid" / "client_secret.json")))
 
 ANIO_DEFAULT = 2026
-SEMESTRE_DEFAULT = "1"
+SEMESTRE_DEFAULT = "2"
 
-NAME_CONTAINS = "Informe Emaús de medio termino 2026"
+NAME_CONTAINS = "Informe Emaús de fin de término 2026"
 
 # ---------------------------------------------------------------------------
 # Google Auth
@@ -522,7 +524,8 @@ def reset_completion_to_pending(sheets, spreadsheet_id: str, sheet_title: str):
     # Layout estándar EE/PI: E4=checkbox, E5=fecha, E6=estado
     # Layout diagonal Talleres/Establecimientos: B1=checkbox, C1=fecha, D1=estado
     diagonal = sheet_title in {"Talleres", "Establecimientos",
-                               "Talleres enero-junio 2026", "EstablecimientosModelo"}
+                               "Talleres enero-junio 2026", "Talleres julio-diciembre 2026",
+                               "EstablecimientosModelo"}
     if diagonal:
         set_cell(sheets, spreadsheet_id, sheet_title, "B1", False)
         set_cell(sheets, spreadsheet_id, sheet_title, "C1", "")
@@ -535,7 +538,8 @@ def reset_completion_to_pending(sheets, spreadsheet_id: str, sheet_title: str):
 
 def is_sheet_declared_complete(sheets, spreadsheet_id: str, sheet_title: str) -> bool:
     diagonal = sheet_title in {"Talleres", "Establecimientos",
-                               "Talleres enero-junio 2026", "EstablecimientosModelo"}
+                               "Talleres enero-junio 2026", "Talleres julio-diciembre 2026",
+                               "EstablecimientosModelo"}
     if diagonal:
         checkbox = read_cell(sheets, spreadsheet_id, sheet_title, "B1")
         status = read_cell(sheets, spreadsheet_id, sheet_title, "D1")
@@ -800,8 +804,9 @@ def scrape_spreadsheet(sheets, spreadsheet_id: str, spec: Dict,
     ]
     has_pi = PI_SHEET_TITLE in all_titles
     # Detectar nombre real de la hoja Talleres (puede ser el nombre estándar o el alternativo)
-    talleres_sheet_name = TALLERES_SHEET if TALLERES_SHEET in all_titles else (
-        TALLERES_SHEET_ALT if TALLERES_SHEET_ALT in all_titles else None
+    talleres_sheet_name = next(
+        (n for n in (TALLERES_SHEET_ALT2, TALLERES_SHEET_ALT, TALLERES_SHEET) if n in all_titles),
+        None,
     )
     has_talleres = talleres_sheet_name is not None
     has_establecimientos = ESTABLECIMIENTOS_SHEET in all_titles
@@ -1144,6 +1149,12 @@ _EE_FIELD_MAP = {
     "Asistentes_25_34":             "asistentes_25_35",  # nombre distinto en DB
     "Asistentes_35_50":             "asistentes_35_50",
     "Asistentes_Mas50":             "asistentes_mas_50",
+    "Asistentes_Mujeres_0_6":           "asistentes_mujeres_0_6",
+    "Asistentes_Mujeres_7_14":          "asistentes_mujeres_7_14",
+    "Asistentes_Mujeres_15_24":         "asistentes_mujeres_15_24",
+    "Asistentes_Mujeres_25_34":         "asistentes_mujeres_25_35",
+    "Asistentes_Mujeres_35_50":         "asistentes_mujeres_35_50",
+    "Asistentes_Mujeres_Mas50":         "asistentes_mujeres_mas_50",
     "GM_RC_Freq":                   "grupo_motor_frecuencia",
     "AyJ_Nro":                      "adolescentes_referentes",
     "AyJ_Freq":                     "adolescentes_frecuencia",
@@ -1805,7 +1816,8 @@ def upsert_pastoral_pi(engine, emaus_id: int, anio: int, semestre: str,
             row[col] = _to_bool(raw) if col in _PI_BOOL_COLS else _to_int(raw)
 
         row["comunidades_total"] = sum(
-            1 for col in ("Comunidad1", "Comunidad2", "Comunidad3", "Comunidad4")
+            1 for col in ("Comunidad1", "Comunidad2", "Comunidad3", "Comunidad4",
+                        "Comunidad5", "Comunidad6", "Comunidad7")
             if str(fv.get(col) or "").strip()
         )
 

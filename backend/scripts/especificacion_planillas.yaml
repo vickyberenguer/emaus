@@ -80,6 +80,37 @@ sheets:
         type: numerico
         required: false
 
+      # --- De ellas, cuántas son mujeres (columna D, desde fin de término 2026) ---
+      - name: Asistentes_Mujeres_0_6
+        cell: D10
+        type: numerico
+        required: false
+
+      - name: Asistentes_Mujeres_7_14
+        cell: D11
+        type: numerico
+        required: false
+
+      - name: Asistentes_Mujeres_15_24
+        cell: D12
+        type: numerico
+        required: false
+
+      - name: Asistentes_Mujeres_25_34
+        cell: D13
+        type: numerico
+        required: false
+
+      - name: Asistentes_Mujeres_35_50
+        cell: D14
+        type: numerico
+        required: false
+
+      - name: Asistentes_Mujeres_Mas50
+        cell: D15
+        type: numerico
+        required: false
+
       # --- Acciones (checkboxes Sí/No) ---
       - name: Accion_PI_Pastoral
         cell: D19
@@ -930,7 +961,7 @@ sheets:
         cell: C11
         type: numerico
 
-      # Comunidades (hasta 4)
+      # Comunidades (hasta 7; filas 18-20 agregadas en fin de término 2026)
       - name: Comunidad1
         cell: B14
         type: texto
@@ -983,262 +1014,298 @@ sheets:
         cell: G17
         type: texto
 
-      - name: Capacitadoras
+
+      - name: Comunidad5
+        cell: B18
+        type: texto
+
+      - name: Comunidad5_Emaus
+        cell: C18
+        type: texto
+
+      - name: Comunidad5_FreqAcciones
+        cell: G18
+        type: texto
+
+      - name: Comunidad6
+        cell: B19
+        type: texto
+
+      - name: Comunidad6_Emaus
+        cell: C19
+        type: texto
+
+      - name: Comunidad6_FreqAcciones
+        cell: G19
+        type: texto
+
+      - name: Comunidad7
+        cell: B20
+        type: texto
+
+      - name: Comunidad7_Emaus
         cell: C20
+        type: texto
+
+      - name: Comunidad7_FreqAcciones
+        cell: G20
+        type: texto
+      - name: Capacitadoras
+        cell: C23
         type: numerico
 
       - name: Lideres
-        cell: C21
-        type: numerico
-
-      - name: MadresEmbarazadas_12_18
         cell: C24
         type: numerico
 
-      - name: MadresEmbarazadas_19_30
-        cell: C25
-        type: numerico
-
-      - name: MadresEmbarazadas_30mas
-        cell: C26
-        type: numerico
-
-      - name: MadresNoEmbarazadas
+      - name: MadresEmbarazadas_12_18
         cell: C27
         type: numerico
 
-      - name: Ninos_0_3
+      - name: MadresEmbarazadas_19_30
         cell: C28
         type: numerico
 
-      - name: Ninos_4_6
+      - name: MadresEmbarazadas_30mas
         cell: C29
         type: numerico
 
-      - name: Familias
+      - name: MadresNoEmbarazadas
         cell: C30
         type: numerico
 
-      - name: Enfermedad1_Ninos
+      - name: Ninos_0_3
+        cell: C31
+        type: numerico
+
+      - name: Ninos_4_6
+        cell: C32
+        type: numerico
+
+      - name: Familias
         cell: C33
+        type: numerico
+
+      - name: Enfermedad1_Ninos
+        cell: C36
         type: texto
 
       - name: Enfermedad2_Ninos
-        cell: C34
+        cell: C37
         type: texto
 
       - name: Enfermedad3_Ninos
-        cell: C35
-        type: texto
-
-      - name: Enfermedad1_Mujeres
         cell: C38
         type: texto
 
+      - name: Enfermedad1_Mujeres
+        cell: C41
+        type: texto
+
       - name: Enfermedad2_Mujeres
-        cell: C39
+        cell: C42
         type: texto
 
       - name: Enfermedad3_Mujeres
-        cell: C40
+        cell: C43
         type: texto
 
       - name: LideresSabenLeerEscribir
-        cell: C43
+        cell: C46
         type: si_no_desconozco
 
       - name: CantLideresNoSabenLeerEscribir
-        cell: C44
+        cell: C47
         type: numerico
 
       - name: AlgunaLiderParticipaDale
-        cell: C45
-        type: si_no_desconozco
-
-      - name: TodasMadresAlfabetizadas
         cell: C48
         type: si_no_desconozco
 
+      - name: TodasMadresAlfabetizadas
+        cell: C51
+        type: si_no_desconozco
+
       - name: CantMadresNoAlfabetizadas
-        cell: C49
+        cell: C52
         type: numerico
 
       - name: AlgunaMadreParticipaAlfabetizacion
-        cell: C50
-        type: si_no_desconozco
-
-      - name: LideresCelebracionVida
         cell: C53
         type: si_no_desconozco
 
+      - name: LideresCelebracionVida
+        cell: C56
+        type: si_no_desconozco
+
       - name: LideresCelebracionVida_Frec
-        cell: D53
+        cell: D56
         type: texto
 
       - name: LideresCelebracionVida_Cant
-        cell: E53
+        cell: E56
         type: numerico
 
       - name: LideresVisitaDomiciliaria
-        cell: C54
+        cell: C57
         type: si_no_desconozco
 
       - name: LideresVisitaDomiciliaria_Frec
-        cell: D54
+        cell: D57
         type: texto
 
       - name: LideresVisitaDomiciliaria_Cant
-        cell: E54
+        cell: E57
         type: numerico
 
       - name: LideresReunionEvaluacion
-        cell: C55
+        cell: C58
         type: si_no_desconozco
 
       - name: LideresReunionEvaluacion_Frec
-        cell: D55
+        cell: D58
         type: texto
 
       - name: LideresReunionEvaluacion_Cant
-        cell: E55
+        cell: E58
         type: numerico
 
       # Temas abordados (Sí/No/Desconozco + cantidad comunidades)
       - name: Abordada_Vacunas
-        cell: C58
-        type: si_no_desconozco
-
-      - name: Abordada_Vacunas_Comunidades
-        cell: D58
-        type: numerico
-
-      - name: Abordada_Higiene
-        cell: C59
-        type: si_no_desconozco
-
-      - name: Abordada_Higiene_Comunidades
-        cell: D59
-        type: numerico
-
-      - name: Abordada_PrimerosaAuxilios
-        cell: C60
-        type: si_no_desconozco
-
-      - name: Abordada_PrimerosaAuxilios_Comunidades
-        cell: D60
-        type: numerico
-
-      - name: Abordada_EstimulacionAdecuada
         cell: C61
         type: si_no_desconozco
 
-      - name: Abordada_EstimulacionAdecuada_Comunidades
+      - name: Abordada_Vacunas_Comunidades
         cell: D61
         type: numerico
 
-      - name: Abordada_Lactancia
+      - name: Abordada_Higiene
         cell: C62
         type: si_no_desconozco
 
-      - name: Abordada_Lactancia_Comunidades
+      - name: Abordada_Higiene_Comunidades
         cell: D62
         type: numerico
 
-      - name: Abordada_Ternura
+      - name: Abordada_PrimerosaAuxilios
         cell: C63
         type: si_no_desconozco
 
-      - name: Abordada_Ternura_Comunidades
+      - name: Abordada_PrimerosaAuxilios_Comunidades
         cell: D63
         type: numerico
 
-      - name: Abordada_Alimentacion
+      - name: Abordada_EstimulacionAdecuada
         cell: C64
         type: si_no_desconozco
 
-      - name: Abordada_Alimentacion_Comunidades
+      - name: Abordada_EstimulacionAdecuada_Comunidades
         cell: D64
         type: numerico
 
-      - name: Abordada_DerechosInfancias
+      - name: Abordada_Lactancia
         cell: C65
         type: si_no_desconozco
 
-      - name: Abordada_DerechosInfancias_Comunidades
+      - name: Abordada_Lactancia_Comunidades
         cell: D65
         type: numerico
 
-      - name: Abordada_DiscriminacionViolencia
+      - name: Abordada_Ternura
         cell: C66
         type: si_no_desconozco
 
-      - name: Abordada_DiscriminacionViolencia_Comunidades
+      - name: Abordada_Ternura_Comunidades
         cell: D66
         type: numerico
 
-      - name: Abordada_Autoestima
+      - name: Abordada_Alimentacion
         cell: C67
         type: si_no_desconozco
 
-      - name: Abordada_Autoestima_Comunidades
+      - name: Abordada_Alimentacion_Comunidades
         cell: D67
         type: numerico
 
-      - name: Abordada_Consumoproblematico
+      - name: Abordada_DerechosInfancias
         cell: C68
         type: si_no_desconozco
 
-      - name: Abordada_Consumoproblematico_Comunidades
+      - name: Abordada_DerechosInfancias_Comunidades
         cell: D68
         type: numerico
 
-      - name: Abordada_AbusoAcoso
+      - name: Abordada_DiscriminacionViolencia
         cell: C69
         type: si_no_desconozco
 
-      - name: Abordada_AbusoAcoso_Comunidades
+      - name: Abordada_DiscriminacionViolencia_Comunidades
         cell: D69
         type: numerico
 
-      - name: Abordada_AdecuacionPI
+      - name: Abordada_Autoestima
         cell: C70
         type: si_no_desconozco
 
-      - name: Abordada_AdecuacionPI_Comunidades
+      - name: Abordada_Autoestima_Comunidades
         cell: D70
         type: numerico
 
-      - name: Abordada_MedioAmbiente
+      - name: Abordada_Consumoproblematico
         cell: C71
         type: si_no_desconozco
 
-      - name: Abordada_MedioAmbiente_Comunidades
+      - name: Abordada_Consumoproblematico_Comunidades
         cell: D71
         type: numerico
 
-      - name: Abordada_Otras
+      - name: Abordada_AbusoAcoso
         cell: C72
+        type: si_no_desconozco
+
+      - name: Abordada_AbusoAcoso_Comunidades
+        cell: D72
+        type: numerico
+
+      - name: Abordada_AdecuacionPI
+        cell: C73
+        type: si_no_desconozco
+
+      - name: Abordada_AdecuacionPI_Comunidades
+        cell: D73
+        type: numerico
+
+      - name: Abordada_MedioAmbiente
+        cell: C74
+        type: si_no_desconozco
+
+      - name: Abordada_MedioAmbiente_Comunidades
+        cell: D74
+        type: numerico
+
+      - name: Abordada_Otras
+        cell: C75
         type: texto
 
       - name: Abordada_Otras_Comunidades
-        cell: D72
+        cell: D75
         type: numerico
 
       # Articulaciones
       - name: Articula_CentroSalud
-        cell: C75
+        cell: C78
         type: si_no_desconozco
 
       - name: Articula_Hospital
-        cell: C76
+        cell: C79
         type: si_no_desconozco
 
       - name: Articula_Municipio
-        cell: C77
+        cell: C80
         type: si_no_desconozco
 
       - name: Articula_DeptGenero
-        cell: C78
+        cell: C81
         type: si_no_desconozco
 
 
@@ -1419,12 +1486,63 @@ validations:
 
   - id: equipinf_no_pero_datos_presentes
     sheet: ee
-    description: "Si NO cuenta con equipamiento, las secciones AlfabDig/Equipamiento deben estar vacías"
+    description: "Si NO cuenta con equipamiento informático e internet, AlfabDig (C154, C156) y Equipamiento (C165 a C172) deben estar vacíos, en No o en 0"
     severity: warning
     when:
       field: Accion_NT_EquiInfInt
       equals: "No"
-    message: "Se respondió que NO cuenta con Equipamiento informático e internet pero se completaron datos en esas secciones"
+    require_all:
+      - any_of:
+          - field: AlfabDig_NT_AccesoInternet
+            is_empty: true
+          - field: AlfabDig_NT_AccesoInternet
+            equals: "No"
+      - any_of:
+          - field: AlfabDig_NT_Formacion
+            is_empty: true
+          - field: AlfabDig_NT_Formacion
+            equals: "No"
+      - any_of:
+          - field: EquipInformatico_MonitorTubo
+            is_empty: true
+          - field: EquipInformatico_MonitorTubo
+            equals: "No"
+      - any_of:
+          - field: EquipInformatico_MonitorPlano
+            is_empty: true
+          - field: EquipInformatico_MonitorPlano
+            equals: "No"
+      - any_of:
+          - field: EquipInformatico_PCAllinOne
+            is_empty: true
+          - field: EquipInformatico_PCAllinOne
+            equals: "No"
+      - any_of:
+          - field: EquipInformatico_PCEscritorio
+            is_empty: true
+          - field: EquipInformatico_PCEscritorio
+            equals: "No"
+      - any_of:
+          - field: EquipInformatico_Notebook
+            is_empty: true
+          - field: EquipInformatico_Notebook
+            equals: "No"
+      - any_of:
+          - field: EquipInformatico_Tablet
+            is_empty: true
+          - field: EquipInformatico_Tablet
+            equals: "No"
+      - any_of:
+          - field: EquipInformatico_Impresora
+            is_empty: true
+          - field: EquipInformatico_Impresora
+            equals: "No"
+      - any_of:
+          - field: EquipInformatico_Multifuncion
+            is_empty: true
+          - field: EquipInformatico_Multifuncion
+            equals: "No"
+    message: "Se respondió que NO cuenta con Equipamiento informático e internet pero hay datos cargados en AlfabDig (C154, C156) o en Equipamiento informático (C165 a C172) — deben estar vacíos, en No o en 0"
 
   # --- AlfabDig: sub-validaciones (cuando D42=Sí) ---
   - id: alfabdig_sin_internet_requiere_motivo
@@ -1521,19 +1639,6 @@ validations:
         is_empty: true
     message: "No hay alumnos de nivel secundario pero está completado el cuadro \"Apoyo escolar Nivel Secundario\""
 
-
-  # --- Becas Familiares: coherencia suma ---
-  - id: bf_apoyo_escolar_suma_niveles
-    sheet: ee
-    description: "La cantidad de BF en apoyo escolar debe coincidir con la suma de niveles inicial, primario y secundario"
-    severity: warning
-    when:
-      field: BF_Nro_ApEscolar
-      greater_than: 0
-    require_all:
-      - sum_of: [BF_Nro_Inicial, BF_Nro_Primaria, BF_Nro_Secundaria]
-        equals_field: BF_Nro_ApEscolar
-    message: "La cantidad de BF en apoyo escolar debe coincidir con la suma de BF que asisten a nivel inicial, nivel primario y nivel secundario (suma de filas 58 a 60 debe coincidir con fila 57)"
 
   # --- Apoyo Escolar: coherencia acción vs datos ---
   - id: apescolar_accion_si_requiere_alumnos
@@ -1785,7 +1890,7 @@ validations:
     require_all:
       - field: Lideres
         greater_than: 0
-    message: "PI con datos de encabezado pero sin cantidad de líderes registrada (C21)"
+    message: "PI con datos de encabezado pero sin cantidad de líderes registrada (C24)"
 
   - id: pi_con_encabezado_requiere_poblacion
     sheet: pi
@@ -1820,7 +1925,7 @@ validations:
         not_empty: true
       - field: LideresReunionEvaluacion
         not_empty: true
-    message: "Hay líderes registradas pero no se indicó ninguna acción que realizan (C53-C55)"
+    message: "Hay líderes registradas pero no se indicó ninguna acción que realizan (C56-C58)"
 
   - id: pi_accion_lideres_requiere_frec_y_cant
     sheet: pi
@@ -1834,7 +1939,7 @@ validations:
         not_empty: true
       - field: LideresCelebracionVida_Cant
         greater_than: 0
-    message: "Celebración de la vida marcada como Sí pero falta frecuencia o cantidad (D53, E53)"
+    message: "Celebración de la vida marcada como Sí pero falta frecuencia o cantidad (D56, E56)"
 
   - id: pi_visita_requiere_frec_y_cant
     sheet: pi
@@ -1848,7 +1953,7 @@ validations:
         not_empty: true
       - field: LideresVisitaDomiciliaria_Cant
         greater_than: 0
-    message: "Visita domiciliaria marcada como Sí pero falta frecuencia o cantidad (D54, E54)"
+    message: "Visita domiciliaria marcada como Sí pero falta frecuencia o cantidad (D57, E57)"
 
   - id: pi_reunion_requiere_frec_y_cant
     sheet: pi
@@ -1862,7 +1967,7 @@ validations:
         not_empty: true
       - field: LideresReunionEvaluacion_Cant
         greater_than: 0
-    message: "Reunión de evaluación marcada como Sí pero falta frecuencia o cantidad (D55, E55)"
+    message: "Reunión de evaluación marcada como Sí pero falta frecuencia o cantidad (D58, E58)"
 
   - id: pi_con_encabezado_requiere_temas_abordados
     sheet: pi
@@ -1901,7 +2006,7 @@ validations:
     require_all:
       - field: CantLideresNoSabenLeerEscribir
         greater_than: 0
-    message: "Se indicó que no todas las líderes saben leer/escribir pero falta la cantidad (C44)"
+    message: "Se indicó que no todas las líderes saben leer/escribir pero falta la cantidad (C47)"
 
   - id: pi_madres_no_alfabetizadas_requiere_cant
     sheet: pi
@@ -1913,103 +2018,161 @@ validations:
     require_all:
       - field: CantMadresNoAlfabetizadas
         greater_than: 0
-    message: "Se indicó que no todas las madres están alfabetizadas pero falta la cantidad (C49)"
+    message: "Se indicó que no todas las madres están alfabetizadas pero falta la cantidad (C52)"
 
 
 # =============================================================
 # Coherencia: los participantes de cada programa deben estar
-# contenidos dentro de las franjas etarias de Asistentes (C10-C15)
+# contenidos dentro del TOTAL de asistentes (C10+C11+C12+C13+C14+C15)
 # =============================================================
 
   - id: asistentes_apescolar_primaria
     sheet: ee
-    description: "Apoyo Escolar Primaria no puede superar los Asistentes de 7 a 14 años"
+    description: "Apoyo Escolar Primaria no puede superar el total de asistentes"
     severity: warning
     require_all:
       - sum_of: [ApEscolar_Nro_Primaria]
-        at_most_sum_of: [Asistentes_7_14]
-    message: "Apoyo Escolar Primaria (C53) supera a los Asistentes de 7 a 14 años (C11) — revisar que todos los participantes estén contados en Asistentes"
+        at_most_sum_of: [Asistentes_0_6, Asistentes_7_14, Asistentes_15_24, Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "Apoyo Escolar Primaria (C53) supera al total de asistentes (C10 a C15) — revisar que todos los participantes estén contados en Asistentes"
 
   - id: asistentes_apescolar_secundaria
     sheet: ee
-    description: "Apoyo Escolar Secundaria no puede superar los Asistentes de 7 a 14 más 15 a 24 años (en secundario puede haber alumnos de 12 a 19 años)"
+    description: "Apoyo Escolar Secundaria no puede superar el total de asistentes"
     severity: warning
     require_all:
       - sum_of: [ApEscolar_Nro_Secundaria]
-        at_most_sum_of: [Asistentes_7_14, Asistentes_15_24]
-    message: "Apoyo Escolar Secundaria (C54) supera a los Asistentes de 7 a 14 (C11) más 15 a 24 años (C12) — revisar que todos los participantes estén contados en Asistentes"
+        at_most_sum_of: [Asistentes_0_6, Asistentes_7_14, Asistentes_15_24, Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "Apoyo Escolar Secundaria (C54) supera al total de asistentes (C10 a C15) — revisar que todos los participantes estén contados en Asistentes"
 
   - id: asistentes_alfabetizacion_ninos
     sheet: ee
-    description: "Alfabetización de niños (6-9 y 10-14) no puede superar los Asistentes de 7 a 14 años"
+    description: "Alfabetización de niños (6-9 y 10-14) no puede superar el total de asistentes"
     severity: warning
     require_all:
       - sum_of: [Alfabetizacion_6_9, Alfabetizacion_10_14]
-        at_most_sum_of: [Asistentes_7_14]
-    message: "Alfabetización 6-9 + 10-14 (C94/C95) supera a los Asistentes de 7 a 14 años (C11) — revisar que todos los participantes estén contados en Asistentes"
+        at_most_sum_of: [Asistentes_0_6, Asistentes_7_14, Asistentes_15_24, Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "Alfabetización 6-9 + 10-14 (C94/C95) supera al total de asistentes (C10 a C15) — revisar que todos los participantes estén contados en Asistentes"
 
   - id: asistentes_alfabetizacion_jovenes
     sheet: ee
-    description: "Alfabetización 15-24 no puede superar los Asistentes de 15 a 24 años"
+    description: "Alfabetización 15-24 no puede superar el total de asistentes"
     severity: warning
     require_all:
       - sum_of: [Alfabetizacion_15_24]
-        at_most_sum_of: [Asistentes_15_24]
-    message: "Alfabetización 15-24 (C96) supera a los Asistentes de 15 a 24 años (C12) — revisar que todos los participantes estén contados en Asistentes"
+        at_most_sum_of: [Asistentes_0_6, Asistentes_7_14, Asistentes_15_24, Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "Alfabetización 15-24 (C96) supera al total de asistentes (C10 a C15) — revisar que todos los participantes estén contados en Asistentes"
 
   - id: asistentes_alfabetizacion_adultos
     sheet: ee
-    description: "Alfabetización 25+ no puede superar los Asistentes de 25 años en adelante"
+    description: "Alfabetización 25+ no puede superar el total de asistentes"
     severity: warning
     require_all:
       - sum_of: [Alfabetizacion_25mas]
-        at_most_sum_of: [Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
-    message: "Alfabetización 25+ (C97) supera a los Asistentes de 25 años en adelante (C13+C14+C15) — revisar que todos los participantes estén contados en Asistentes"
+        at_most_sum_of: [Asistentes_0_6, Asistentes_7_14, Asistentes_15_24, Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "Alfabetización 25+ (C97) supera al total de asistentes (C10 a C15) — revisar que todos los participantes estén contados en Asistentes"
 
   - id: asistentes_dale_ninos
     sheet: ee
-    description: "DALE de niños (6-9 y 10-14) no puede superar los Asistentes de 7 a 14 años"
+    description: "DALE de niños (6-9 y 10-14) no puede superar el total de asistentes"
     severity: warning
     require_all:
       - sum_of: [DALE_6_9, DALE_10_14]
-        at_most_sum_of: [Asistentes_7_14]
-    message: "DALE 6-9 + 10-14 (C103/C104) supera a los Asistentes de 7 a 14 años (C11) — revisar que todos los participantes estén contados en Asistentes"
+        at_most_sum_of: [Asistentes_0_6, Asistentes_7_14, Asistentes_15_24, Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "DALE 6-9 + 10-14 (C103/C104) supera al total de asistentes (C10 a C15) — revisar que todos los participantes estén contados en Asistentes"
 
   - id: asistentes_dale_jovenes
     sheet: ee
-    description: "DALE 15-24 no puede superar los Asistentes de 15 a 24 años"
+    description: "DALE 15-24 no puede superar el total de asistentes"
     severity: warning
     require_all:
       - sum_of: [DALE_15_24]
-        at_most_sum_of: [Asistentes_15_24]
-    message: "DALE 15-24 (C105) supera a los Asistentes de 15 a 24 años (C12) — revisar que todos los participantes estén contados en Asistentes"
+        at_most_sum_of: [Asistentes_0_6, Asistentes_7_14, Asistentes_15_24, Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "DALE 15-24 (C105) supera al total de asistentes (C10 a C15) — revisar que todos los participantes estén contados en Asistentes"
 
   - id: asistentes_dale_adultos
     sheet: ee
-    description: "DALE 25+ no puede superar los Asistentes de 25 años en adelante"
+    description: "DALE 25+ no puede superar el total de asistentes"
     severity: warning
     require_all:
       - sum_of: [DALE_25mas]
-        at_most_sum_of: [Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
-    message: "DALE 25+ (C106) supera a los Asistentes de 25 años en adelante (C13+C14+C15) — revisar que todos los participantes estén contados en Asistentes"
+        at_most_sum_of: [Asistentes_0_6, Asistentes_7_14, Asistentes_15_24, Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "DALE 25+ (C106) supera al total de asistentes (C10 a C15) — revisar que todos los participantes estén contados en Asistentes"
 
   - id: asistentes_btu
     sheet: ee
-    description: "BTU regulares (jóvenes de 17 a 35) no puede superar los Asistentes de 15 a 34 años"
+    description: "BTU regulares no puede superar el total de asistentes"
     severity: warning
     require_all:
       - sum_of: [BTU_regulares]
-        at_most_sum_of: [Asistentes_15_24, Asistentes_25_34]
-    message: "BTU regulares (C67) supera a los Asistentes de 15 a 34 años (C12+C13) — revisar que todos los participantes estén contados en Asistentes"
+        at_most_sum_of: [Asistentes_0_6, Asistentes_7_14, Asistentes_15_24, Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "BTU regulares (C67) supera al total de asistentes (C10 a C15) — revisar que todos los participantes estén contados en Asistentes"
 
   - id: asistentes_grupo_motor
     sheet: ee
-    description: "Grupo Motor (suma de roles) no puede superar los Asistentes de 25 años en adelante"
+    description: "Grupo Motor (suma de roles) no puede superar el total de asistentes"
     severity: warning
     require_all:
       - sum_of: [GM_Rol1_Cant, GM_Rol2_Cant, GM_Rol3_Cant, GM_Rol4_Cant]
-        at_most_sum_of: [Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
-    message: "Grupo Motor (suma de roles D178-D181) supera a los Asistentes de 25 años en adelante (C13+C14+C15) — revisar que todos los participantes estén contados en Asistentes"
+        at_most_sum_of: [Asistentes_0_6, Asistentes_7_14, Asistentes_15_24, Asistentes_25_34, Asistentes_35_50, Asistentes_Mas50]
+    message: "Grupo Motor (suma de roles D178-D181) supera al total de asistentes (C10 a C15) — revisar que todos los participantes estén contados en Asistentes"
+
+# -------------------------------------------------------------
+# Mujeres: no pueden superar el total de cada franja (D10:D15 <= C10:C15)
+# -------------------------------------------------------------
+
+  - id: asistentes_mujeres_0_6
+    sheet: ee
+    description: "Mujeres de 0 a 6 años no puede superar el total de asistentes de esa franja"
+    severity: warning
+    require_all:
+      - sum_of: [Asistentes_Mujeres_0_6]
+        at_most_sum_of: [Asistentes_0_6]
+    message: "Las mujeres de 0 a 6 años (D10) superan al total de asistentes de esa franja (C10) — revisar"
+
+  - id: asistentes_mujeres_7_14
+    sheet: ee
+    description: "Mujeres de 7 a 14 años no puede superar el total de asistentes de esa franja"
+    severity: warning
+    require_all:
+      - sum_of: [Asistentes_Mujeres_7_14]
+        at_most_sum_of: [Asistentes_7_14]
+    message: "Las mujeres de 7 a 14 años (D11) superan al total de asistentes de esa franja (C11) — revisar"
+
+  - id: asistentes_mujeres_15_24
+    sheet: ee
+    description: "Mujeres de 15 a 24 años no puede superar el total de asistentes de esa franja"
+    severity: warning
+    require_all:
+      - sum_of: [Asistentes_Mujeres_15_24]
+        at_most_sum_of: [Asistentes_15_24]
+    message: "Las mujeres de 15 a 24 años (D12) superan al total de asistentes de esa franja (C12) — revisar"
+
+  - id: asistentes_mujeres_25_34
+    sheet: ee
+    description: "Mujeres de 25 a 34 años no puede superar el total de asistentes de esa franja"
+    severity: warning
+    require_all:
+      - sum_of: [Asistentes_Mujeres_25_34]
+        at_most_sum_of: [Asistentes_25_34]
+    message: "Las mujeres de 25 a 34 años (D13) superan al total de asistentes de esa franja (C13) — revisar"
+
+  - id: asistentes_mujeres_35_50
+    sheet: ee
+    description: "Mujeres de 35 a 50 años no puede superar el total de asistentes de esa franja"
+    severity: warning
+    require_all:
+      - sum_of: [Asistentes_Mujeres_35_50]
+        at_most_sum_of: [Asistentes_35_50]
+    message: "Las mujeres de 35 a 50 años (D14) superan al total de asistentes de esa franja (C14) — revisar"
+
+  - id: asistentes_mujeres_mas50
+    sheet: ee
+    description: "Mujeres de más de 50 años no puede superar el total de asistentes de esa franja"
+    severity: warning
+    require_all:
+      - sum_of: [Asistentes_Mujeres_Mas50]
+        at_most_sum_of: [Asistentes_Mas50]
+    message: "Las mujeres de más de 50 años (D15) superan al total de asistentes de esa franja (C15) — revisar"
 
   - id: grupo_motor_total_coincide_roles
     sheet: ee

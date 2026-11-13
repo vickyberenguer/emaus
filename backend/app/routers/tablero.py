@@ -2869,6 +2869,15 @@ def participantes(
     asistentes_mas_50 = s("asistentes_mas_50")
     total_asistentes  = asistentes_0_6 + asistentes_7_14 + asistentes_15_24 + asistentes_25_35 + asistentes_35_50 + asistentes_mas_50
 
+    # Mujeres (columna "De ellas, cuántas son mujeres", desde fin de término 2026)
+    mujeres_0_6    = s("asistentes_mujeres_0_6")
+    mujeres_7_14   = s("asistentes_mujeres_7_14")
+    mujeres_15_24  = s("asistentes_mujeres_15_24")
+    mujeres_25_35  = s("asistentes_mujeres_25_35")
+    mujeres_35_50  = s("asistentes_mujeres_35_50")
+    mujeres_mas_50 = s("asistentes_mujeres_mas_50")
+    total_mujeres  = mujeres_0_6 + mujeres_7_14 + mujeres_15_24 + mujeres_25_35 + mujeres_35_50 + mujeres_mas_50
+
     grupo_motor = s("grupo_motor_cantidad")
     total_colaboradores = int(iti_sum) + grupo_motor
 
@@ -2912,6 +2921,15 @@ def participantes(
             "25_35":  asistentes_25_35,
             "35_50":  asistentes_35_50,
             "mas_50": asistentes_mas_50,
+        },
+        "asistentes_mujeres": {
+            "total":  total_mujeres,
+            "0_6":    mujeres_0_6,
+            "7_14":   mujeres_7_14,
+            "15_24":  mujeres_15_24,
+            "25_35":  mujeres_25_35,
+            "35_50":  mujeres_35_50,
+            "mas_50": mujeres_mas_50,
         },
         "apoyo_escolar": {
             "primaria":    s("apoyo_primario_ninos"),
@@ -2994,6 +3012,12 @@ def participantes_export(
             "Asistentes 25-35": ree.asistentes_25_35 or 0,
             "Asistentes 35-50": ree.asistentes_35_50 or 0,
             "Asistentes +50": ree.asistentes_mas_50 or 0,
+            "Mujeres 0-6": ree.asistentes_mujeres_0_6 or 0,
+            "Mujeres 7-14": ree.asistentes_mujeres_7_14 or 0,
+            "Mujeres 15-24": ree.asistentes_mujeres_15_24 or 0,
+            "Mujeres 25-35": ree.asistentes_mujeres_25_35 or 0,
+            "Mujeres 35-50": ree.asistentes_mujeres_35_50 or 0,
+            "Mujeres +50": ree.asistentes_mujeres_mas_50 or 0,
             "Grupo Motor (cantidad)": ree.grupo_motor_cantidad if ree.grupo_motor_cantidad is not None else "",
             "Grupo Motor (frecuencia)": ree.grupo_motor_frecuencia or "",
             "Adolescentes Referentes": ree.adolescentes_referentes if ree.adolescentes_referentes is not None else "",
