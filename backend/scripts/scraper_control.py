@@ -2197,32 +2197,58 @@ def leer_btu_planilla(sheets_svc, spreadsheet_id: str) -> Dict[str, int]:
 
 
 def leer_bf_planilla(sheets_svc, spreadsheet_id: str) -> Dict[str, int]:
-    """Lee la planilla BF y retorna {nombre_emaus: bf_actual}. Col A = nombre, Col B = cantidad."""
+    """Lee la planilla BF y retorna {nombre_emaus: bf_actual}.
+
+    Soporta dos layouts (se detecta por el encabezado de la primera hoja):
+      - Actual ("CONTROL INFORMES CUALI Y MAILS"): col B = Diócesis, col con
+        encabezado "cant. BF" (hoy la E) = cantidad de BF.
+      - Legado: col A = nombre, col B = cantidad.
+    Las filas sin cantidad numérica se ignoran (no pisan el valor existente).
+    """
     if not spreadsheet_id:
         return {}
     try:
         resp = sheets_svc.spreadsheets().values().get(
             spreadsheetId=spreadsheet_id,
-            range="A1:B60",
+            range="A1:H60",
             valueRenderOption="UNFORMATTED_VALUE",
         ).execute()
     except Exception as e:
         print(f"  [warn] No se pudo leer planilla BF: {e}")
         return {}
 
-    result = {}
-    for row in resp.get("values", []):
-        if len(row) < 2:
+    rows = resp.get("values", [])
+    col_nombre, col_bf, start = 0, 1, 0
+    for i, row in enumerate(rows):
+        celdas = [str(c).strip().lower() for c in row]
+        for j, c in enumerate(celdas):
+            if c.startswith("cant") and "bf" in c:
+                col_bf, start = j, i + 1
+                col_nombre = next(
+                    (k for k, x in enumerate(celdas) if x.startswith("di") and "cesis" in x), 1
+                )
+                break
+        else:
             continue
-        nombre = str(row[0]).strip()
-        if not nombre:
+        break
+
+    result = {}
+    for row in rows[start:]:
+        if len(row) <= max(col_nombre, col_bf):
+            continue
+        nombre = str(row[col_nombre]).strip()
+        if not nombre or nombre.lower() in ("diócesis", "diocesis", "totales"):
             continue
         try:
-            cant = int(float(str(row[1])))
+            cant = int(float(str(row[col_bf])))
         except (ValueError, TypeError):
             continue
         nombre_real = _EMAUS_NAME_FIXES.get(nombre, nombre)
         result[nombre_real] = cant
+    # La planilla tiene dos filas para la misma diócesis (San Francisco y Las
+    # Varillas, ambas con 6 BTU); la cantidad de BF viene cargada en "San Francisco".
+    if "Las Varillas" not in result and "San Francisco" in result:
+        result["Las Varillas"] = result["San Francisco"]
     return result
 
 
