@@ -986,6 +986,8 @@ let soloTablero = false;
 let datos = null;
 
 async function init() {
+  // Esperar a que termine de ejecutarse todo el script (declaraciones let/const de más abajo).
+  await Promise.resolve();
   session.requireRol(['admin', 'responsable', 'tablero']);
   session.pintarNavbar('Tablero');
   esAdmin = session.rol() === 'admin';
@@ -1000,11 +1002,16 @@ async function init() {
       .forEach(b => b.style.display = 'none');
   }
 
+  // Los listeners se registran PRIMERO y de forma síncrona: ninguna carga de datos
+  // (lenta, colgada o con error) puede dejar a otras pestañas sin sus eventos.
+  registrarListenersParticipantes();
   if (esAdmin) {
     actualizarFiltroBar('estado-carga');
-    await cargarResponsables();
     document.getElementById('sel-responsable').addEventListener('change', cargarDatos);
   }
+
+  const cargas = [cargarFiltros()];
+  if (esAdmin) cargas.push(cargarResponsables());
 
   if (soloTablero) {
     // El rol "tablero" no tiene acceso a "Estado de carga": ocultar el tab
@@ -1016,15 +1023,17 @@ async function init() {
     document.getElementById('tab-participantes').style.display = 'block';
     // Solo ve el período actual: ocultar el selector de Período en todos los tabs
     document.querySelectorAll('.lbl-periodo, .sel-periodo').forEach(el => el.style.display = 'none');
-    await cargarParticipantes();
+    cargas.push(cargarParticipantes());
   } else {
     // Estado de carga activo por defecto
     document.getElementById('tab-participantes').style.display = 'none';
-    await cargarDatos();
+    cargas.push(cargarDatos());
   }
 
-  await cargarFiltros();
+  await Promise.allSettled(cargas);
+}
 
+function registrarListenersParticipantes() {
   // Período → recargar filtros completos
   ['part-anio','part-semestre'].forEach(id => {
     document.getElementById(id).addEventListener('change', () => {
@@ -1205,7 +1214,7 @@ function renderizar(d) {
   });
 }
 
-init();
+init().catch(e => console.error('[tablero] error en init:', e));
 
 // ── Tab switching ──
 function mostrarPestaña(target) {
