@@ -548,10 +548,16 @@ def is_sheet_declared_complete(sheets, spreadsheet_id: str, sheet_title: str) ->
         status = read_cell(sheets, spreadsheet_id, sheet_title, "E6")
 
     declared_values = {"completa", "completada", "completada (con advertencias)"}
-    if isinstance(checkbox, bool) and checkbox:
+    # El tilde manda: si está explícitamente destildado, la hoja NO está declarada aunque el
+    # texto de estado diga "Completa" (puede quedar así por ejecuciones solapadas del script
+    # de la planilla). El estado solo se usa como respaldo si el tilde viene vacío.
+    if isinstance(checkbox, bool):
+        return checkbox
+    tilde = str(checkbox).strip().lower()
+    if tilde in {"true", "verdadero", "sí", "si", "*"}:
         return True
-    if str(checkbox).strip().lower() in {"true", "verdadero", "sí", "si", "*"}:
-        return True
+    if tilde in {"false", "falso", "no"}:
+        return False
     if str(status).strip().lower() in declared_values:
         return True
     return False
@@ -769,10 +775,14 @@ def _parse_completion_from_values(values: List[List], diagonal: bool) -> bool:
         checkbox = values[0][0] if values and values[0] else ""
         status = values[2][0] if len(values) > 2 and values[2] else ""
 
-    if isinstance(checkbox, bool) and checkbox:
+    # El tilde manda (ver is_sheet_declared_complete): destildado explícito => no declarada.
+    if isinstance(checkbox, bool):
+        return checkbox
+    tilde = str(checkbox).strip().lower()
+    if tilde in {"true", "verdadero", "sí", "si", "*"}:
         return True
-    if str(checkbox).strip().lower() in {"true", "verdadero", "sí", "si", "*"}:
-        return True
+    if tilde in {"false", "falso", "no"}:
+        return False
     if str(status).strip().lower() in declared_values:
         return True
     return False
