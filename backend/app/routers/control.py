@@ -83,6 +83,7 @@ class ControlEmausOut(BaseModel):
     aprobacion: Optional[AprobacionOut]
 
     listo_para_aprobar: bool
+    bloqueos: List[str] = []
 
     class Config:
         from_attributes = True
@@ -122,6 +123,56 @@ def is_listo(ctrl: ControlRelevamiento) -> bool:
     return True
 
 
+def contexto_bloqueo(db: Session, emaus_ids: List[int], anio: int, semestre: str) -> dict:
+    """Por Emaús: advertencias sin resolver y BTU/BF relevados (suma de hojas EE)."""
+    if not emaus_ids:
+        return {"warn": {}, "btu": {}, "bf": {}}
+    warn_rows = (
+        db.query(ControlValidacionDetalle.emaus_id, func.count(ControlValidacionDetalle.id))
+        .filter(
+            ControlValidacionDetalle.anio == anio,
+            ControlValidacionDetalle.semestre == semestre,
+            ControlValidacionDetalle.severity == "warning",
+            ControlValidacionDetalle.resuelto == False,
+            ControlValidacionDetalle.emaus_id.in_(emaus_ids),
+        )
+        .group_by(ControlValidacionDetalle.emaus_id)
+        .all()
+    )
+    rel_rows = (
+        db.query(
+            Relevamiento.emaus_id,
+            func.coalesce(func.sum(RelevamientoEE.btu_regulares), 0),
+            func.coalesce(func.sum(RelevamientoEE.bf_apoyo_escolar), 0),
+        )
+        .join(RelevamientoEE, RelevamientoEE.relevamiento_id == Relevamiento.id)
+        .filter(
+            Relevamiento.anio == anio,
+            Relevamiento.semestre == semestre,
+            Relevamiento.emaus_id.in_(emaus_ids),
+        )
+        .group_by(Relevamiento.emaus_id)
+        .all()
+    )
+    return {
+        "warn": {r[0]: int(r[1]) for r in warn_rows},
+        "btu": {r[0]: int(r[1]) for r in rel_rows},
+        "bf": {r[0]: int(r[2]) for r in rel_rows},
+    }
+
+
+def motivos_bloqueo(ctrl: ControlRelevamiento, warnings: int, btu_rel: int, bf_rel: int) -> List[str]:
+    """Motivos (además de is_listo) por los que no se puede aprobar."""
+    motivos = []
+    if warnings > 0:
+        motivos.append(f"{warnings} advertencia(s) sin resolver")
+    if ctrl.btu_actual is not None and ctrl.btu_actual != btu_rel:
+        motivos.append(f"Diferencia de BTU: planilla de control {ctrl.btu_actual}, relevado {btu_rel}")
+    if ctrl.bf_actual is not None and ctrl.bf_actual != bf_rel:
+        motivos.append(f"Diferencia de BF: planilla de control {ctrl.bf_actual}, relevado {bf_rel}")
+    return motivos
+
+
 def emaus_ids_for_user(user: Usuario, db: Session) -> Optional[List[int]]:
     """None = ver todos (admin, tablero). Lista = solo esos Emaús (responsable)."""
     if user.rol in ("admin", "tablero"):
@@ -132,7 +183,9 @@ def emaus_ids_for_user(user: Usuario, db: Session) -> Optional[List[int]]:
     ]
 
 
-def build_control_out(ctrl: ControlRelevamiento, emaus: Emaus) -> dict:
+def build_control_out(ctrl: ControlRelevamiento, emaus: Emaus,
+                      warnings: int = 0, btu_rel: int = 0, bf_rel: int = 0) -> dict:
+    bloqueos = motivos_bloqueo(ctrl, warnings, btu_rel, bf_rel)
     return {
         "emaus_id": ctrl.emaus_id,
         "emaus_nombre": emaus.nombre,
@@ -158,7 +211,8 @@ def build_control_out(ctrl: ControlRelevamiento, emaus: Emaus) -> dict:
         "ultimo_sync": ctrl.ultimo_sync,
         "spreadsheet_url": spreadsheet_url(emaus.spreadsheet_id),
         "aprobacion": ctrl.aprobacion,
-        "listo_para_aprobar": is_listo(ctrl),
+        "listo_para_aprobar": is_listo(ctrl) and not bloqueos,
+        "bloqueos": bloqueos,
     }
 
 
@@ -189,44 +243,20 @@ def listar_control(
 
     rows = query.order_by(Emaus.nombre).all()
 
-    # BTU relevado: sum(btu_regulares) de relevamiento_ee por Emaús
+    # Advertencias sin resolver y BTU/BF relevado (suma de hojas EE) por Emaús
     emaus_ids = [ctrl.emaus_id for ctrl, _ in rows]
-    btu_relevado_map: dict = {}
-    if emaus_ids:
-        btu_rows = (
-            db.query(Relevamiento.emaus_id, func.coalesce(func.sum(RelevamientoEE.btu_regulares), 0))
-            .join(RelevamientoEE, RelevamientoEE.relevamiento_id == Relevamiento.id)
-            .filter(
-                Relevamiento.anio == anio,
-                Relevamiento.semestre == semestre,
-                Relevamiento.emaus_id.in_(emaus_ids),
-            )
-            .group_by(Relevamiento.emaus_id)
-            .all()
-        )
-        btu_relevado_map = {r[0]: int(r[1]) for r in btu_rows}
-
-    # BF relevado: sum(bf_apoyo_escolar) de relevamiento_ee por Emaús
-    bf_relevado_map: dict = {}
-    if emaus_ids:
-        bf_rows = (
-            db.query(Relevamiento.emaus_id, func.coalesce(func.sum(RelevamientoEE.bf_apoyo_escolar), 0))
-            .join(RelevamientoEE, RelevamientoEE.relevamiento_id == Relevamiento.id)
-            .filter(
-                Relevamiento.anio == anio,
-                Relevamiento.semestre == semestre,
-                Relevamiento.emaus_id.in_(emaus_ids),
-            )
-            .group_by(Relevamiento.emaus_id)
-            .all()
-        )
-        bf_relevado_map = {r[0]: int(r[1]) for r in bf_rows}
+    ctx = contexto_bloqueo(db, emaus_ids, anio, semestre)
 
     result = []
     for ctrl, emaus in rows:
-        out = build_control_out(ctrl, emaus)
-        out["btu_relevado"] = btu_relevado_map.get(ctrl.emaus_id, 0)
-        out["bf_relevado"] = bf_relevado_map.get(ctrl.emaus_id, 0)
+        out = build_control_out(
+            ctrl, emaus,
+            warnings=ctx["warn"].get(ctrl.emaus_id, 0),
+            btu_rel=ctx["btu"].get(ctrl.emaus_id, 0),
+            bf_rel=ctx["bf"].get(ctrl.emaus_id, 0),
+        )
+        out["btu_relevado"] = ctx["btu"].get(ctrl.emaus_id, 0)
+        out["bf_relevado"] = ctx["bf"].get(ctrl.emaus_id, 0)
         result.append(out)
     return result
 
@@ -282,7 +312,15 @@ def detalle_control(
         ControlValidacionDetalle.resuelto == False,
     ).order_by(ControlValidacionDetalle.severity, ControlValidacionDetalle.hoja_nombre).all()
 
-    out = build_control_out(ctrl, emaus)
+    ctx = contexto_bloqueo(db, [emaus_id], anio, semestre)
+    out = build_control_out(
+        ctrl, emaus,
+        warnings=ctx["warn"].get(emaus_id, 0),
+        btu_rel=ctx["btu"].get(emaus_id, 0),
+        bf_rel=ctx["bf"].get(emaus_id, 0),
+    )
+    out["btu_relevado"] = ctx["btu"].get(emaus_id, 0)
+    out["bf_relevado"] = ctx["bf"].get(emaus_id, 0)
     out["validaciones"] = validaciones
     return out
 
@@ -311,8 +349,15 @@ def aprobar_emaus(
     if not ctrl:
         raise HTTPException(status_code=404, detail="Sin datos de control")
 
-    if body.estado == "aprobado" and not is_listo(ctrl):
-        raise HTTPException(status_code=400, detail="El Emaús aún tiene hojas pendientes o con errores")
+    if body.estado == "aprobado":
+        if not is_listo(ctrl):
+            raise HTTPException(status_code=400, detail="El Emaús aún tiene hojas pendientes o con errores")
+        ctx = contexto_bloqueo(db, [emaus_id], anio, semestre)
+        motivos = motivos_bloqueo(
+            ctrl, ctx["warn"].get(emaus_id, 0), ctx["btu"].get(emaus_id, 0), ctx["bf"].get(emaus_id, 0)
+        )
+        if motivos:
+            raise HTTPException(status_code=400, detail="No se puede aprobar: " + "; ".join(motivos))
 
     aprobacion = db.query(ControlAprobacion).filter(
         ControlAprobacion.emaus_id == emaus_id,

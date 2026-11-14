@@ -550,6 +550,13 @@
       <div class="prog-body" id="part-colab-bars"></div>
     </div>
     <div class="prog-card">
+      <div class="prog-head" style="border-color:#0891b2">
+        <div class="prog-head-name">Voluntarios</div>
+        <div class="prog-head-val" id="part-vol-val" style="color:#0891b2">—</div>
+      </div>
+      <div class="prog-body" id="part-vol-bars"></div>
+    </div>
+    <div class="prog-card">
       <div class="prog-head" style="border-color:#0d9488">
         <div class="prog-head-name">BTU</div>
         <div class="prog-head-val" id="part-btu-val" style="color:#0d9488">—</div>
@@ -1685,6 +1692,19 @@ function renderParticipantes(d) {
   document.getElementById('part-colab-bars').innerHTML = `
     <div class="prog-row"><span class="prog-lbl">Grupo Motor</span>${progBar(d.colaboradores.grupo_motor, maxColab,'#c4b5fd')}<span class="prog-val" style="color:#7c3aed">${n(d.colaboradores.grupo_motor)}</span></div>
     <div class="prog-row"><span class="prog-lbl">Itinerancia</span>${progBar(d.colaboradores.itinerancia, maxColab,'#c4b5fd')}<span class="prog-val" style="color:#7c3aed">${n(d.colaboradores.itinerancia)}</span></div>`;
+
+  // Voluntarios (personas por función; no se deduplican entre funciones)
+  const vol = d.voluntarios || {};
+  document.getElementById('part-vol-val').textContent = n(vol.total);
+  const volFilas = [
+    ['Grupo Motor', vol.grupo_motor], ['Itinerancia', vol.itinerancia],
+    ['Alfabetizadores', vol.alfabetizadores], ['Educadores DALE', vol.educadores_dale],
+    ['Líderes PI', vol.pi_lideres], ['Capacitadoras PI', vol.pi_capacitadoras],
+  ];
+  const maxVol = Math.max(...volFilas.map(f => f[1] || 0), 1);
+  document.getElementById('part-vol-bars').innerHTML = volFilas.map(([l, v]) =>
+    `<div class="prog-row"><span class="prog-lbl">${l}</span>${progBar(v || 0, maxVol, '#67e8f9')}<span class="prog-val" style="color:#0891b2">${n(v)}</span></div>`
+  ).join('');
 
   // Apoyo Escolar
   const aeMax = Math.max(d.apoyo_escolar.primaria, d.apoyo_escolar.secundaria, 1);

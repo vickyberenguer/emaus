@@ -423,7 +423,10 @@ function botonAprobar(d) {
       <i class="bi bi-check-circle"></i> Aprobar
     </button>`;
   }
-  return `<button class="btn btn-outline-success btn-sm" disabled title="Completar todas las hojas primero">
+  const motivo = (d.bloqueos && d.bloqueos.length)
+    ? d.bloqueos.join(' · ').replace(/"/g, '&quot;')
+    : 'Completar todas las hojas primero';
+  return `<button class="btn btn-outline-success btn-sm" disabled title="${motivo}">
     <i class="bi bi-check-circle"></i>
   </button>`;
 }
@@ -521,6 +524,11 @@ async function abrirDetalle(emausId) {
         <button class="btn btn-outline-danger btn-sm" onclick="iniciarAccion(${emausId},'rechazado')">
           <i class="bi bi-x-circle"></i> Rechazar
         </button>`;
+    }
+    if (d.bloqueos && d.bloqueos.length && d.aprobacion?.estado !== 'aprobado') {
+      document.getElementById('modal-body').innerHTML +=
+        `<div class="alert alert-warning mt-3 mb-0 small"><strong>No se puede aprobar todavía:</strong><ul class="mb-0">` +
+        d.bloqueos.map(m => `<li>${m}</li>`).join('') + `</ul></div>`;
     }
     accs.innerHTML = accionesHtml;
 

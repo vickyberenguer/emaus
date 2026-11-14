@@ -2906,7 +2906,53 @@ def participantes(
     btu_total = s("btu_regulares")
     bf_total = s("bf_nivel_inicial") + s("bf_primaria") + s("bf_secundaria")
 
+    # Voluntarios: personas (suma de las cantidades declaradas, no de roles) en
+    # Grupo Motor, Itinerancia, Alfabetizadores, Educadores DALE (por EE) y
+    # Líderes y Capacitadoras de Primera Infancia (por Emaús). La planilla no
+    # identifica personas, así que una misma persona en dos funciones se cuenta
+    # en cada una. Con filtro por EE no se suma PI (no pertenece a un EE).
+    vol_alfabetizadores = s("alfa_alfabetizadores")
+    vol_educadores_dale = s("dale_educadores")
+    vol_pi_lideres = 0
+    vol_pi_capacitadoras = 0
+    if not ee_id:
+        pi_q = (
+            db.query(
+                func.coalesce(func.sum(PastoralPI.lideres), 0),
+                func.coalesce(func.sum(PastoralPI.capacitadoras), 0),
+            )
+            .join(Relevamiento, and_(
+                Relevamiento.id == PastoralPI.relevamiento_id,
+                Relevamiento.anio == anio,
+                Relevamiento.semestre == semestre,
+            ))
+            .join(Emaus, and_(Emaus.id == Relevamiento.emaus_id, Emaus.activo == True))
+            .join(Diocesis, Diocesis.id == Emaus.diocesis_id)
+        )
+        if allowed_ids is not None:
+            pi_q = pi_q.filter(Relevamiento.emaus_id.in_(allowed_ids))
+        if region:
+            pi_q = pi_q.filter(Diocesis.region.in_(region))
+        if provincia:
+            pi_q = pi_q.filter(Diocesis.provincia.in_(provincia))
+        if emaus_id:
+            pi_q = pi_q.filter(Relevamiento.emaus_id.in_(emaus_id))
+        vol_pi_lideres, vol_pi_capacitadoras = [int(x) for x in pi_q.one()]
+    total_voluntarios = (
+        grupo_motor + int(iti_sum) + vol_alfabetizadores + vol_educadores_dale
+        + vol_pi_lideres + vol_pi_capacitadoras
+    )
+
     return {
+        "voluntarios": {
+            "total": total_voluntarios,
+            "grupo_motor": grupo_motor,
+            "itinerancia": int(iti_sum),
+            "alfabetizadores": vol_alfabetizadores,
+            "educadores_dale": vol_educadores_dale,
+            "pi_lideres": vol_pi_lideres,
+            "pi_capacitadoras": vol_pi_capacitadoras,
+        },
         "ee_count": ee_count,
         "emaus_count": emaus_count,
         "provincias_count": provincias_count,
